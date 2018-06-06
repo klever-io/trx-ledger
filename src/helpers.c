@@ -26,8 +26,10 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
     cx_keccak_init(sha3Context, 256);
     cx_hash((cx_hash_t *)sha3Context, CX_LAST, publicKey->W + 1, 64,
             hashAddress);
+    
+    os_memmove(address+1, hashAddress + 11, 21);
     address[0] = ADD_PRE_FIX_BYTE_MAINNET;
-    os_memmove(address+1, hashAddress + 12, 20);
+    
 }
 
 void getBase58FromAddres(uint8_t *address, uint8_t *out,
@@ -46,7 +48,7 @@ void getBase58FromAddres(uint8_t *address, uint8_t *out,
     os_memmove(addchecksum+ADDRESS_SIZE, sha256_1, 4);
     
     
-    encode_base_58(&addchecksum[0],25,out,150);
+    encode_base_58(&addchecksum[0],25,out,BASE58CHECK_ADDRESS_SIZE);
     
 }
 

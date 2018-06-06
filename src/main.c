@@ -102,8 +102,8 @@ txContent_t txContent;
 
 cx_sha3_t sha3;
 cx_sha256_t sha2;
-volatile char addressSummary[ADDRESS_SIZE];
-volatile char fullAddress[43]; 
+volatile char addressSummary[ADDRESS_SIZE+1];
+volatile char fullAddress[BASE58CHECK_ADDRESS_SIZE+1]; 
 volatile char fullAmount[50]; 
 volatile char maxBandwidth[50];   
 volatile bool dataPresent;
@@ -587,6 +587,19 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
 
 uint32_t set_result_get_publicKey() {
     uint32_t tx = 0;
+    uint32_t addressLength = BASE58CHECK_ADDRESS_SIZE;
+    G_io_apdu_buffer[tx++] = CLA;
+    
+    G_io_apdu_buffer[tx++] = addressLength;
+    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.address58,
+               addressLength);
+    tx += addressLength;
+    if (tmpCtx.publicKeyContext.getChaincode) {
+        os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.chainCode,
+                   32);
+        tx += 32;
+    }
+
     // Todo: get public key
     return tx;
 }
@@ -598,14 +611,17 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     //Clear Buffer                        
     UNUSED(dataLength);
     // Get private key data
-    uint8_t privateKeyData[33];   //TODO: check size
+    uint8_t privateKeyData[33];
     uint32_t bip32Path[MAX_BIP32_PATH];  
     uint32_t i;
     uint8_t bip32PathLength = *(dataBuffer++);
     cx_ecfp_private_key_t privateKey;
     
-    uint8_t p2Chain = p2 & 0x3F;   //TODO: check chain
+    uint8_t p2Chain = p2 & 0x3F;   
     uint8_t addressLength;
+
+    uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
+
 
     if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
         PRINTF("Invalid path\n");
@@ -617,14 +633,13 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     if ((p2Chain != P2_CHAINCODE) && (p2Chain != P2_NO_CHAINCODE)) {
         THROW(0x6B00);
     }
-    
+
     // Add requested BIP path to tmp array
     for (i = 0; i < bip32PathLength; i++) {
         bip32Path[i] = (dataBuffer[0] << 24) | (dataBuffer[1] << 16) |
                        (dataBuffer[2] << 8) | (dataBuffer[3]);
         dataBuffer += 4;
     }
-    
     
     // Get private key
     tmpCtx.publicKeyContext.getChaincode = (p2Chain == P2_CHAINCODE);
@@ -634,31 +649,38 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                                     ? tmpCtx.publicKeyContext.chainCode
                                     : NULL));
 
-    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 65, &privateKey);
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &tmpCtx.publicKeyContext.publicKey,
                           &privateKey, 1);
 
     // Clear tmp buffer data
     os_memset(&privateKey, 0, sizeof(privateKey));
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    // Get address from PK
+    getAddressFromKey(&tmpCtx.publicKeyContext.publicKey,
+                                tmpCtx.publicKeyContext.address,&sha3);
+    // Get Base58
+    getBase58FromAddres(&tmpCtx.publicKeyContext.address,
+                                tmpCtx.publicKeyContext.address58, &sha2);
+    
+    os_memmove(fullAddress,tmpCtx.publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
   
-    // Get public key
-    // Compute Addres Here
-  /*  getAddressStringFromKey(&tmpCtx.publicKeyContext.publicKey,
-                               tmpCtx.publicKeyContext.address, &sha3);
-*/
-        // prepare for a UI based reply
+    if (p1 == P1_NON_CONFIRM) {
+        //os_memmove(G_io_apdu_buffer, fullAddress,sizeof(fullAddress));
+        *tx=set_result_get_publicKey();
+        THROW(0x9000);
+    } else {
+         
+    // prepare for a UI based reply
 #if defined(TARGET_NANOS)
-#if 0        
-        snprintf(fullAddress, sizeof(fullAddress), " 0x%.*s ", 40,
-                 tmpCtx.publicKeyContext.address);
-#endif
         ux_step = 0;
         ux_step_count = 2;
         UX_DISPLAY(ui_address_nanos, ui_address_prepro);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
+    }
     
 }
 
@@ -734,7 +756,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
              case INS_TEST_ADDRESS:
                 
                 //Load Public key
-                os_memmove(&(tmpCtx.publicKeyContext.publicKey.W),G_io_apdu_buffer+2,65);
+                os_memmove(&tmpCtx.publicKeyContext.publicKey.W,G_io_apdu_buffer+2,65);
 
                 UNUSED(G_io_apdu_buffer);
                 
@@ -742,7 +764,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                                 &tmpCtx.publicKeyContext.address,&sha3);
                 getBase58FromAddres(&tmpCtx.publicKeyContext.address,
                                 G_io_apdu_buffer, &sha2);
-                *tx=34;
+                *tx=BASE58CHECK_ADDRESS_SIZE;
                 THROW(0x9000);
                 
                 break;
