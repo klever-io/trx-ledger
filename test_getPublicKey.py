@@ -38,6 +38,6 @@ print("Request Public Key")
 dongle = getDongle(True)
 result = dongle.exchange(apdu)
 print( binascii.hexlify(result))
-#print("Public Key: {:d}".format( result[1]))
+
 
 

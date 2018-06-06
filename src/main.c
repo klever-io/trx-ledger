@@ -24,6 +24,8 @@
 #include "string.h"
 
 #include "glyphs.h"
+#define TARGET_NANOS 1
+#define HAVE_U2F 1
 
 #ifdef HAVE_U2F
 
@@ -50,6 +52,7 @@ uint32_t set_result_get_publicKey(void);
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
+#define INS_TEST_ADDRESS 0x07  // Test Address from PK
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
 #define P2_NO_CHAINCODE 0x00
@@ -70,6 +73,7 @@ static const uint8_t const SIGN_PREFIX[] = {0x53, 0x54, 0x58, 0x00};
 typedef struct publicKeyContext_t {
     cx_ecfp_public_key_t publicKey;
     uint8_t address[ADDRESS_SIZE];
+    uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
     uint8_t chainCode[32]; 
     bool getChaincode;
 } publicKeyContext_t;
@@ -97,6 +101,7 @@ typedef struct txContent_t {
 txContent_t txContent;
 
 cx_sha3_t sha3;
+cx_sha256_t sha2;
 volatile char addressSummary[ADDRESS_SIZE];
 volatile char fullAddress[43]; 
 volatile char fullAmount[50]; 
@@ -639,9 +644,9 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
   
     // Get public key
     // Compute Addres Here
-    getAddressStringFromKey(&tmpCtx.publicKeyContext.publicKey,
+  /*  getAddressStringFromKey(&tmpCtx.publicKeyContext.publicKey,
                                tmpCtx.publicKeyContext.address, &sha3);
-
+*/
         // prepare for a UI based reply
 #if defined(TARGET_NANOS)
 #if 0        
@@ -691,6 +696,9 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 // Check ADPU and process the assigned task
 void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     unsigned short sw = 0;
+    uint8_t privateKeyData[65];
+                cx_sha3_t *sha3Context = &sha3;
+                uint8_t hashAddress[32];
 
     BEGIN_TRY {
         TRY {
@@ -721,6 +729,22 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                break;
+
+             case INS_TEST_ADDRESS:
+                
+                //Load Public key
+                os_memmove(&(tmpCtx.publicKeyContext.publicKey.W),G_io_apdu_buffer+2,65);
+
+                UNUSED(G_io_apdu_buffer);
+                
+                getAddressFromKey(&tmpCtx.publicKeyContext.publicKey,
+                                &tmpCtx.publicKeyContext.address,&sha3);
+                getBase58FromAddres(&tmpCtx.publicKeyContext.address,
+                                G_io_apdu_buffer, &sha2);
+                *tx=34;
+                THROW(0x9000);
+                
                 break;
 
             default:

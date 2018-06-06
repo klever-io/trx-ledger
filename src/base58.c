@@ -1,6 +1,6 @@
 /*******************************************************************************
-*   Ripple Wallet
-*   (c) 2017 Ledger
+*   TRON Ledger
+*   (c) 2018 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -17,116 +17,61 @@
 
 #include "base58.h"
 
-static const unsigned char const BASE58TABLE[] = {
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x8,  0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,
-    0x10, 0xff, 0x11, 0x12, 0x13, 0x14, 0x15, 0xff, 0x16, 0x17, 0x18, 0x19,
-    0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b,
-    0xff, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36,
-    0x37, 0x38, 0x39, 0xff, 0xff, 0xff, 0xff, 0xff};
+/** array of base58 aplhabet letters */
+static const char BASE_58_ALPHABET[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q',
+		'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+		'w', 'x', 'y', 'z' };
 
-static const unsigned char const BASE58ALPHABET[] = {
-    'r', 'p', 's', 'h', 'n', 'a', 'f', '3', '9', 'w', 'B', 'U', 'D', 'N', 'E',
-    'G', 'H', 'J', 'K', 'L', 'M', '4', 'P', 'Q', 'R', 'S', 'T', '7', 'V', 'W',
-    'X', 'Y', 'Z', '2', 'b', 'c', 'd', 'e', 'C', 'g', '6', '5', 'j', 'k', 'm',
-    '8', 'o', 'F', 'q', 'i', '1', 't', 'u', 'v', 'A', 'x', 'y', 'z'};
-
-unsigned char decode_base58(unsigned char WIDE *in, unsigned char length,
-                                unsigned char *out, unsigned char maxoutlen) {
-    unsigned char tmp[164];
-    unsigned char buffer[164];
-    unsigned char i;
-    unsigned char j;
-    unsigned char startAt;
-    unsigned char zeroCount = 0;
-    if (length > sizeof(tmp)) {
-        THROW(INVALID_PARAMETER);
-    }
-    os_memmove(tmp, in, length);
-    for (i = 0; i < length; i++) {
-        if (in[i] > 128) {
-            THROW(EXCEPTION);
-        }
-        tmp[i] = BASE58TABLE[in[i]];
-        if (tmp[i] == 0xff) {
-            THROW(EXCEPTION);
-        }
-    }
-    while ((zeroCount < length) && (tmp[zeroCount] == 0)) {
-        ++zeroCount;
-    }
-    j = length;
-    startAt = zeroCount;
-    while (startAt < length) {
-        unsigned short remainder = 0;
-        unsigned char divLoop;
-        for (divLoop = startAt; divLoop < length; divLoop++) {
-            unsigned short digit256 = (unsigned short)(tmp[divLoop] & 0xff);
-            unsigned short tmpDiv = remainder * 58 + digit256;
-            tmp[divLoop] = (unsigned char)(tmpDiv / 256);
-            remainder = (tmpDiv % 256);
-        }
-        if (tmp[startAt] == 0) {
-            ++startAt;
-        }
-        buffer[--j] = (unsigned char)remainder;
-    }
-    while ((j < length) && (buffer[j] == 0)) {
-        ++j;
-    }
-    length = length - (j - zeroCount);
-    if (maxoutlen < length) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
-    os_memmove(out, buffer + j - zeroCount, length);
-    return length;
+/** encodes in_length bytes from in into base-58, writes the converted bytes to out, stopping when it converts out_length bytes.  */
+unsigned int encode_base_58(const void *in, const unsigned int in_len, char *out, const unsigned int out_len) {
+	return encode_base_x(BASE_58_ALPHABET, sizeof(BASE_58_ALPHABET), in, in_len, out, out_len);
 }
 
-unsigned char encode_base58(unsigned char WIDE *in, unsigned char length,
-                                unsigned char *out, unsigned char maxoutlen) {
-    unsigned char tmp[164];
-    unsigned char buffer[164];
-    unsigned char j;
-    unsigned char startAt;
-    unsigned char zeroCount = 0;
-    if (length > sizeof(tmp)) {
-        THROW(INVALID_PARAMETER);
-    }
-    os_memmove(tmp, in, length);
-    while ((zeroCount < length) && (tmp[zeroCount] == 0)) {
-        ++zeroCount;
-    }
-    j = 2 * length;
-    startAt = zeroCount;
-    while (startAt < length) {
-        unsigned short remainder = 0;
-        unsigned char divLoop;
-        for (divLoop = startAt; divLoop < length; divLoop++) {
-            unsigned short digit256 = (unsigned short)(tmp[divLoop] & 0xff);
-            unsigned short tmpDiv = remainder * 256 + digit256;
-            tmp[divLoop] = (unsigned char)(tmpDiv / 58);
-            remainder = (tmpDiv % 58);
-        }
-        if (tmp[startAt] == 0) {
-            ++startAt;
-        }
-        buffer[--j] = (unsigned char)BASE58ALPHABET[remainder];
-    }
-    while ((j < (2 * length)) && (buffer[j] == BASE58ALPHABET[0])) {
-        ++j;
-    }
-    while (zeroCount-- > 0) {
-        buffer[--j] = BASE58ALPHABET[0];
-    }
-    length = 2 * length - j;
-    if (maxoutlen < length) {
-        THROW(EXCEPTION_OVERFLOW);
-    }
-    os_memmove(out, (buffer + j), length);
-    return length;
+/** encodes in_length bytes from in into the given base, using the given alphabet. writes the converted bytes to out, stopping when it converts out_length bytes. */
+unsigned int encode_base_x(const char * alphabet, const unsigned int alphabet_len, const void * in, const unsigned int in_length, char * out,
+		const unsigned int out_length) {
+	char tmp[64];
+	char buffer[128];
+	unsigned char buffer_ix;
+	unsigned char startAt;
+	unsigned char zeroCount = 0;
+	if (in_length > sizeof(tmp)) {
+		THROW(0x6D11);
+	}
+	os_memmove(tmp, in, in_length);
+	while ((zeroCount < in_length) && (tmp[zeroCount] == 0)) {
+		++zeroCount;
+	}
+	buffer_ix = 2 * in_length;
+	if (buffer_ix > sizeof(buffer)) {
+		THROW(0x6D12);
+	}
+
+	startAt = zeroCount;
+	while (startAt < in_length) {
+		unsigned short remainder = 0;
+		unsigned char divLoop;
+		for (divLoop = startAt; divLoop < in_length; divLoop++) {
+			unsigned short digit256 = (unsigned short) (tmp[divLoop] & 0xff);
+			unsigned short tmpDiv = remainder * 256 + digit256;
+			tmp[divLoop] = (unsigned char) (tmpDiv / alphabet_len);
+			remainder = (tmpDiv % alphabet_len);
+		}
+		if (tmp[startAt] == 0) {
+			++startAt;
+		}
+		buffer[--buffer_ix] = *(alphabet + remainder);
+	}
+	while ((buffer_ix < (2 * in_length)) && (buffer[buffer_ix] == *(alphabet + 0))) {
+		++buffer_ix;
+	}
+	while (zeroCount-- > 0) {
+		buffer[--buffer_ix] = *(alphabet + 0);
+	}
+	const unsigned int true_out_length = (2 * in_length) - buffer_ix;
+	if (true_out_length > out_length) {
+		THROW(0x6D14);
+	}
+	os_memmove(out, (buffer + buffer_ix), true_out_length);
+	return true_out_length;
 }

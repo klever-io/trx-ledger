@@ -1,6 +1,6 @@
 /*******************************************************************************
-*   Ripple Wallet
-*   (c) 2017 Ledger
+*   TRON Ledger
+*   (c) 2018 Ledger
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -18,8 +18,12 @@
 #include "os.h"
 #include "cx.h"
 
-unsigned char decode_base58(unsigned char WIDE *in, unsigned char length,
-                                unsigned char *out, unsigned char maxoutlen);
+#ifndef BASE58_H
+#define BASE58_H
 
-unsigned char encode_base58(unsigned char WIDE *in, unsigned char length,
-                                unsigned char *out, unsigned char maxoutlen);
+unsigned int encode_base_x(const char * alphabet, const unsigned int alphabet_len, const void * in, const unsigned int in_length, char * out,
+		const unsigned int out_length);
+
+unsigned int encode_base_58(const void *in, const unsigned int in_len, char *out, const unsigned int out_len);
+
+#endif
