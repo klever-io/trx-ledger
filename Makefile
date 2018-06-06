@@ -21,7 +21,7 @@ endif
 include $(BOLOS_SDK)/Makefile.defines
 
 APPNAME = Tron
-APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/27'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
+APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
 
 APPVERSION_M=0
 APPVERSION_N=0

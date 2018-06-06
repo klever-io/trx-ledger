@@ -24,10 +24,14 @@ parser.add_argument('--path', help="BIP 32 path to retrieve")
 args = parser.parse_args()
 
 if args.path == None:
-	args.path = "44'/27'/0'/0/0"
+	args.path = "44'/195'/0'/0/0"
 
 donglePath = parse_bip32_path(args.path)
-txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
+# Ask for confirmation
+# txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
+# No confirmation
+txt = "27020000" + '{:02x}'.format(len(donglePath)+1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
+#txt = "E0020000" + '{:02x}'.format(00) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
 print(txt)
 apdu = bytearray.fromhex(txt)
 
@@ -37,7 +41,12 @@ print("-= Tron Ledger =-")
 print("Request Public Key")
 dongle = getDongle(True)
 result = dongle.exchange(apdu)
-print( binascii.hexlify(result))
+size=result[1]
+if size == 34 :
+	print("Address: " + result[1:size].decode())
+else:
+	print("Error... Size: {:d}".format(size))
+
 
 
 
