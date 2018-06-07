@@ -41,11 +41,16 @@ print("-= Tron Ledger =-")
 print("Request Public Key")
 dongle = getDongle(True)
 result = dongle.exchange(apdu)
-size=result[1]
-if size == 34 :
-	print("Address: " + result[1:size].decode())
+size=result[0]
+if size == 65 :
+	print("Public Key: " + result[1:1+size].hex())
 else:
-	print("Error... Size: {:d}".format(size))
+	print("Error... Public Key Size: {:d}".format(size))
+size=result[size+1]
+if size == 34 :
+	print("Address: " + result[66:66+size].decode())
+else:
+	print("Error... Address Size: {:d}".format(size))
 
 
 

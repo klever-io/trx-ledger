@@ -588,19 +588,13 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
 uint32_t set_result_get_publicKey() {
     uint32_t tx = 0;
     uint32_t addressLength = BASE58CHECK_ADDRESS_SIZE;
-    G_io_apdu_buffer[tx++] = CLA;
-    
+    G_io_apdu_buffer[tx++] = 65;
+    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.publicKey.W, 65);
+    tx += 65;
     G_io_apdu_buffer[tx++] = addressLength;
     os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.address58,
                addressLength);
     tx += addressLength;
-    if (tmpCtx.publicKeyContext.getChaincode) {
-        os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.chainCode,
-                   32);
-        tx += 32;
-    }
-
-    // Todo: get public key
     return tx;
 }
 
@@ -689,9 +683,153 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 uint16_t dataLength, volatile unsigned int *flags,
                 volatile unsigned int *tx) {
 
-    PRINTF("To be implemented\n");
-    THROW(0x6a81);
-    
+    UNUSED(tx);
+    /*parserStatus_e txResult;
+    uint256_t bandwidth;
+    if (p1 == P1_FIRST) {
+        tmpCtx.transactionContext.pathLength = workBuffer[0];
+        if ((tmpCtx.transactionContext.pathLength < 0x01) ||
+            (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
+            PRINTF("Invalid path\n");
+            THROW(0x6a80);
+        }
+        workBuffer++;
+        dataLength--;
+        for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
+            tmpCtx.transactionContext.bip32Path[i] =
+                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
+                (workBuffer[2] << 8) | (workBuffer[3]);
+            workBuffer += 4;
+            dataLength -= 4;
+        }
+        dataPresent = false;
+        tokenContext.provisioned = false;
+        initTx(&txContext, &sha3, &tmpContent.txContent, customProcessor, NULL);
+    } else if (p1 != P1_MORE) {
+        THROW(0x6B00);
+    }
+    if (p2 != 0) {
+        THROW(0x6B00);
+    }
+    if (txContext.currentField == TX_RLP_NONE) {
+        PRINTF("Parser not initialized\n");
+        THROW(0x6985);
+    }
+    txResult = processTx(&txContext, workBuffer, dataLength);
+    switch (txResult) {
+    case USTREAM_FINISHED:
+        break;
+    case USTREAM_PROCESSING:
+        THROW(0x9000);
+    case USTREAM_FAULT:
+        THROW(0x6A80);
+    default:
+        PRINTF("Unexpected parser status\n");
+        THROW(0x6A80);
+    }
+
+    // Store the hash
+    cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0,
+            tmpCtx.transactionContext.hash);
+    // If there is a token to process, check if it is well known
+    if (tokenContext.provisioned) {
+        for (i = 0; i < NUM_TOKENS; i++) {
+            tokenDefinition_t *currentToken = PIC(&TOKENS[i]);
+            if (os_memcmp(currentToken->address,
+                          tmpContent.txContent.destination, 20) == 0) {
+                dataPresent = false;
+                decimals = currentToken->decimals;
+                ticker = currentToken->ticker;
+                tmpContent.txContent.destinationLength = 20;
+                os_memmove(tmpContent.txContent.destination,
+                           tokenContext.data + 4 + 12, 20);
+                os_memmove(tmpContent.txContent.value.value,
+                           tokenContext.data + 4 + 32, 32);
+                tmpContent.txContent.value.length = 32;
+                break;
+            }
+        }
+    }
+    // Add address
+    if (tmpContent.txContent.destinationLength != 0) {
+        getEthAddressStringFromBinary(tmpContent.txContent.destination, address,
+                                      &sha3);
+        /*
+        addressSummary[0] = '0';
+        addressSummary[1] = 'x';
+        os_memmove((unsigned char *)(addressSummary + 2), address, 4);
+        os_memmove((unsigned char *)(addressSummary + 6), "...", 3);
+        os_memmove((unsigned char *)(addressSummary + 9), address + 40 - 4, 4);
+        addressSummary[13] = '\0';
+        * /
+
+        fullAddress[0] = '0';
+        fullAddress[1] = 'x';
+        os_memmove((unsigned char *)fullAddress + 2, address, 40);
+        fullAddress[42] = '\0';
+    } else {
+        os_memmove((void *)addressSummary, CONTRACT_ADDRESS,
+                   sizeof(CONTRACT_ADDRESS));
+        strcpy(fullAddress, "Contract");
+    }
+    // Add amount in ethers or tokens
+    convertUint256BE(tmpContent.txContent.value.value,
+                     tmpContent.txContent.value.length, &uint256);
+    tostring256(&uint256, 10, (char *)(G_io_apdu_buffer + 100), 100);
+    i = 0;
+    while (G_io_apdu_buffer[100 + i]) {
+        i++;
+    }
+    adjustDecimals((char *)(G_io_apdu_buffer + 100), i,
+                   (char *)G_io_apdu_buffer, 100, decimals);
+    i = 0;
+    tickerOffset = 0;
+    while (ticker[tickerOffset]) {
+        fullAmount[tickerOffset] = ticker[tickerOffset];
+        tickerOffset++;
+    }
+    while (G_io_apdu_buffer[i]) {
+        fullAmount[tickerOffset + i] = G_io_apdu_buffer[i];
+        i++;
+    }
+    fullAmount[tickerOffset + i] = '\0';
+    // Compute maximum fee
+    convertUint256BE(tmpContent.txContent.gasprice.value,
+                     tmpContent.txContent.gasprice.length, &gasPrice);
+    convertUint256BE(tmpContent.txContent.startgas.value,
+                     tmpContent.txContent.startgas.length, &startGas);
+    mul256(&gasPrice, &startGas, &uint256);
+    tostring256(&uint256, 10, (char *)(G_io_apdu_buffer + 100), 100);
+    i = 0;
+    while (G_io_apdu_buffer[100 + i]) {
+        i++;
+    }
+    adjustDecimals((char *)(G_io_apdu_buffer + 100), i,
+                   (char *)G_io_apdu_buffer, 100, WEI_TO_ETHER);
+    i = 0;
+    tickerOffset = 0;
+    while (ticker[tickerOffset]) {
+        maxFee[tickerOffset] = ticker[tickerOffset];
+        tickerOffset++;
+    }
+    tickerOffset++;
+    while (G_io_apdu_buffer[i]) {
+        maxFee[tickerOffset + i] = G_io_apdu_buffer[i];
+        i++;
+    }
+    maxFee[tickerOffset + i] = '\0';
+
+#if defined(TARGET_BLUE)
+    ui_approval_transaction_blue_init();
+#elif defined(TARGET_NANOS)
+    skipWarning = !dataPresent;
+    ux_step = 0;
+    ux_step_count = 5;
+    UX_DISPLAY(ui_approval_nanos, ui_approval_prepro);
+#endif // #if TARGET_ID
+
+    *flags |= IO_ASYNCH_REPLY;
+    */
 }
 
 
