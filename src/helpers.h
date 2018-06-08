@@ -18,17 +18,10 @@
 #include "os.h"
 #include "cx.h"
 
+#include "parse.h"
+
 #ifndef HELPER_H
 #define HELPER_H
-
-#define ADD_PRE_FIX_STRING "T"
-#define ADDRESS_SIZE 21
-#define BASE58CHECK_ADDRESS_SIZE 34
-#define BASE58CHECK_PK_SIZE 64
-
-#define DROP 1000000L
-#define ADD_PRE_FIX_BYTE_MAINNET 0x41
-#define MAX_RAW_TX 200
 
 
 void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *out,

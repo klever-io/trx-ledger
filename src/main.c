@@ -32,6 +32,8 @@
 #include "u2f_service.h"
 #include "u2f_transport.h"
 
+#include "parse.h"
+
 volatile unsigned char u2fMessageBuffer[U2F_MAX_MESSAGE_SIZE];
 
 extern void USB_power_U2F(unsigned char enabled, unsigned char fido);
@@ -43,8 +45,6 @@ bagl_element_t tmp_element;
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 uint32_t set_result_get_publicKey(void);
-
-#define MAX_BIP32_PATH 10
 
 
 // Define command events
@@ -70,34 +70,12 @@ uint32_t set_result_get_publicKey(void);
 
 static const uint8_t const SIGN_PREFIX[] = {0x53, 0x54, 0x58, 0x00};
 
-typedef struct publicKeyContext_t {
-    cx_ecfp_public_key_t publicKey;
-    uint8_t address[ADDRESS_SIZE];
-    uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
-    uint8_t chainCode[32]; 
-    bool getChaincode;
-} publicKeyContext_t;
 
-typedef struct transactionContext_t {
-    cx_curve_t curve;
-    uint8_t pathLength;
-    uint32_t bip32Path[MAX_BIP32_PATH];
-    uint8_t rawTx[MAX_RAW_TX];
-    uint32_t rawTxLength;
-} transactionContext_t;
 
 union {
     publicKeyContext_t publicKeyContext;
     transactionContext_t transactionContext;
 } tmpCtx;
-
-typedef struct txContent_t {
-    uint64_t amount;
-    uint64_t bandwidth;
-    uint8_t account[ADDRESS_SIZE];
-    uint8_t destination[ADDRESS_SIZE];
-} txContent_t;
-
 txContent_t txContent;
 
 cx_sha3_t sha3;
@@ -684,7 +662,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    /*parserStatus_e txResult;
+    /*
+    parserStatus_e txResult;
     uint256_t bandwidth;
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
@@ -702,15 +681,18 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             workBuffer += 4;
             dataLength -= 4;
         }
-        dataPresent = false;
-        tokenContext.provisioned = false;
-        initTx(&txContext, &sha3, &tmpContent.txContent, customProcessor, NULL);
+        
     } else if (p1 != P1_MORE) {
         THROW(0x6B00);
     }
     if (p2 != 0) {
         THROW(0x6B00);
     }
+
+    if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+        THROW(0x6A80);
+    }
+    
     if (txContext.currentField == TX_RLP_NONE) {
         PRINTF("Parser not initialized\n");
         THROW(0x6985);
@@ -846,9 +828,12 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(flags);
     //Add info to buffer
     G_io_apdu_buffer[0] = 0x00;
-    G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
+    /*G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
-    G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
+    G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;*/
+    G_io_apdu_buffer[1] = 0x01;
+    G_io_apdu_buffer[2] = 0x00;
+    G_io_apdu_buffer[3] = 0x18;
     *tx = 4;        // Set return size
     THROW(0x9000);  //Return OK
 }

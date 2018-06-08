@@ -31,7 +31,6 @@ donglePath = parse_bip32_path(args.path)
 # txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
 # No confirmation
 txt = "27020000" + '{:02x}'.format(len(donglePath)+1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
-#txt = "E0020000" + '{:02x}'.format(00) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
 print(txt)
 apdu = bytearray.fromhex(txt)
 
