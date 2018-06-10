@@ -28,9 +28,9 @@ if args.path == None:
 
 donglePath = parse_bip32_path(args.path)
 # Ask for confirmation
-# txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
+# txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
 # No confirmation
-txt = "27020000" + '{:02x}'.format(len(donglePath)+1) + '{:02x}'.format( int(len(donglePath) / 4)) + donglePath
+txt = "27020000" + '{:02x}'.format(len(donglePath)+1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
 print(txt)
 apdu = bytearray.fromhex(txt)
 
