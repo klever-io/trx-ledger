@@ -52,7 +52,6 @@ uint32_t set_result_get_publicKey(void);
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
-#define INS_TEST_ADDRESS 0x07  // Test Address from PK
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
 #define P2_NO_CHAINCODE 0x00
@@ -662,9 +661,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    /*
+    uint32_t i;
+    
     parserStatus_e txResult;
-    uint256_t bandwidth;
+    
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
         if ((tmpCtx.transactionContext.pathLength < 0x01) ||
@@ -689,129 +689,28 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         THROW(0x6B00);
     }
 
+    /*
+    Parse will not be available for the first version
+    //Parse Raw transaction dada
     if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
-        THROW(0x6A80);
-    }
-    
-    if (txContext.currentField == TX_RLP_NONE) {
-        PRINTF("Parser not initialized\n");
-        THROW(0x6985);
-    }
-    txResult = processTx(&txContext, workBuffer, dataLength);
-    switch (txResult) {
-    case USTREAM_FINISHED:
-        break;
-    case USTREAM_PROCESSING:
-        THROW(0x9000);
-    case USTREAM_FAULT:
-        THROW(0x6A80);
-    default:
         PRINTF("Unexpected parser status\n");
         THROW(0x6A80);
-    }
+    }*/
 
     // Store the hash
-    cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0,
-            tmpCtx.transactionContext.hash);
-    // If there is a token to process, check if it is well known
-    if (tokenContext.provisioned) {
-        for (i = 0; i < NUM_TOKENS; i++) {
-            tokenDefinition_t *currentToken = PIC(&TOKENS[i]);
-            if (os_memcmp(currentToken->address,
-                          tmpContent.txContent.destination, 20) == 0) {
-                dataPresent = false;
-                decimals = currentToken->decimals;
-                ticker = currentToken->ticker;
-                tmpContent.txContent.destinationLength = 20;
-                os_memmove(tmpContent.txContent.destination,
-                           tokenContext.data + 4 + 12, 20);
-                os_memmove(tmpContent.txContent.value.value,
-                           tokenContext.data + 4 + 32, 32);
-                tmpContent.txContent.value.length = 32;
-                break;
-            }
-        }
-    }
-    // Add address
-    if (tmpContent.txContent.destinationLength != 0) {
-        getEthAddressStringFromBinary(tmpContent.txContent.destination, address,
-                                      &sha3);
-        /*
-        addressSummary[0] = '0';
-        addressSummary[1] = 'x';
-        os_memmove((unsigned char *)(addressSummary + 2), address, 4);
-        os_memmove((unsigned char *)(addressSummary + 6), "...", 3);
-        os_memmove((unsigned char *)(addressSummary + 9), address + 40 - 4, 4);
-        addressSummary[13] = '\0';
-        * /
-
-        fullAddress[0] = '0';
-        fullAddress[1] = 'x';
-        os_memmove((unsigned char *)fullAddress + 2, address, 40);
-        fullAddress[42] = '\0';
-    } else {
-        os_memmove((void *)addressSummary, CONTRACT_ADDRESS,
-                   sizeof(CONTRACT_ADDRESS));
-        strcpy(fullAddress, "Contract");
-    }
-    // Add amount in ethers or tokens
-    convertUint256BE(tmpContent.txContent.value.value,
-                     tmpContent.txContent.value.length, &uint256);
-    tostring256(&uint256, 10, (char *)(G_io_apdu_buffer + 100), 100);
-    i = 0;
-    while (G_io_apdu_buffer[100 + i]) {
-        i++;
-    }
-    adjustDecimals((char *)(G_io_apdu_buffer + 100), i,
-                   (char *)G_io_apdu_buffer, 100, decimals);
-    i = 0;
-    tickerOffset = 0;
-    while (ticker[tickerOffset]) {
-        fullAmount[tickerOffset] = ticker[tickerOffset];
-        tickerOffset++;
-    }
-    while (G_io_apdu_buffer[i]) {
-        fullAmount[tickerOffset + i] = G_io_apdu_buffer[i];
-        i++;
-    }
-    fullAmount[tickerOffset + i] = '\0';
-    // Compute maximum fee
-    convertUint256BE(tmpContent.txContent.gasprice.value,
-                     tmpContent.txContent.gasprice.length, &gasPrice);
-    convertUint256BE(tmpContent.txContent.startgas.value,
-                     tmpContent.txContent.startgas.length, &startGas);
-    mul256(&gasPrice, &startGas, &uint256);
-    tostring256(&uint256, 10, (char *)(G_io_apdu_buffer + 100), 100);
-    i = 0;
-    while (G_io_apdu_buffer[100 + i]) {
-        i++;
-    }
-    adjustDecimals((char *)(G_io_apdu_buffer + 100), i,
-                   (char *)G_io_apdu_buffer, 100, WEI_TO_ETHER);
-    i = 0;
-    tickerOffset = 0;
-    while (ticker[tickerOffset]) {
-        maxFee[tickerOffset] = ticker[tickerOffset];
-        tickerOffset++;
-    }
-    tickerOffset++;
-    while (G_io_apdu_buffer[i]) {
-        maxFee[tickerOffset + i] = G_io_apdu_buffer[i];
-        i++;
-    }
-    maxFee[tickerOffset + i] = '\0';
-
+    //cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0,
+    //        tmpCtx.transactionContext.hash);
+  
 #if defined(TARGET_BLUE)
     ui_approval_transaction_blue_init();
 #elif defined(TARGET_NANOS)
-    skipWarning = !dataPresent;
     ux_step = 0;
     ux_step_count = 5;
     UX_DISPLAY(ui_approval_nanos, ui_approval_prepro);
 #endif // #if TARGET_ID
 
     *flags |= IO_ASYNCH_REPLY;
-    */
+
 }
 
 
@@ -828,12 +727,9 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(flags);
     //Add info to buffer
     G_io_apdu_buffer[0] = 0x00;
-    /*G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
+    G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
-    G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;*/
-    G_io_apdu_buffer[1] = 0x01;
-    G_io_apdu_buffer[2] = 0x00;
-    G_io_apdu_buffer[3] = 0x18;
+    G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
     *tx = 4;        // Set return size
     THROW(0x9000);  //Return OK
 }
@@ -874,22 +770,6 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
-                break;
-
-             case INS_TEST_ADDRESS:
-                
-                //Load Public key
-                os_memmove(&tmpCtx.publicKeyContext.publicKey.W,G_io_apdu_buffer+2,65);
-
-                UNUSED(G_io_apdu_buffer);
-                
-                getAddressFromKey(&tmpCtx.publicKeyContext.publicKey,
-                                &tmpCtx.publicKeyContext.address,&sha3);
-                getBase58FromAddres(&tmpCtx.publicKeyContext.address,
-                                G_io_apdu_buffer, &sha2);
-                *tx=BASE58CHECK_ADDRESS_SIZE;
-                THROW(0x9000);
-                
                 break;
 
             default:

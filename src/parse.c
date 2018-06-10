@@ -17,57 +17,17 @@
 
 #include "parse.h"
 
-#define STI_UINT16 0x01
-#define STI_UINT32 0x02
-#define STI_AMOUNT 0x06
-#define STI_VL 0x07
-#define STI_ACCOUNT 0x08
-
-
-parserStatus_e parseTxInternal(uint8_t *data, uint32_t length,
-                               txContent_t *context) {
-    uint32_t offset = 0;
-    parserStatus_e result = USTREAM_FAULT;
-    while (offset != length) {
-        if (offset > length) {
-            goto error;
-        }
-        uint8_t dataType = data[offset] >> 4;
-        switch (dataType) {
-        case STI_UINT16:
-            result = processUint16(data, length, context, &offset);
-            break;
-        case STI_UINT32:
-            result = processUint32(data, length, context, &offset);
-            break;
-        case STI_AMOUNT:
-            result = processAmount(data, length, context, &offset);
-            break;
-        case STI_VL:
-            result = processVl(data, length, context, &offset);
-            break;
-        case STI_ACCOUNT:
-            result = processAccount(data, length, context, &offset);
-            break;
-        default:
-            goto error;
-        }
-        if (result != USTREAM_FINISHED) {
-            goto error;
-        }
-        result = USTREAM_FAULT;
-    }
-    result = USTREAM_FINISHED;
-error:
-    return result;
-}
+#define PB_TYPE 0x07
+#define PB_FIELD_R 0x03
+#define PB_VARIANT_MASK 0x80
 
 parserStatus_e parseTx(uint8_t *data, uint32_t length, txContent_t *context) {
-    parserStatus_e result;
+    parserStatus_e result = USTREAM_FAULT;
     BEGIN_TRY {
         TRY {
             os_memset(context, 0, sizeof(txContent_t));
-            result = parseTxInternal(data, length, context);
+            PRINTF("Parse transacation will not be available on first release\n");
+            THROW(0x6A80);
         }
         CATCH_OTHER(e) {
             result = USTREAM_FAULT;
