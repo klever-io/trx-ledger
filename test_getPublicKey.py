@@ -47,7 +47,7 @@ else:
 	print("Error... Public Key Size: {:d}".format(size))
 size=result[size+1]
 if size == 34 :
-	print("Address: " + result[66:66+size].decode())
+	print("Address: " + result[67:67+size].decode())
 else:
 	print("Error... Address Size: {:d}".format(size))
 
