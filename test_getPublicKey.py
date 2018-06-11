@@ -31,7 +31,6 @@ donglePath = parse_bip32_path(args.path)
 # txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
 # No confirmation
 txt = "27020000" + '{:02x}'.format(len(donglePath)+1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
-print(txt)
 apdu = bytearray.fromhex(txt)
 
 
@@ -48,6 +47,8 @@ else:
 size=result[size+1]
 if size == 34 :
 	print("Address: " + result[67:67+size].decode())
+	if (result[67:67+size].decode()=="TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH"):
+		print("Address match with test case!")
 else:
 	print("Error... Address Size: {:d}".format(size))
 
