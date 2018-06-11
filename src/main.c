@@ -613,12 +613,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
     
     // Get private key
-    tmpCtx.publicKeyContext.getChaincode = (p2Chain == P2_CHAINCODE);
     os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, bip32PathLength,
-                               privateKeyData,
-                               (tmpCtx.publicKeyContext.getChaincode
-                                    ? tmpCtx.publicKeyContext.chainCode
-                                    : NULL));
+                               privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &tmpCtx.publicKeyContext.publicKey,
@@ -631,8 +627,9 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     // Get address from PK
     getAddressFromKey(&tmpCtx.publicKeyContext.publicKey,
                                 tmpCtx.publicKeyContext.address,&sha3);
+                                
     // Get Base58
-    getBase58FromAddres(&tmpCtx.publicKeyContext.address,
+    getBase58FromAddres(tmpCtx.publicKeyContext.address,
                                 tmpCtx.publicKeyContext.address58, &sha2);
     
     os_memmove(fullAddress,tmpCtx.publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
@@ -696,6 +693,13 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         PRINTF("Unexpected parser status\n");
         THROW(0x6A80);
     }*/
+    
+    cx_sha256_init(&sha2);
+    cx_hash(&sha2, CX_LAST, workBuffer, 133, tmpCtx.transactionContext.hash);
+    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.hash, 32);
+    *tx=32;
+    THROW(0x9000);  //Return OK
+
 
     // Store the hash
     //cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0,
