@@ -27,7 +27,7 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
     cx_hash((cx_hash_t *)sha3Context, CX_LAST, publicKey->W + 1, 64,
             hashAddress);
     
-    os_memmove(address+1, hashAddress + 11, 21);
+    os_memmove(address, hashAddress + 11, 21);
     address[0] = ADD_PRE_FIX_BYTE_MAINNET;
     
 }
