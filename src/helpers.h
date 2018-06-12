@@ -30,5 +30,9 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *out,
 void getBase58FromAddres(uint8_t *address, uint8_t *out,
                                 cx_sha256_t* sha2);
 
+void transactionHash(uint8_t *raw, uint16_t dataLength,
+                        uint8_t *out, cx_sha256_t* sha2);
+
+void signTransaction(transactionContext_t *transactionContext);
 
 #endif

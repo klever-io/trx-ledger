@@ -491,9 +491,26 @@ unsigned int ui_address_nanos_button(unsigned int button_mask,
 #endif // #if defined(TARGET_NANOS)
 
 unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
+    uint32_t tx = 0;
     
-    // Todo send transaction
+    signTransaction(&tmpCtx.transactionContext);
+    // send to output buffer
+    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
+    tx=tmpCtx.transactionContext.signatureLength;
 
+#ifdef HAVE_U2F
+    if (fidoActivated) {
+        u2f_proxy_response((u2f_service_t *)&u2fService, tx);
+    } else {
+        // Send back the response, do not restart the event loop
+        io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    }
+#else  // HAVE_U2F
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+#endif // HAVE_U2F
+    // Display back the original UX
+    ui_idle();
     return 0; // do not redraw the widget
 }
 
@@ -686,6 +703,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         THROW(0x6B00);
     }
 
+    // Load raw Data
+    os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
+    tmpCtx.transactionContext.rawTxLength = dataLength;
+    // get Hash
+    transactionHash(tmpCtx.transactionContext.rawTx, tmpCtx.transactionContext.rawTxLength,
+                        tmpCtx.transactionContext.hash, &sha2);
     /*
     Parse will not be available for the first version
     //Parse Raw transaction dada
@@ -693,18 +716,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         PRINTF("Unexpected parser status\n");
         THROW(0x6A80);
     }*/
-    
-    cx_sha256_init(&sha2);
-    cx_hash(&sha2, CX_LAST, workBuffer, 133, tmpCtx.transactionContext.hash);
-    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.hash, 32);
-    *tx=32;
+    //Sign transaction
+    signTransaction(&tmpCtx.transactionContext);
+    // send to output buffer
+    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
+    *tx=tmpCtx.transactionContext.signatureLength;
     THROW(0x9000);  //Return OK
 
-
-    // Store the hash
-    //cx_hash((cx_hash_t *)&sha3, CX_LAST, tmpCtx.transactionContext.hash, 0,
-    //        tmpCtx.transactionContext.hash);
-  
+    // For further confirmation screen
 #if defined(TARGET_BLUE)
     ui_approval_transaction_blue_init();
 #elif defined(TARGET_NANOS)

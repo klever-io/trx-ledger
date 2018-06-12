@@ -11,6 +11,7 @@
 #define ADDRESS_SIZE 21
 #define BASE58CHECK_ADDRESS_SIZE 34
 #define BASE58CHECK_PK_SIZE 64
+#define HASH_SIZE 32
 
 #define DROP 1000000L
 #define ADD_PRE_FIX_BYTE_MAINNET 0x41
@@ -43,7 +44,10 @@ typedef struct transactionContext_t {
     uint8_t pathLength;
     uint32_t bip32Path[MAX_BIP32_PATH];
     uint8_t rawTx[MAX_RAW_TX];
-    uint32_t rawTxLength;
+    uint16_t rawTxLength;
+    uint8_t hash[HASH_SIZE];
+    uint8_t signature[MAX_RAW_TX];
+    uint8_t signatureLength;
 } transactionContext_t;
 
 parserStatus_e parseTx(uint8_t *data, uint32_t length, txContent_t *context);

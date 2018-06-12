@@ -52,3 +52,46 @@ void getBase58FromAddres(uint8_t *address, uint8_t *out,
     
 }
 
+void transactionHash(uint8_t *raw, uint16_t dataLength,
+                        uint8_t *out, cx_sha256_t* sha2) {
+   
+    cx_sha256_init(sha2);
+    cx_hash(sha2, CX_LAST, raw, dataLength, out);    
+}
+
+void signTransaction(transactionContext_t *transactionContext) {
+   
+    uint8_t privateKeyData[32];
+    cx_ecfp_private_key_t privateKey;
+    uint8_t rLength, sLength, rOffset, sOffset;
+    uint8_t signature[100];
+    unsigned int info = 0;
+
+    // Get Private key from BIP32 path
+    os_perso_derive_node_bip32(
+        CX_CURVE_256K1, transactionContext->bip32Path,
+        transactionContext->pathLength, privateKeyData, NULL);
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    // Sign transaction hash
+    cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
+                      transactionContext->hash, sizeof(transactionContext->hash),
+                      signature, &info);
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    // recover signature
+    rLength = signature[3];
+    sLength = signature[4 + rLength + 1];
+    rOffset = (rLength == 33 ? 1 : 0);
+    sOffset = (sLength == 33 ? 1 : 0);
+    os_memmove(transactionContext->signature, signature + 4 + rOffset, 32);
+    os_memmove(transactionContext->signature + 32, signature + 4 + rLength + 2 + sOffset, 32);
+    transactionContext->signature[64] = 0x00;
+    if (info & CX_ECCINFO_PARITY_ODD) {
+        transactionContext->signature[64] |= 0x01;
+    }
+    transactionContext->signatureLength = 65
+    ;
+
+    return;
+
+}
