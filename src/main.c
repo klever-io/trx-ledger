@@ -613,7 +613,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
         PRINTF("Invalid path\n");
-        THROW(0x6a80);
+        THROW(0x6A80);
     }
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) {
         THROW(0x6B00);
@@ -711,7 +711,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                         tmpCtx.transactionContext.hash, &sha2);
     /*
     Parse will not be available for the first version
-    //Parse Raw transaction dada
+    //Parse Raw transaction data
     if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
         PRINTF("Unexpected parser status\n");
         THROW(0x6A80);
