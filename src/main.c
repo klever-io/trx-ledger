@@ -79,11 +79,8 @@ txContent_t txContent;
 
 cx_sha3_t sha3;
 cx_sha256_t sha2;
-volatile char addressSummary[ADDRESS_SIZE+1];
 volatile char fullAddress[BASE58CHECK_ADDRESS_SIZE+1]; 
-volatile char fullAmount[50]; 
-volatile char maxBandwidth[50];   
-volatile bool dataPresent;
+volatile char fullAmount[50];
 
 bagl_element_t tmp_element;
 
@@ -292,10 +289,6 @@ unsigned int ui_address_nanos_button(unsigned int button_mask,
 
 #if defined(TARGET_NANOS)
 // Show transactions details for approval
-const char *const ui_approval_details[][2] = {
-    {"Amount", fullAmount}, {"Address", addressSummary},
-    {"Bandwidth", maxBandwidth},
-};
 const bagl_element_t ui_approval_nanos[] = {
     // type                               userid    x    y   w    h  str rad
     // fill      fg        bg      fid iid  txt   touchparams...       ]
@@ -352,65 +345,67 @@ const bagl_element_t ui_approval_nanos[] = {
 
     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     NULL, //"Amount",
+     "Amount",
      0,
      0,
      0,
      NULL,
      NULL,
      NULL},
-    {{BAGL_LABELINE, 0x12, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     NULL, //(char *)fullAmount,
+     (char *)fullAmount,
      0,
      0,
      0,
      NULL,
      NULL,
      NULL},
-
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Send To",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x03, 16, 26, 96, 12, 0, 0, 0, 0xFFFFFF, 0x000000,
+     BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+    (char *)fullAddress,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+  
 };
 
 /*
  ux_step 0: confirm
          1: amount
          2: address
-         3: [sourcetag]
-         4: [destinationtag]
-         5: fees
 */
 unsigned int ui_approval_prepro(const bagl_element_t *element) {
     unsigned int display = 1;
     if (element->component.userid > 0) {
-        // display the meta element when at least bigger
-        display = (ux_step == element->component.userid - 1) ||
-                  (element->component.userid >= 0x02 && ux_step >= 1);
+        display = (ux_step == element->component.userid - 1);
         if (display) {
             switch (element->component.userid) {
             case 0x01:
                 UX_CALLBACK_SET_INTERVAL(2000);
                 break;
             case 0x02:
-            case 0x12:
-                os_memmove(&tmp_element, element, sizeof(bagl_element_t));
-                display = ux_step - 1;
-                switch (display) {
-                case 0: // amount
-                case 1: // address
-                display_detail:
-                    tmp_element.text =
-                        ui_approval_details[display]
-                                           [(element->component.userid) >> 4];
-                    break;
-                case 2: // fees
-                    display = 3;
-                    goto display_detail;
-                }
-
-                UX_CALLBACK_SET_INTERVAL(MAX(
+            UX_CALLBACK_SET_INTERVAL(MAX(
                     3000,
-                    1000 + bagl_label_roundtrip_duration_ms(&tmp_element, 7)));
-                return &tmp_element;
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
             }
         }
     }
@@ -497,6 +492,8 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     // send to output buffer
     os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
     tx=tmpCtx.transactionContext.signatureLength;
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
 
 #ifdef HAVE_U2F
     if (fidoActivated) {
@@ -676,7 +673,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     UNUSED(tx);
     uint32_t i;
-    
     parserStatus_e txResult;
     
     if (p1 == P1_FIRST) {
@@ -709,26 +705,24 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // get Hash
     transactionHash(tmpCtx.transactionContext.rawTx, tmpCtx.transactionContext.rawTxLength,
                         tmpCtx.transactionContext.hash, &sha2);
-    /*
-    Parse will not be available for the first version
     //Parse Raw transaction dada
     if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
         PRINTF("Unexpected parser status\n");
         THROW(0x6A80);
-    }*/
-    //Sign transaction
-    signTransaction(&tmpCtx.transactionContext);
-    // send to output buffer
-    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
-    *tx=tmpCtx.transactionContext.signatureLength;
-    THROW(0x9000);  //Return OK
+    }
+    print_amount(txContent.amount,fullAmount,sizeof(fullAmount), "TRX \0", DROP_DIG);
+    getBase58FromAddres(txContent.destination,
+                                fullAddress, &sha2);
+    os_memmove(fullAddress + 5, "...", 3);
+    os_memmove(fullAddress + 8, fullAddress + ADDRESS_SIZE - 4, 4);
+    fullAddress[12]='\0';
 
     // For further confirmation screen
 #if defined(TARGET_BLUE)
     ui_approval_transaction_blue_init();
 #elif defined(TARGET_NANOS)
     ux_step = 0;
-    ux_step_count = 5;
+    ux_step_count = 3;
     UX_DISPLAY(ui_approval_nanos, ui_approval_prepro);
 #endif // #if TARGET_ID
 

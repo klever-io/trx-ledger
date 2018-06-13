@@ -13,9 +13,15 @@
 #define BASE58CHECK_PK_SIZE 64
 #define HASH_SIZE 32
 
-#define DROP 1000000L
+#define DROP_DIG 6
 #define ADD_PRE_FIX_BYTE_MAINNET 0x41
 #define MAX_RAW_TX 200
+
+#define PB_TYPE 0x07
+#define PB_FIELD_R 0x03
+#define PB_VARIANT_MASK 0x80
+#define PB_BASE128 0x80
+#define PB_BASE128DATA 0x7F
 
 
 typedef enum parserStatus_e {
@@ -29,6 +35,7 @@ typedef struct txContent_t {
     uint64_t bandwidth;
     uint8_t account[ADDRESS_SIZE];
     uint8_t destination[ADDRESS_SIZE];
+    uint8_t contractType;
 } txContent_t;
 
 typedef struct publicKeyContext_t {
@@ -50,49 +57,10 @@ typedef struct transactionContext_t {
     uint8_t signatureLength;
 } transactionContext_t;
 
-parserStatus_e parseTx(uint8_t *data, uint32_t length, txContent_t *context);
+parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 
+unsigned short print_amount(uint64_t amount, uint8_t *out,
+                                uint32_t outlen, uint8_t *txt, uint8_t drop);
 
 
 #endif
-
-
-/*
-# https://developers.google.com/protocol-buffers/docs/encoding#structure
-# How to decode transaction Message
-# Message
-# 0a0248f12208df3e5ffe7c9762a140d881dedabd2c5a67080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a15a0a99930dbebff557f9efc0b9aaf3ba26e8f65231b1215a04f560eb4182ca53757f905609e226e96e8e1a80c18c0843d708cbcb5a5be2c
-# T: 0a -> 1 | 010 -> type 2 Length-delimited id 1
-# 02-48f1   length 2 BlockBytes 48f1
-# 22    -> 100 | 010 -> type 2 Length-delimited id 4
-# 08-df3e5ffe7c9762a1  length 8 BlockHash df3e5ffe7c9762a1  
-# 40    -> 1000 | 000 -> type 0 Variant id 8
-## Look for bin 1XXX-XXXX, continue, 0XXX-XXXX, ends
-## d8 81 de da bd 2c
-## 58 01 5E 5A 3D 2c
-## 128^0 128^1 128^2 28^3 28^4 28^5 = 1528393335000
-# 5a -> 1011 | 010 -> type 2 Length-delimited id 11
-# 67-080112630a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a15a0a99930dbebff557f9efc0b9aaf3ba26e8f65231b1215a04f560eb4182ca53757f905609e226e96e8e1a80c18c0843d
-## 08 -> 1 | 000 -> type 0 Variant id 1
-## 01   ContractType TransferContract = 1;
-## 12 -> 10 | 010 -> type 2 Length-delimited id 2
-## 63-0a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412320a15a0a99930dbebff557f9efc0b9aaf3ba26e8f65231b1215a04f560eb4182ca53757f905609e226e96e8e1a80c18c0843d
-### 0a -> 1 | 010 -> type 2 Length-delimited id 1
-### 2d 747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e7472616374
-###     type.googleapis.com/protocol.TransferContract
-### 12 -> 10 | 010 -> type 2 Length-delimited id 2
-### 32 0a15a0a99930dbebff557f9efc0b9aaf3ba26e8f65231b1215a04f560eb4182ca53757f905609e226e96e8e1a80c18c0843d
-#### 0a -> 1 | 010 -> type 2 Length-delimited id 1
-#### 15-a0a99930dbebff557f9efc0b9aaf3ba26e8f65231b
-#### 12 -> 10 | 010 -> type 2 Length-delimited id 2
-#### 15-a04f560eb4182ca53757f905609e226e96e8e1a80c
-#### 18 -> 1 | 010 -> type 2 Length-delimited id 1
-#### c0843d
-##### 80 04 3d
-##### 128^0 128^1 128^2  = 1000000
-# 70 -> 1110 | 000 -> type 0 Variant id 14
-## Look for bin 1XXX-XXXX, continue, 0XXX-XXXX, ends
-## 8c bc b5 a5 be 2c
-## 0C 3C 35 25 3E 2c 
-## 128^0 128^1 128^2 28^3 28^4 28^5 = 1528549957132
-*/
