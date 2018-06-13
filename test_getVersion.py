@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
 from ledgerblue.comm import getDongle
-from ledgerblue.commException import CommException
-import argparse
-import struct
-import binascii
 
 print("-= Tron Ledger =-")
 print("Request app Version")

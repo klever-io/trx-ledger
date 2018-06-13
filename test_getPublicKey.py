@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 from ledgerblue.comm import getDongle
-from ledgerblue.commException import CommException
 import argparse
 import struct
-import binascii
 
 def parse_bip32_path(path):
 	if len(path) == 0:
