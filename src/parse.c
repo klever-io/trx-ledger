@@ -40,6 +40,8 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
             p+=2; if (p>dataLength) THROW(0x6a80);  
             switch (context->contractType){
                 case 1:
+                    context->tokenNameLength=4;
+                    os_memmove(context->tokenName,"TRX\0",context->tokenNameLength);
                     // address 1
                     if ((*(data+p)>>PB_FIELD_R)!=1 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
                     p++;if (p>dataLength) THROW(0x6a80); 
@@ -69,8 +71,46 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                                                 +70; //signature length
                     // DONE
                 break;
+                case 2:
+                    // Token Name
+                    if ((*(data+p)>>PB_FIELD_R)!=1 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
+                    p++;if (p>dataLength) THROW(0x6a80); 
+                    context->tokenNameLength=*(data+p);
+                    p++;if (p+context->tokenNameLength>dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName,data+p,context->tokenNameLength);
+                    context->tokenName[context->tokenNameLength]='\0';
+                    p+=context->tokenNameLength;if (p>dataLength) THROW(0x6a80); 
+                    // address 1
+                    if ((*(data+p)>>PB_FIELD_R)!=2 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
+                    p++;if (p>dataLength) THROW(0x6a80); 
+                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
+                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+p,ADDRESS_SIZE);
+                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    // address 2
+                    if ((*(data+p)>>PB_FIELD_R)!=3 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
+                    p++;if (p>dataLength) THROW(0x6a80); 
+                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
+                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->destination,data+p,ADDRESS_SIZE);
+                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    // Amount 
+                    if ((*(data+p)>>PB_FIELD_R)!=4 || (*(data+p)&PB_TYPE)!=0 ) THROW(0x6a80);
+                    p++;if (p>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    while(p<dataLength){
+                        context->amount += ((uint64_t)( (*(data+p))& PB_BASE128DATA) << b128) ;
+                        if ((*(data+p)&PB_BASE128)==0) break;
+                        p++; if (p>dataLength) THROW(0x6a88);
+                        b128+=7;
+                    }
+                    // Bandwidth estimation
+                    context->bandwidth = dataLength  // raw data length
+                                                +70; //signature length
+                    // DONE
+                break;
                 default:
-                    THROW(0x6a80);
+                    result = USTREAM_FINISHED;
             }
             result = USTREAM_FINISHED;
         }
@@ -149,7 +189,7 @@ bool adjustDecimals(char *src, uint32_t srcLength, char *target,
     return true;
 }
 unsigned short print_amount(uint64_t amount, uint8_t *out,
-                                uint32_t outlen, uint8_t *txt, uint8_t drop) {
+                                uint32_t outlen, uint8_t drop) {
     char tmp[20];
     char tmp2[25];
     uint32_t numDigits = 0, i;
@@ -167,8 +207,7 @@ unsigned short print_amount(uint64_t amount, uint8_t *out,
         base /= 10;
     }
     tmp[i] = '\0';
-    strcpy(tmp2, txt);
-    adjustDecimals(tmp, i, tmp2 + 4, 25, drop);
+    adjustDecimals(tmp, i, tmp2, 25, drop);
     if (strlen(tmp2) < outlen - 1) {
         strcpy(out, tmp2);
     } else {

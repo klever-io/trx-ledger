@@ -35,6 +35,8 @@ typedef struct txContent_t {
     uint64_t bandwidth;
     uint8_t account[ADDRESS_SIZE];
     uint8_t destination[ADDRESS_SIZE];
+    uint8_t tokenName[32];
+    uint8_t tokenNameLength;
     uint8_t contractType;
 } txContent_t;
 
@@ -60,7 +62,6 @@ typedef struct transactionContext_t {
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
-                                uint32_t outlen, uint8_t *txt, uint8_t drop);
-
+                                uint32_t outlen, uint8_t drop);
 
 #endif
