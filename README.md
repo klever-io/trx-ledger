@@ -68,7 +68,7 @@ pip install ledgerblue
 python -m ledgerblue.loadApp \
 --targetId 0x31100003 \
 --fileName bin/app.hex \
---icon `docker run --rm -v "$(pwd)":/trx_ledger -w /trx_ledger ledger-chain python /opt/bolos/nanos-secure-sdk/icon.py icon.gif hexbitmaponly` \
+--icon `docker run --rm -v "$(pwd)":/trx_ledger -w /trx_ledger ledger-chain sh -c 'python $BOLOS_SDK/icon.py icon.gif hexbitmaponly'` \
 --curve secp256k1 \
 --path "44'/195'" \
 --apdu \
