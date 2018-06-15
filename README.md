@@ -1,4 +1,3 @@
-
 # Test Case
 
 Test cases are based on the following seed:
@@ -28,7 +27,7 @@ cd trx-ledger
 ## Docker toolchain image
 In order to make compiling as eas as possible you can make use of a docker image containing all the necessary compilers and the [nanos-secure-sdk](https://github.com/LedgerHQ/nanos-secure-sdk).
 
-Inside the repository directory you'll find a Dockerfile for building a toolchain image.
+Make sure you have [Docker](https://www.docker.com/community-edition) installed.
 
 ### Step 1 - Build the image:
 ```bash
@@ -69,13 +68,22 @@ pip install ledgerblue
 python -m ledgerblue.loadApp \
 --targetId 0x31100003 \
 --fileName bin/app.hex \
---icon `docker run --rm -v "$(pwd)":/trx_ledger -w /trx_ledger ledger-chain python /opt/bolos/nanos-secure-sdk/icon.py icon.gif hexbitmaponly` \
+--icon `docker run --rm -v "$(pwd)":/trx_ledger -w /trx_ledger ledger-chain sh -c 'python $BOLOS_SDK/icon.py icon.gif hexbitmaponly'` \
 --curve secp256k1 \
---path "44'/195'/0'" \
+--path "44'/195'" \
 --apdu \
 --appName "Tron" \
+--appVersion "0.0.1b" \
+--appFlags 0x40 \
 --delete \
---tlv
+--dataSize `cat debug/app.map | grep _nvram_data_size | tr -s ' ' | cut -f2 -d' '` \
+--tlv 
+```
+
+### Step 4 - Leave virtualenv
+To get out of your Python virtualenv again after everything is done.
+```bash
+deactivate
 ```
 
 ## Using your own toolchain:
@@ -99,14 +107,18 @@ python -m ledgerblue.loadApp \
 --fileName NAME_OF_PRECOMPILED_HEX_HERE.hex \
 --icon 0100000000ffffff0000000000fc000c0f3814c822103f101120092005400340018001800000000000 \
 --curve secp256k1 \
---path "44'/195'/0'" \
+--path "44'/195'" \
 --apdu \
 --appName "Tron" \
+--appVersion "0.0.1b" \
+--appFlags 0x40 \
 --delete \
---tlv
+--tlv 
 ```
+Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the precomiled hex file.
 
-Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location of the precomiled hex file.
+### Step 4 - Leave virtualenv
+See step 4 above.
 
 # Links
 ========
