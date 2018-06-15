@@ -1,4 +1,3 @@
-
 # Test Case
 
 Test cases are based on the following seed:
@@ -78,6 +77,12 @@ python -m ledgerblue.loadApp \
 --tlv
 ```
 
+### Step 4 - Leave virtualenv
+To get out of your Python virtualenv again after everything is done.
+```bash
+deactivate
+```
+
 ## Using your own toolchain:
 
 ```bash
@@ -105,8 +110,10 @@ python -m ledgerblue.loadApp \
 --delete \
 --tlv
 ```
+Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the precomiled hex file.
 
-Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location of the precomiled hex file.
+### Step 4 - Leave virtualenv
+See step 4 above.
 
 # Links
 ========
