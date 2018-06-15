@@ -40,32 +40,34 @@ The easiest way to compile from source is by building the Dockerfile.
 Make sure you have [Docker](https://www.docker.com/community-edition) installed.
 
  
-Using the Docker image:
+## Using Docker image
 ```bash
 docker run --rm -v "$(pwd)":/trx-ledger -w /trx-ledger ledger-chain make
 ```
 
-Using your own toolchain:
+## Using your own toolchain:
 ```bash
-docker run --rm -v "$(pwd)":/trx-ledger -w /trx-ledger ledger-chain make
+make
 ```
+
 
 # Load app onto Ledger Nano S
 
-Make sure you have virtualenv available locally.
+## Using Docker image
+### Step 1 - Install virtualenv
 ```bash
 [sudo] pip install -U setuptools
 [sudo] pip install virtualenv
 ```
 
-Inside the repository directory create a new virtualenv for Python:
+### Step 2 - Create new virtualenv
 ```bash
 virtualenv -p python3 ledger
 source ledger/bin/activate
 pip install ledgerblue
 ```
 
-Then run:
+### Step 3 - Load HEX file
 ```bash
 python -m ledgerblue.loadApp \
 --targetId 0x31100003 \
@@ -80,11 +82,35 @@ python -m ledgerblue.loadApp \
 ```
 
 
-Using your own toolchain:
+## Using your own toolchain:
+
 ```bash
-docker run --rm -v "$(pwd)":/trx-ledger -w /trx-ledger ledger-chain make load
+make load
 ```
 
+## Load pre-compiled HEX file
+
+### Step 1 - Install virtualenv
+See step 1 above. 
+
+### Step 2 - Create new virtualenv
+See step 2 above. 
+
+### Step 3 - Load HEX file
+```bash
+python -m ledgerblue.loadApp \
+--targetId 0x31100003 \
+--fileName NAME_OF_PRECOMPILED_HEX_HERE.hex \
+--icon 0100000000ffffff0000000000fc000c0f3814c822103f101120092005400340018001800000000000 \
+--curve secp256k1 \
+--path "44'/195'/0'" \
+--apdu \
+--appName "Tron" \
+--delete \
+--tlv
+```
+
+Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location of the precomiled hex file.
 
 # Links
 ========
