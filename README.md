@@ -27,7 +27,7 @@ cd trx-ledger
 ## Docker toolchain image
 In order to make compiling as eas as possible you can make use of a docker image containing all the necessary compilers and the [nanos-secure-sdk](https://github.com/LedgerHQ/nanos-secure-sdk).
 
-Inside the repository directory you'll find a Dockerfile for building a toolchain image.
+Make sure you have [Docker](https://www.docker.com/community-edition) installed.
 
 ### Step 1 - Build the image:
 ```bash
