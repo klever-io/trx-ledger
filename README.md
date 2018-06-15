@@ -23,24 +23,21 @@ cd trx-ledger
 ```
 
 
-# Docker toolchain image
-In order to make compiling as eas as possible you can make use of a docker image containing all the neccessary compilers and the [nanos-secure-sdk](https://github.com/LedgerHQ/nanos-secure-sdk)
+# Compiling from source
+
+## Docker toolchain image
+In order to make compiling as eas as possible you can make use of a docker image containing all the necessary compilers and the [nanos-secure-sdk](https://github.com/LedgerHQ/nanos-secure-sdk).
 
 Inside the repository directory you'll find a Dockerfile for building a toolchain image.
 
-Building the image:
+### Step 1 - Build the image:
 ```bash
 docker build -t ledger-chain:latest .
 ```
-
-
-#Compiling from source
-
-The easiest way to compile from source is by building the Dockerfile.
-Make sure you have [Docker](https://www.docker.com/community-edition) installed.
+The `.` at the end is important!
 
  
-## Using Docker image
+### Step 2 - Use Docker image
 ```bash
 docker run --rm -v "$(pwd)":/trx-ledger -w /trx-ledger ledger-chain make
 ```
@@ -80,7 +77,6 @@ python -m ledgerblue.loadApp \
 --delete \
 --tlv
 ```
-
 
 ## Using your own toolchain:
 
