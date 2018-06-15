@@ -51,6 +51,7 @@ uint32_t set_result_get_publicKey(void);
 #define CLA 0x27                        // Start byte for any communications    
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
+#define INS_SIGN_SIMPLE 0x07
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
@@ -66,7 +67,7 @@ uint32_t set_result_get_publicKey(void);
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
 
-static const char * contractType[] =  {
+/*static const char *contractType[] =  {
     "Account Create\0",
     "Transfer\0",
     "Transfer Asset\0",
@@ -84,7 +85,7 @@ static const char * contractType[] =  {
     "Unfreeze Asset\0", 
     "Update Asset\0"
 };
-
+*/
 union {
     publicKeyContext_t publicKeyContext;
     transactionContext_t transactionContext;
@@ -479,7 +480,7 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL,
      NULL},
 
-     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
      "Amount",
      0,
@@ -488,7 +489,7 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL,
      NULL,
      NULL},
-    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
      (char *)fullAmount,
      0,
@@ -936,7 +937,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
         break;
         default:
-            os_memmove(fullContract, contractType[txContent.contractType], strlen(contractType[txContent.contractType]));
+            THROW(0x6A80);
+            //os_memmove((void *)fullContract, contractType[txContent.contractType], strlen(contractType[txContent.contractType]));
             
              // prepare for a UI based reply
             #if defined(TARGET_NANOS)
@@ -946,6 +948,102 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET
     }
     
+    *flags |= IO_ASYNCH_REPLY;
+}
+
+// APDU Sign
+void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+                uint16_t dataLength, volatile unsigned int *flags,
+                volatile unsigned int *tx) {
+
+    UNUSED(tx);
+    uint32_t i;
+    parserStatus_e txResult;
+    
+    if (p1 == P1_FIRST) {
+        tmpCtx.transactionContext.pathLength = workBuffer[0];
+        if ((tmpCtx.transactionContext.pathLength < 0x01) ||
+            (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
+            PRINTF("Invalid path\n");
+            THROW(0x6a80);
+        }
+        workBuffer++;
+        dataLength--;
+        for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
+            tmpCtx.transactionContext.bip32Path[i] =
+                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
+                (workBuffer[2] << 8) | (workBuffer[3]);
+            workBuffer += 4;
+            dataLength -= 4;
+        }
+        
+    } else if (p1 != P1_MORE) {
+        THROW(0x6B00);
+    }
+    if (p2 != 0) {
+        THROW(0x6B00);
+    }
+
+    // Load Contract Type
+    txContent.contractType = *workBuffer;
+    workBuffer++;dataLength--;
+      switch (txContent.contractType){
+        case 0:
+            os_memmove(fullContract,"Account Create\0", 15);
+            break;
+        case 3:
+            os_memmove(fullContract,"Vote Asset\0", 11);
+            break;
+        case 4:
+            os_memmove(fullContract,"Vote Witness\0", 13);
+            break;
+        case 5:
+            os_memmove(fullContract,"Witness Create\0", 15);
+            break;
+        case 6:
+            os_memmove(fullContract,"Asset Issue\0", 13);
+            break;
+        case 7:
+            os_memmove(fullContract,"Deploy Contract\0",  17);
+            break;
+        case 8:
+            os_memmove(fullContract,"Witness Update\0", 15);
+            break; 
+        case 9:
+            os_memmove(fullContract,"Participate Asset\0", 18);
+            break;
+        case 10:
+            os_memmove(fullContract,"Account Update\0", 15);
+            break;
+        case 11:
+            os_memmove(fullContract,"Freeze Balance\0", 15);
+            break;
+        case 12:
+            os_memmove(fullContract,"Unfreeze Balance\0", 17);
+            break;
+        case 13:
+            os_memmove(fullContract,"Withdraw Balance\0", 17);
+            break;
+        case 14:
+            os_memmove(fullContract,"Unfreeze Asset\0", 15);
+            break;
+        case 15:
+            os_memmove(fullContract,"Update Asset\0", 13);
+            break;
+        default: 
+        THROW(0x6A80);
+    };
+    //os_memmove(fullContract, "TRX\0", 4);
+    // Load hash
+    os_memmove(tmpCtx.transactionContext.hash, workBuffer, dataLength);
+        
+    // prepare for a UI based reply
+    #if defined(TARGET_NANOS)
+        ux_step = 0;
+        ux_step_count = 2;
+        UX_DISPLAY(ui_approval_simple_nanos, ui_approval_simple_prepro);
+    #endif // #if TARGET
+   
     *flags |= IO_ASYNCH_REPLY;
 }
 
@@ -973,9 +1071,6 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 // Check ADPU and process the assigned task
 void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     unsigned short sw = 0;
-    uint8_t privateKeyData[65];
-                cx_sha3_t *sha3Context = &sha3;
-                uint8_t hashAddress[32];
 
     BEGIN_TRY {
         TRY {
@@ -1006,6 +1101,14 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                break;
+
+            case INS_SIGN_SIMPLE:
+                // Request Signature
+                handleSimpleSign(G_io_apdu_buffer[OFFSET_P1],
+                           G_io_apdu_buffer[OFFSET_P2],
+                           G_io_apdu_buffer + OFFSET_CDATA,
+                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
 
             default:
