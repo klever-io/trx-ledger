@@ -70,11 +70,14 @@ python -m ledgerblue.loadApp \
 --fileName bin/app.hex \
 --icon `docker run --rm -v "$(pwd)":/trx_ledger -w /trx_ledger ledger-chain python /opt/bolos/nanos-secure-sdk/icon.py icon.gif hexbitmaponly` \
 --curve secp256k1 \
---path "44'/195'/0'" \
+--path "44'/195'" \
 --apdu \
 --appName "Tron" \
+--appVersion "0.0.1b" \
+--appFlags 0x40 \
 --delete \
---tlv
+--dataSize `cat debug/app.map | grep _nvram_data_size | tr -s ' ' | cut -f2 -d' '` \
+--tlv 
 ```
 
 ### Step 4 - Leave virtualenv
@@ -104,11 +107,13 @@ python -m ledgerblue.loadApp \
 --fileName NAME_OF_PRECOMPILED_HEX_HERE.hex \
 --icon 0100000000ffffff0000000000fc000c0f3814c822103f101120092005400340018001800000000000 \
 --curve secp256k1 \
---path "44'/195'/0'" \
+--path "44'/195'" \
 --apdu \
 --appName "Tron" \
+--appVersion "0.0.1b" \
+--appFlags 0x40 \
 --delete \
---tlv
+--tlv 
 ```
 Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the precomiled hex file.
 
