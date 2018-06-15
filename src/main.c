@@ -24,8 +24,6 @@
 #include "string.h"
 
 #include "glyphs.h"
-#define TARGET_NANOS 1
-#define HAVE_U2F 1
 
 #ifdef HAVE_U2F
 
@@ -808,9 +806,6 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     cx_ecfp_private_key_t privateKey;
     
     uint8_t p2Chain = p2 & 0x3F;   
-    uint8_t addressLength;
-
-    uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
 
 
     if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
@@ -851,7 +846,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     getBase58FromAddres(tmpCtx.publicKeyContext.address,
                                 tmpCtx.publicKeyContext.address58, &sha2);
     
-    os_memmove(fullAddress,tmpCtx.publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
+    os_memmove((void *)fullAddress,tmpCtx.publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
   
     if (p1 == P1_NON_CONFIRM) {
         //os_memmove(G_io_apdu_buffer, fullAddress,sizeof(fullAddress));
@@ -878,8 +873,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     UNUSED(tx);
     uint32_t i;
-    parserStatus_e txResult;
-    
+
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
         if ((tmpCtx.transactionContext.pathLength < 0x01) ||
@@ -918,14 +912,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     switch (txContent.contractType){
         case 1:
         case 2:
-            print_amount(txContent.amount,fullAmount,sizeof(fullAmount), (txContent.contractType==1)?DROP_DIG:0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?DROP_DIG:0);
             getBase58FromAddres(txContent.destination,
-                                        fullAddress, &sha2);
-            os_memmove(fullAddress + 5, "...", 3);
-            os_memmove(fullAddress + 8, fullAddress + ADDRESS_SIZE - 4, 4);
+                                        (void *)fullAddress, &sha2);
+            os_memmove((void *)(fullAddress + 5), "...", 3);
+            os_memmove((void *)(fullAddress + 8), (void *)(fullAddress + ADDRESS_SIZE - 4), 4);
             fullAddress[12]='\0';
             // get token name
-            os_memmove(fullContract, txContent.tokenName, txContent.tokenNameLength+1);
+            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
 
             #if defined(TARGET_BLUE)
                 ui_approval_transaction_blue_init();
@@ -958,7 +952,6 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     UNUSED(tx);
     uint32_t i;
-    parserStatus_e txResult;
     
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
@@ -989,51 +982,51 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     workBuffer++;dataLength--;
       switch (txContent.contractType){
         case 0:
-            os_memmove(fullContract,"Account Create\0", 15);
+            os_memmove((void *)fullContract,"Account Create\0", 15);
             break;
         case 3:
-            os_memmove(fullContract,"Vote Asset\0", 11);
+            os_memmove((void *)fullContract,"Vote Asset\0", 11);
             break;
         case 4:
-            os_memmove(fullContract,"Vote Witness\0", 13);
+            os_memmove((void *)fullContract,"Vote Witness\0", 13);
             break;
         case 5:
-            os_memmove(fullContract,"Witness Create\0", 15);
+            os_memmove((void *)fullContract,"Witness Create\0", 15);
             break;
         case 6:
-            os_memmove(fullContract,"Asset Issue\0", 13);
+            os_memmove((void *)fullContract,"Asset Issue\0", 13);
             break;
         case 7:
-            os_memmove(fullContract,"Deploy Contract\0",  17);
+            os_memmove((void *)fullContract,"Deploy Contract\0",  17);
             break;
         case 8:
-            os_memmove(fullContract,"Witness Update\0", 15);
+            os_memmove((void *)fullContract,"Witness Update\0", 15);
             break; 
         case 9:
-            os_memmove(fullContract,"Participate Asset\0", 18);
+            os_memmove((void *)fullContract,"Participate Asset\0", 18);
             break;
         case 10:
-            os_memmove(fullContract,"Account Update\0", 15);
+            os_memmove((void *)fullContract,"Account Update\0", 15);
             break;
         case 11:
-            os_memmove(fullContract,"Freeze Balance\0", 15);
+            os_memmove((void *)fullContract,"Freeze Balance\0", 15);
             break;
         case 12:
-            os_memmove(fullContract,"Unfreeze Balance\0", 17);
+            os_memmove((void *)fullContract,"Unfreeze Balance\0", 17);
             break;
         case 13:
-            os_memmove(fullContract,"Withdraw Balance\0", 17);
+            os_memmove((void *)fullContract,"Withdraw Balance\0", 17);
             break;
         case 14:
-            os_memmove(fullContract,"Unfreeze Asset\0", 15);
+            os_memmove((void *)fullContract,"Unfreeze Asset\0", 15);
             break;
         case 15:
-            os_memmove(fullContract,"Update Asset\0", 13);
+            os_memmove((void *)fullContract,"Update Asset\0", 13);
             break;
         default: 
         THROW(0x6A80);
     };
-    //os_memmove(fullContract, "TRX\0", 4);
+    //os_memmove((void *)fullContract, "TRX\0", 4);
     // Load hash
     os_memmove(tmpCtx.transactionContext.hash, workBuffer, dataLength);
         
