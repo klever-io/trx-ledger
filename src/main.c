@@ -46,7 +46,7 @@ uint32_t set_result_get_publicKey(void);
 
 
 // Define command events
-#define CLA 0x27                        // Start byte for any communications    
+#define CLA 0xE0                        // Start byte for any communications    
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
 #define INS_SIGN_SIMPLE 0x07

@@ -53,12 +53,12 @@ signatureCheck2 = "1de95be5dcfa5382e6ad3b814321935912408f8c7731a0b07c39591b498ca
                      "00"
 
 # Create APDU message.
-# CLA 0x27
+# CLA 0xE0
 # INS 0x04 	SIGN
 # P1 0x00	NO USER CONFIRMATION
 # P2 0x00  	NO CHAIN CODE
-apduMessage1 = "27040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw1) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw1
-apduMessage2 = "27040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw2) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw2
+apduMessage1 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw1) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw1
+apduMessage2 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw2) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw2
 
 print("-= Tron Ledger =-")
 print("Request Signature")

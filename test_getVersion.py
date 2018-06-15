@@ -3,11 +3,11 @@
 from ledgerblue.comm import getDongle
 
 # Create APDU message.
-# CLA 0x27
+# CLA 0xE0
 # INS 0x06  GET_APP_CONFIGURATION
 # P1 0x00   NO USER CONFIRMATION
 # P2 0x00   NO CHAIN CODE
-apduMessage = "27060000ff"
+apduMessage = "E0060000ff"
 
 print("-= Tron Ledger =-")
 print("Request app Version")

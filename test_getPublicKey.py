@@ -27,14 +27,14 @@ if args.path == None:
 donglePath = parse_bip32_path(args.path)
 
 # Create APDU message.
-# CLA 0x27
+# CLA 0xE0
 # INS 0x02  GET_PUBLIC_KEY
 # P1 0x00   NO USER CONFIRMATION
 # P2 0x00   NO CHAIN CODE
 # Ask for confirmation
-# txt = "27020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
+# txt = "E0020100" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format( int(len(donglePath) / 4 / 2)) + donglePath
 # No confirmation
-apduMessage = "27020000" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath
+apduMessage = "E0020000" + '{:02x}'.format(len(donglePath) + 1) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath
 apdu = bytearray.fromhex(apduMessage)
 
 print("-= Tron Ledger =-")
