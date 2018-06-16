@@ -52,6 +52,16 @@ signatureCheck2 = "1de95be5dcfa5382e6ad3b814321935912408f8c7731a0b07c39591b498ca
                      "663a984fa2864e95b69617c8a02a1a7e46ae9e128429b4d3c539219f2624c174"\
                      "00"
 
+# Test Transfer Asset
+transactionRaw3 = "0a02e7c3220869e2abb19969f1e740f0bbd3fabf2c5a7c080212780a32747970"   \
+					 "652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e7366"\
+					 "65724173736574436f6e747261637412420a1043727970746f436861696e546f"\
+					 "6b656e121541c8599111f29c1e1e061265b4af93ea1f274ad78a1a15414f560e"\
+					 "b4182ca53757f905609e226e96e8e1a80c200170b7f5cffabf2c"
+signatureCheck3 = "c3244d575efc0bf11a4a4ac6c24f3d7f195cab200a127382d581a8e4accbf74c2b6"\
+					 "f385047350edb00bb4f3455684b2ce6cd73112a7510a2022ebd0201d9b7c700"
+
+
 # Create APDU message.
 # CLA 0xE0
 # INS 0x04 	SIGN
@@ -59,6 +69,7 @@ signatureCheck2 = "1de95be5dcfa5382e6ad3b814321935912408f8c7731a0b07c39591b498ca
 # P2 0x00  	NO CHAIN CODE
 apduMessage1 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw1) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw1
 apduMessage2 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw2) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw2
+apduMessage3 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw3) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw3
 
 print("-= Tron Ledger =-")
 print("Request Signature")
@@ -78,3 +89,40 @@ if binascii.hexlify(result[0:65]).decode()==signatureCheck2:
 	print("Signature Validated!")
 else:
 	print("Signature Error!")
+
+# Have ledger sign Test Transfer Asset.
+result = dongle.exchange(bytearray.fromhex(apduMessage3))
+if binascii.hexlify(result[0:65]).decode()==signatureCheck3:
+	print("Signature Validated!")
+else:
+	print("Signature Error!")
+
+
+''' Transafer Asset Transaction Example
+Data To Sign: 0a02e7c3220869e2abb19969f1e740f0bbd3fabf2c5a7c080212780a32747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e736665724173736574436f6e747261637412420a1043727970746f436861696e546f6b656e121541c8599111f29c1e1e061265b4af93ea1f274ad78a1a15414f560eb4182ca53757f905609e226e96e8e1a80c200170b7f5cffabf2c
+raw_data: 
+{
+ref_block_bytes: e7c3
+ref_block_num: 0
+ref_block_hash: 69e2abb19969f1e7
+contract: 
+{
+contract 0 :::
+[
+type: TransferAssetContract
+asset_name: CryptoChainToken
+owner_address: TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH
+to_address: THChUb7p2bwY6ReAiJXao6qc2ZGn88T46v
+amount: 1
+]
+
+}
+timestamp: Thu Jun 14 13:24:43 EDT 2018
+}
+signature: 
+{
+signature 0 :c3244d575efc0bf11a4a4ac6c24f3d7f195cab200a127382d581a8e4accbf74c2b6f385047350edb00bb4f3455684b2ce6cd73112a7510a2022ebd0201d9b7c700
+}
+
+SRaw data Hex: 0a9a010a02e7c3220869e2abb19969f1e740f0bbd3fabf2c5a7c080212780a32747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e736665724173736574436f6e747261637412420a1043727970746f436861696e546f6b656e121541c8599111f29c1e1e061265b4af93ea1f274ad78a1a15414f560eb4182ca53757f905609e226e96e8e1a80c200170b7f5cffabf2c1241c3244d575efc0bf11a4a4ac6c24f3d7f195cab200a127382d581a8e4accbf74c2b6f385047350edb00bb4f3455684b2ce6cd73112a7510a2022ebd0201d9b7c700
+'''
