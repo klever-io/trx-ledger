@@ -78,7 +78,7 @@ python -m ledgerblue.loadApp \
 --path "44'/195'" \
 --apdu \
 --appName "Tron" \
---appVersion "0.0.1b" \
+--appVersion `cat ./VERSION` \
 --appFlags 0x40 \
 --delete \
 --dataSize `cat debug/app.map | grep _nvram_data_size | tr -s ' ' | cut -f2 -d' '` \
@@ -115,7 +115,7 @@ python -m ledgerblue.loadApp \
 --path "44'/195'" \
 --apdu \
 --appName "Tron" \
---appVersion "0.0.1b" \
+--appVersion "0.0.1" \
 --appFlags 0x40 \
 --delete \
 --tlv 
