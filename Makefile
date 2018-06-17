@@ -23,10 +23,12 @@ include $(BOLOS_SDK)/Makefile.defines
 APPNAME = Tron
 APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
 
-APPVERSION_M=0
-APPVERSION_N=0
-APPVERSION_P=1
-APPVERSION=$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)
+splitVersion=$(word $2, $(subst ., , $1))
+
+APPVERSION=$(shell cat ./VERSION)
+APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
+APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
+APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
@@ -67,7 +69,7 @@ DEFINES   += CX_COMPLIANCE_141
 ##############
 #GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
 #CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
-CC       := $(CLANGPATH)clang 
+CC       := $(CLANGPATH)clang
 
 #CFLAGS   += -O0
 CFLAGS   += -O3 -Os -Isrc/include
@@ -76,13 +78,13 @@ AS     := $(GCCPATH)arm-none-eabi-gcc
 
 LD       := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS  += -O3 -Os
-LDLIBS   += -lm -lgcc -lc 
+LDLIBS   += -lm -lgcc -lc
 
 # import rules to compile glyphs(/pone)
 include $(BOLOS_SDK)/Makefile.glyphs
 
 ### computed variables
-APP_SOURCE_PATH  += src  
+APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_stusb
 
 

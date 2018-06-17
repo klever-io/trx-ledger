@@ -13,7 +13,7 @@
 #define BASE58CHECK_PK_SIZE 64
 #define HASH_SIZE 32
 
-#define DROP_DIG 6
+#define SUN_DIG 6
 #define ADD_PRE_FIX_BYTE_MAINNET 0x41
 #define MAX_RAW_TX 200
 
@@ -62,6 +62,6 @@ typedef struct transactionContext_t {
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
-                                uint32_t outlen, uint8_t drop);
+                                uint32_t outlen, uint8_t sun);
 
 #endif

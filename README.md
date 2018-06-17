@@ -33,7 +33,7 @@ Make sure you have [Docker](https://www.docker.com/community-edition) installed.
 ```bash
 docker build -t ledger-chain:latest .
 ```
-The `.` at the end is important!
+The `.` at the end is **important!**
 
  
 ### Step 2 - Use Docker image
@@ -41,13 +41,18 @@ The `.` at the end is important!
 docker run --rm -v "$(pwd)":/trx-ledger -w /trx-ledger ledger-chain make
 ```
 
-## Using your own toolchain:
+## Using your own toolchain
 ```bash
 make
 ```
 
 
 # Load app onto Ledger Nano S
+
+Before attempting to load the hex file, make sure your Ledger Nano S 
+is connected and the firware is updated to the [latest version](https://support.ledgerwallet.com/hc/en-us/articles/360002731113-Update-the-firmware).
+
+Enter your PIN and **make sure you're seeing the Dashboard app**.
 
 ## Using Docker image
 ### Step 1 - Install virtualenv
@@ -73,7 +78,7 @@ python -m ledgerblue.loadApp \
 --path "44'/195'" \
 --apdu \
 --appName "Tron" \
---appVersion "0.0.1b" \
+--appVersion `cat ./VERSION` \
 --appFlags 0x40 \
 --delete \
 --dataSize `cat debug/app.map | grep _nvram_data_size | tr -s ' ' | cut -f2 -d' '` \
@@ -86,7 +91,7 @@ To get out of your Python virtualenv again after everything is done.
 deactivate
 ```
 
-## Using your own toolchain:
+## Using your own toolchain
 
 ```bash
 make load
@@ -110,7 +115,7 @@ python -m ledgerblue.loadApp \
 --path "44'/195'" \
 --apdu \
 --appName "Tron" \
---appVersion "0.0.1b" \
+--appVersion "0.0.1" \
 --appFlags 0x40 \
 --delete \
 --tlv 

@@ -912,7 +912,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     switch (txContent.contractType){
         case 1:
         case 2:
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?DROP_DIG:0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
             os_memmove((void *)(fullAddress + 5), "...", 3);
