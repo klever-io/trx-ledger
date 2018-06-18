@@ -361,7 +361,7 @@ const bagl_element_t ui_approval_simple_nanos[] = {
 
     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "Contract Type",
+     "Transaction Type",
      0,
      0,
      0,
@@ -1041,7 +1041,7 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 }
 
 
-// // APDU App Config and Versionp
+// // APDU App Config and Version
 void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                uint16_t dataLength,
                                volatile unsigned int *flags,
