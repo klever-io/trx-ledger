@@ -15,7 +15,9 @@ Select 12 words, enter 11 times `abandon` and one time `about`.
 > Address base 58: TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH
 
 # Installing Tron app for Ledger
-Clone this repository:
+Testers, jump to: [Load pre-compiled HEX file](#load-pre-compiled-hex-file).
+
+# Clone this repository
 ```bash
 git clone https://github.com/fbsobreira/trx-ledger.git
 cd trx-ledger
@@ -68,6 +70,8 @@ source ledger/bin/activate
 pip install ledgerblue
 ```
 
+If you run into errors here, make sure you have the required dependencies installed. See [Ledger - Loader Python](https://github.com/LedgerHQ/blue-loader-python).
+
 ### Step 3 - Load HEX file
 ```bash
 python -m ledgerblue.loadApp \
@@ -99,6 +103,14 @@ make load
 
 ## Load pre-compiled HEX file
 
+Testers should start here.
+
+
+### Download pre-compiled HEX file
+Download a copy of the [latest HEX file here](https://github.com/fbsobreira/trx-ledger/releases).
+
+Write down or remember the version number without the `v`. `v0.0.1` becomes `0.0.1`  
+
 ### Step 1 - Install virtualenv
 See step 1 above. 
 
@@ -115,12 +127,14 @@ python -m ledgerblue.loadApp \
 --path "44'/195'" \
 --apdu \
 --appName "Tron" \
---appVersion "0.0.1" \
+--appVersion "VERSION_NUMBER" \
 --appFlags 0x40 \
 --delete \
 --tlv 
 ```
-Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the precomiled hex file.
+Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the pre-compiled HEX file.
+
+Replace `VERSION_NUMBER` with the version number of the pre-compiled HEX file.
 
 ### Step 4 - Leave virtualenv
 See step 4 above.
