@@ -953,6 +953,8 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(tx);
     uint32_t i;
     
+    THROW(0x6B00);
+    
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
         if ((tmpCtx.transactionContext.pathLength < 0x01) ||
