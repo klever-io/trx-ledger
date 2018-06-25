@@ -29,29 +29,31 @@ donglePath = parse_bip32_path(args.path)
 print(donglePath)
 
 # Test Cases
-# Test Transaction 1 as Protobuf 2.
-transactionRaw = "0A7A0A024166220832A4175F2B12471540E0D49DBDC32C5A59080B12550A32747970652E676F6F676C65617069732E636F6D2F70726F746F636F6C2E467265657A6542616C616E6365436F6E7472616374121F0A154167E39013BE3CDD3814BED152D7439FB5B6791409108094EBDC03180370809AB2F491BEDC9D15"
+# Compare two signatures using chunk send data
+# Contract Type Freeze Asset
+transactionRaw = "5A6A080412660A30747970652E676F6F676C65617069732E636F6D2F70726F746F636F6C2E566F74655769746E657373436F6E747261637412320A154167E39013BE3CDD3814BED152D7439FB5B679140912190A154167E39013BE3CDD3814BED152D7439FB5B67914091064"
 
-transactionRawFIRST = "0A7A0A024166220832A4175F2B12475F2B12471540E0D49DBDC32C5A59080B12550A32747970652E676F6F676C65617069732E636F6D2F70726F746F636F6C2E467265657A6542616C616E6365436F6E7472616374121F0A154167"
-transactionRawEND = "E39013BE3CDD3814BED152D7439FB5B6791409108094EBDC03180370809AB2F491BEDC9D15"
+transactionRawFIRST = "5A6A080412660A30747970652E676F6F676C65617069732E636F6D2F70726F746F636F6C2E566F74655769746E657373436F6E747261637412320A154167E39013BE3CDD3814BED152D7439FB5B679140912190A154167E39013BE3CDD3814BED152D7439F"
+transactionRawEND = "B5B67914091064"
 
 # Create APDU message.
 # CLA 0xE0
 # INS 0x04 	SIGN
+# P1 = P1_SIGN = 0x10
 apduMessage = "E0041000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw
 dongle = getDongle(True)
-result = dongle.exchange(bytearray.fromhex(apduMessage))
-print(binascii.hexlify(result[0:65]).decode())
-
-
+result1 = dongle.exchange(bytearray.fromhex(apduMessage))
+# P1 = P1_FIRST = 0x00
 apduMessage = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRawFIRST) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRawFIRST
 result = dongle.exchange(bytearray.fromhex(apduMessage))
-print(binascii.hexlify(result[0:65]).decode())
-
+# P1 = P1_LAST = 0x90
 apduMessage = "E0049000" + '{:02x}'.format(  int(len(transactionRawEND) / 2)) +  transactionRawEND
-result = dongle.exchange(bytearray.fromhex(apduMessage))
-print(binascii.hexlify(result[0:65]).decode())
+result2 = dongle.exchange(bytearray.fromhex(apduMessage))
 
+if (binascii.hexlify(result1[0:65]).decode()==binascii.hexlify(result2[0:65]).decode()):
+	print("Hash signature match")
+else:
+	print("Hash signature error")
 
 
 #7f778af3dfdf41207301e4a05b2371737a57aff6eaf40b74bcedd737c26b7f390fb663e7087d6a49d8d304189e52e08bfbeeba713d8dca95cacf2388aaa01c4800
