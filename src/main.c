@@ -49,7 +49,6 @@ uint32_t set_result_get_publicKey(void);
 #define CLA 0xE0                        // Start byte for any communications    
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
-#define INS_SIGN_SIMPLE 0x07
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
@@ -967,59 +966,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     *flags |= IO_ASYNCH_REPLY;
 }
 
-// APDU Sign
-void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
-                uint16_t dataLength, volatile unsigned int *flags,
-                volatile unsigned int *tx) {
-
-    UNUSED(tx);
-    uint32_t i;
-    
-    THROW(0x6B00);
-
-    if (p1 == P1_FIRST) {
-        tmpCtx.transactionContext.pathLength = workBuffer[0];
-        if ((tmpCtx.transactionContext.pathLength < 0x01) ||
-            (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
-            THROW(0x6a80);
-        }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
-            tmpCtx.transactionContext.bip32Path[i] =
-                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
-                (workBuffer[2] << 8) | (workBuffer[3]);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
-        
-    } else if (p1 != P1_MORE) {
-        THROW(0x6B00);
-    }
-    if (p2 != 0) {
-        THROW(0x6B00);
-    }
-
-    // Load Contract Type
-    txContent.contractType = *workBuffer;
-    workBuffer++;dataLength--;
-    if (!setContractType(txContent.contractType, (void *)fullContract)) THROW(0x6A80);
-    //os_memmove((void *)fullContract, "TRX\0", 4);
-    // Load hash
-    os_memmove(tmpCtx.transactionContext.hash, workBuffer, dataLength);
-        
-    // prepare for a UI based reply
-    #if defined(TARGET_NANOS)
-        ux_step = 0;
-        ux_step_count = 2;
-        UX_DISPLAY(ui_approval_simple_nanos, ui_approval_simple_prepro);
-    #endif // #if TARGET
-   
-    *flags |= IO_ASYNCH_REPLY;
-}
-
-
 // // APDU App Config and Version
 void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                uint16_t dataLength,
@@ -1073,14 +1019,6 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
-                break;
-
-            case INS_SIGN_SIMPLE:
-                // Request Signature
-                handleSimpleSign(G_io_apdu_buffer[OFFSET_P1],
-                           G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_CDATA,
-                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
 
             default:
