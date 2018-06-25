@@ -59,6 +59,8 @@ typedef struct transactionContext_t {
     uint8_t signatureLength;
 } transactionContext_t;
 
+bool setContractType(uint8_t type, volatile char * out);
+
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,

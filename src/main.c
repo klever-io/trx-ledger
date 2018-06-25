@@ -57,6 +57,8 @@ uint32_t set_result_get_publicKey(void);
 #define P2_CHAINCODE 0x01
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
+#define P1_LAST 0x90
+#define P1_SIGN 0x10
 
 #define OFFSET_CLA 0
 #define OFFSET_INS 1
@@ -65,25 +67,6 @@ uint32_t set_result_get_publicKey(void);
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
 
-/*static const char *contractType[] =  {
-    "Account Create\0",
-    "Transfer\0",
-    "Transfer Asset\0",
-    "Vote Asset\0",
-    "Vote Witness\0",
-    "Witness Create\0", 
-    "Asset Issue\0", 
-    "Deploy Contract\0", 
-    "Witness Update\0", 
-    "Participate Asset\0", 
-    "Account Update\0", 
-    "Freeze Balance\0", 
-    "Unfreeze Balance\0", 
-    "Withdraw Balance\0", 
-    "Unfreeze Asset\0", 
-    "Update Asset\0"
-};
-*/
 union {
     publicKeyContext_t publicKeyContext;
     transactionContext_t transactionContext;
@@ -95,6 +78,7 @@ cx_sha256_t sha2;
 volatile char fullAddress[BASE58CHECK_ADDRESS_SIZE+1]; 
 volatile char fullAmount[50];
 volatile char fullContract[50];
+volatile char fullHash[HASH_SIZE*2+1];
 
 bagl_element_t tmp_element;
 
@@ -377,6 +361,25 @@ const bagl_element_t ui_approval_simple_nanos[] = {
      NULL,
      NULL,
      NULL},
+
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Transaction Hash",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullHash,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
 };
 
 unsigned int ui_approval_simple_prepro(const bagl_element_t *element) {
@@ -391,6 +394,10 @@ unsigned int ui_approval_simple_prepro(const bagl_element_t *element) {
                 UX_CALLBACK_SET_INTERVAL(MAX(
                     3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
                 break;
+            case 3:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
             }
         }
         return display;
@@ -874,7 +881,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(tx);
     uint32_t i;
 
-    if (p1 == P1_FIRST) {
+    if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
         if ((tmpCtx.transactionContext.pathLength < 0x01) ||
             (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
@@ -890,28 +897,34 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             workBuffer += 4;
             dataLength -= 4;
         }
+
+        //Parse contract type
+        // Load raw Data
+        os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
+        tmpCtx.transactionContext.rawTxLength = dataLength;
+        //Parse Raw transaction dada
+        if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+            PRINTF("Unexpected parser status\n");
+            THROW(0x6A80);
+        }
+        cx_sha256_init(&sha2); //init sha
         
-    } else if (p1 != P1_MORE) {
+    } else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
         THROW(0x6B00);
+    }else {
+
     }
     if (p2 != 0) {
         THROW(0x6B00);
     }
 
-    // Load raw Data
-    os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
-    tmpCtx.transactionContext.rawTxLength = dataLength;
-    // get Hash
-    transactionHash(tmpCtx.transactionContext.rawTx, tmpCtx.transactionContext.rawTxLength,
-                        tmpCtx.transactionContext.hash, &sha2);
-    //Parse Raw transaction dada
-    if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
-        PRINTF("Unexpected parser status\n");
-        THROW(0x6A80);
-    }
     switch (txContent.contractType){
         case 1:
         case 2:
+            // get Hash
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, tmpCtx.transactionContext.rawTx,
+                tmpCtx.transactionContext.rawTxLength, tmpCtx.transactionContext.hash);
+
             print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
@@ -931,15 +944,24 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
         break;
         default:
-            THROW(0x6A80);
-            //os_memmove((void *)fullContract, contractType[txContent.contractType], strlen(contractType[txContent.contractType]));
+            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash(&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);    
             
-             // prepare for a UI based reply
+            // Write fullHash
+            array_hexstr(fullHash, tmpCtx.transactionContext.hash, 32);
+            // write contract type
+            if (!setContractType(txContent.contractType, fullContract)) THROW(0x6A80);
+       
             #if defined(TARGET_NANOS)
                 ux_step = 0;
-                ux_step_count = 2;
+                ux_step_count = 3;
                 UX_DISPLAY(ui_approval_simple_nanos, ui_approval_simple_prepro);
-            #endif // #if TARGET
+            #endif // #if TARGET_ID
+        break;
     }
     
     *flags |= IO_ASYNCH_REPLY;
@@ -954,7 +976,7 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     uint32_t i;
     
     THROW(0x6B00);
-    
+
     if (p1 == P1_FIRST) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
         if ((tmpCtx.transactionContext.pathLength < 0x01) ||
@@ -982,52 +1004,7 @@ void handleSimpleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // Load Contract Type
     txContent.contractType = *workBuffer;
     workBuffer++;dataLength--;
-      switch (txContent.contractType){
-        case 0:
-            os_memmove((void *)fullContract,"Account Create\0", 15);
-            break;
-        case 3:
-            os_memmove((void *)fullContract,"Vote Asset\0", 11);
-            break;
-        case 4:
-            os_memmove((void *)fullContract,"Vote Witness\0", 13);
-            break;
-        case 5:
-            os_memmove((void *)fullContract,"Witness Create\0", 15);
-            break;
-        case 6:
-            os_memmove((void *)fullContract,"Asset Issue\0", 13);
-            break;
-        case 7:
-            os_memmove((void *)fullContract,"Deploy Contract\0",  17);
-            break;
-        case 8:
-            os_memmove((void *)fullContract,"Witness Update\0", 15);
-            break; 
-        case 9:
-            os_memmove((void *)fullContract,"Participate Asset\0", 18);
-            break;
-        case 10:
-            os_memmove((void *)fullContract,"Account Update\0", 15);
-            break;
-        case 11:
-            os_memmove((void *)fullContract,"Freeze Balance\0", 15);
-            break;
-        case 12:
-            os_memmove((void *)fullContract,"Unfreeze Balance\0", 17);
-            break;
-        case 13:
-            os_memmove((void *)fullContract,"Withdraw Balance\0", 17);
-            break;
-        case 14:
-            os_memmove((void *)fullContract,"Unfreeze Asset\0", 15);
-            break;
-        case 15:
-            os_memmove((void *)fullContract,"Update Asset\0", 13);
-            break;
-        default: 
-        THROW(0x6A80);
-    };
+    if (!setContractType(txContent.contractType, (void *)fullContract)) THROW(0x6A80);
     //os_memmove((void *)fullContract, "TRX\0", 4);
     // Load hash
     os_memmove(tmpCtx.transactionContext.hash, workBuffer, dataLength);
