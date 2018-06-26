@@ -34,7 +34,10 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
             pos = (uint8_t *)strstr((char *)data, search);
             p = (pos-data)+*(pos-1); //shift pos to contract beginning
             // contact type
-            context->contractType = *(pos-5); //get contract type
+            if ((*(pos-4)&PB_BASE128)==0) // quick fix for longer contracts... TODO: 
+               context->contractType = *(pos-5); //get contract type
+            else
+                context->contractType = *(pos-6); //get contract type
             if (p>dataLength) THROW(0x6a80);
             if (*(data+p)>>PB_FIELD_R!=2 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
             p+=2; if (p>dataLength) THROW(0x6a80);  
