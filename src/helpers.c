@@ -34,18 +34,17 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
 
 void getBase58FromAddres(uint8_t *address, uint8_t *out,
                                 cx_sha256_t* sha2) {
-    uint8_t sha256_0[32];
-    uint8_t sha256_1[32];
+    uint8_t sha256[32];
     uint8_t checkSum[4];
     uint8_t addchecksum[ADDRESS_SIZE+4];
     
     cx_sha256_init(sha2);
-    cx_hash(sha2, CX_LAST, address, 21, sha256_0);
+    cx_hash(sha2, CX_LAST, address, 21, sha256);
     cx_sha256_init(sha2);
-    cx_hash(sha2, CX_LAST, &sha256_0[0], 32, sha256_1);
+    cx_hash(sha2, CX_LAST, sha256, 32, sha256);
     
     os_memmove(addchecksum, address , ADDRESS_SIZE);
-    os_memmove(addchecksum+ADDRESS_SIZE, sha256_1, 4);
+    os_memmove(addchecksum+ADDRESS_SIZE, sha256, 4);
     
     
     encode_base_58(&addchecksum[0],25,out,BASE58CHECK_ADDRESS_SIZE);
