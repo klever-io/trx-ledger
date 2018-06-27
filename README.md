@@ -109,7 +109,9 @@ Testers should start here.
 ### Download pre-compiled HEX file
 Download a copy of the [latest HEX file here](https://github.com/fbsobreira/trx-ledger/releases).
 
-Write down or remember the version number without the `v`. `v0.0.1` becomes `0.0.1`  
+Write down or remember the version number without the `v`. `v0.0.1` becomes `0.0.1`.
+
+Write down the `dataSize`. You will need these in the step 3.
 
 ### Step 1 - Install virtualenv
 See step 1 above. 
@@ -130,11 +132,14 @@ python -m ledgerblue.loadApp \
 --appVersion "VERSION_NUMBER" \
 --appFlags 0x40 \
 --delete \
+--dataSize DATA_SIZE_OF_PRECOMPILED_HEX \
 --tlv 
 ```
 Replace `NAME_OF_PRECOMPILED_HEX_HERE.hex` with the location and name of the pre-compiled HEX file.
 
 Replace `VERSION_NUMBER` with the version number of the pre-compiled HEX file.
+
+Replace `DATA_SIZE_OF_PRECOMPILED_HEX` with the data size of the pre-compiled HEX file.
 
 ### Step 4 - Leave virtualenv
 See step 4 above.

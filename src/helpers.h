@@ -35,4 +35,6 @@ void transactionHash(uint8_t *raw, uint16_t dataLength,
 
 void signTransaction(transactionContext_t *transactionContext);
 
+void array_hexstr(char *strbuf, const void *bin, unsigned int len);
+
 #endif

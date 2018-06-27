@@ -67,9 +67,9 @@ signatureCheck3 = "c3244d575efc0bf11a4a4ac6c24f3d7f195cab200a127382d581a8e4accbf
 # INS 0x04 	SIGN
 # P1 0x00	NO USER CONFIRMATION
 # P2 0x00  	NO CHAIN CODE
-apduMessage1 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw1) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw1
-apduMessage2 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw2) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw2
-apduMessage3 = "E0040000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw3) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw3
+apduMessage1 = "E0041000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw1) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw1
+apduMessage2 = "E0041000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw2) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw2
+apduMessage3 = "E0041000" + '{:02x}'.format(int(len(donglePath) / 2) + 1 + int(len(transactionRaw3) / 2)) + '{:02x}'.format(int(len(donglePath) / 4 / 2)) + donglePath + transactionRaw3
 
 print("-= Tron Ledger =-")
 print("Request Signature")

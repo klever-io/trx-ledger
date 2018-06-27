@@ -41,12 +41,15 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
             if (pos == NULL) THROW(0x6a80);
             index = (pos-data)+*(pos-1);
             // contact type
-            context->contractType = *(pos-5);
+            if ((*(pos-4)&PB_BASE128)==0) // quick fix for longer contracts... TODO: 
+               context->contractType = *(pos-5); //get contract type
+            else
+                context->contractType = *(pos-6); //get contract type
             if (index>dataLength) THROW(0x6a80);
             if (data[index]>>PB_FIELD_R!=2 || data[index]&PB_TYPE!=2 ) THROW(0x6a80);
             index+=2; if (index>dataLength) THROW(0x6a80);  
             switch (context->contractType){
-                case 1:
+                case 1: // Send TRX
                     context->tokenNameLength=4;
                     os_memmove(context->tokenName,"TRX\0",context->tokenNameLength);
                     // address 1
@@ -79,7 +82,7 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                                                 +70; //signature length
                     // DONE
                 break;
-                case 2:
+                case 2: //Send Asset
                     // Token Name
                     if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
@@ -117,6 +120,10 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                                                 +70; //signature length
                     // DONE
                 break;
+                case 4: // Vote Witness
+                case 11: // Freeze Balance Contract
+                case 12: // Unfreeze Balance Contract
+                case 13: // Withdraw Balance Contract
                 default:
                     result = USTREAM_FINISHED;
             }
@@ -217,9 +224,59 @@ unsigned short print_amount(uint64_t amount, uint8_t *out,
     tmp[i] = '\0';
     adjustDecimals(tmp, i, tmp2, 25, sun);
     if (strlen(tmp2) < outlen - 1) {
-        strcpy(out, tmp2);
+        strcpy((char *)out, tmp2);
     } else {
         out[0] = '\0';
     }
-    return strlen(out);
+    return strlen((char *)out);
+}
+
+bool setContractType(uint8_t type, volatile char * out){
+    switch (type){
+        case 0:
+            os_memmove(out,"Account Create\0", 15);
+            break;
+        case 3:
+            os_memmove(out,"Vote Asset\0", 11);
+            break;
+        case 4:
+            os_memmove(out,"Vote Witness\0", 13);
+            break;
+        case 5:
+            os_memmove(out,"Witness Create\0", 15);
+            break;
+        case 6:
+            os_memmove(out,"Asset Issue\0", 13);
+            break;
+        case 7:
+            os_memmove(out,"Deploy Contract\0",  17);
+            break;
+        case 8:
+            os_memmove(out,"Witness Update\0", 15);
+            break; 
+        case 9:
+            os_memmove(out,"Participate Asset\0", 18);
+            break;
+        case 10:
+            os_memmove(out,"Account Update\0", 15);
+            break;
+        case 11:
+            os_memmove(out,"Freeze Balance\0", 15);
+            break;
+        case 12:
+            os_memmove(out,"Unfreeze Balance\0", 17);
+            break;
+        case 13:
+            os_memmove(out,"Withdraw Balance\0", 17);
+            break;
+        case 14:
+            os_memmove(out,"Unfreeze Asset\0", 15);
+            break;
+        case 15:
+            os_memmove(out,"Update Asset\0", 13);
+            break;
+        default: 
+        return false;
+    };
+    return true;
 }
