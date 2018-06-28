@@ -487,8 +487,8 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL,
      NULL,
      NULL},
-     {{BAGL_LABELINE, 0x04, 16, 26, 96, 12, 0, 0, 0, 0xFFFFFF, 0x000000,
-     BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
     (char *)fullAddress,
     0,
     0,
@@ -854,9 +854,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
-            os_memmove((void *)(fullAddress + 5), "...", 3);
-            os_memmove((void *)(fullAddress + 8), (void *)(fullAddress + ADDRESS_SIZE - 4), 4);
-            fullAddress[12]='\0';
+            /*os_memmove((void *)(fullAddress + 5), "...", 3);
+            os_memmove((void *)(fullAddress + 8), (void *)(fullAddress + BASE58CHECK_ADDRESS_SIZE - 4), 4);*/
+            //fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
             // get token name
             os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
 
