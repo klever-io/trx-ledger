@@ -23,52 +23,60 @@
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context) {
     parserStatus_e result = USTREAM_FAULT;
     uint8_t *pos;
-    uint8_t p;
-    const char search[] = "type.googleapis";
+    uint8_t index;
+    uint8_t search[] = "type.googleapis";
     uint8_t b128=0;
     BEGIN_TRY {
         TRY {
             os_memset(context, 0, sizeof(txContent_t));
 
-            // search contract init
-            pos = (uint8_t *)strstr((char *)data, search);
-            p = (pos-data)+*(pos-1); //shift pos to contract beginning
+            // check that input data is null terminated
+            for(index=0; index<dataLength; ++index)
+            {
+                if(data[index]== '\0') break;
+            }
+            if(index == dataLength) THROW(0x6a80);
+
+            pos = strstr(data, search);
+            if (pos == NULL) THROW(0x6a80);
+            index = (pos-data)+*(pos-1);
             // contact type
             if ((*(pos-4)&PB_BASE128)==0) // quick fix for longer contracts... TODO: 
                context->contractType = *(pos-5); //get contract type
             else
                 context->contractType = *(pos-6); //get contract type
-            if (p>dataLength) THROW(0x6a80);
-            if (*(data+p)>>PB_FIELD_R!=2 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-            p+=2; if (p>dataLength) THROW(0x6a80);  
+            if (index>dataLength) THROW(0x6a80);
+            if (data[index]>>PB_FIELD_R!=2 || data[index]&PB_TYPE!=2 ) THROW(0x6a80);
+            index+=2; if (index>dataLength) THROW(0x6a80);  
             switch (context->contractType){
                 case 1: // Send TRX
                     context->tokenNameLength=4;
                     os_memmove(context->tokenName,"TRX\0",context->tokenNameLength);
                     // address 1
-                    if ((*(data+p)>>PB_FIELD_R)!=1 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80); 
-                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
-                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
-                    os_memmove(context->account,data+p,ADDRESS_SIZE);
-                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
                     // address 2
-                    if ((*(data+p)>>PB_FIELD_R)!=2 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80); 
-                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
-                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
-                    os_memmove(context->destination,data+p,ADDRESS_SIZE);
-                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->destination,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
                     // Amount 
-                    if ((*(data+p)>>PB_FIELD_R)!=3 || (*(data+p)&PB_TYPE)!=0 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80);
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
                     // find end of base128
-                    while(p<dataLength){
-                        context->amount += ((uint64_t)( (*(data+p))& PB_BASE128DATA) << b128) ;
-                        if ((*(data+p)&PB_BASE128)==0) break;
-                        p++; if (p>dataLength) THROW(0x6a88);
+                    for(; index<dataLength; ++index){
+                        context->amount += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
                         b128+=7;
                     }
+                    if (index == dataLength) THROW(0x6a88);
+
                     // Bandwidth estimation
                     context->bandwidth = dataLength  // raw data length
                                                 +70; //signature length
@@ -76,35 +84,35 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                 break;
                 case 2: //Send Asset
                     // Token Name
-                    if ((*(data+p)>>PB_FIELD_R)!=1 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80); 
-                    context->tokenNameLength=*(data+p);
-                    p++;if (p+context->tokenNameLength>dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName,data+p,context->tokenNameLength);
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
                     context->tokenName[context->tokenNameLength]='\0';
-                    p+=context->tokenNameLength;if (p>dataLength) THROW(0x6a80); 
+                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80); 
                     // address 1
-                    if ((*(data+p)>>PB_FIELD_R)!=2 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80); 
-                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
-                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
-                    os_memmove(context->account,data+p,ADDRESS_SIZE);
-                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
                     // address 2
-                    if ((*(data+p)>>PB_FIELD_R)!=3 || (*(data+p)&PB_TYPE)!=2 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80); 
-                    if (*(data+p)!=ADDRESS_SIZE ) THROW(0x6a80);
-                    p++;if (p+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
-                    os_memmove(context->destination,data+p,ADDRESS_SIZE);
-                    p+=ADDRESS_SIZE;if (p>dataLength) THROW(0x6a80); 
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->destination,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
                     // Amount 
-                    if ((*(data+p)>>PB_FIELD_R)!=4 || (*(data+p)&PB_TYPE)!=0 ) THROW(0x6a80);
-                    p++;if (p>dataLength) THROW(0x6a80);
+                    if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
                     // find end of base128
-                    while(p<dataLength){
-                        context->amount += ((uint64_t)( (*(data+p))& PB_BASE128DATA) << b128) ;
-                        if ((*(data+p)&PB_BASE128)==0) break;
-                        p++; if (p>dataLength) THROW(0x6a88);
+                    while(index<dataLength){
+                        context->amount += ((uint64_t)( (data[index])& PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128)==0) break;
+                        index++; if (index>dataLength) THROW(0x6a88);
                         b128+=7;
                     }
                     // Bandwidth estimation
