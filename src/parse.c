@@ -18,7 +18,17 @@
 #include "parse.h"
 #include <string.h>
 
-
+char *sstrstr(char *haystack, char *needle, size_t length)
+{
+    size_t needle_length = strlen(needle);
+    size_t i;
+    for (i = 0; i < length; i++)
+    {
+        if (i + needle_length > length) return NULL;
+        if (strncmp(&haystack[i], needle, needle_length) == 0) return &haystack[i];
+    }
+    return NULL;
+}
 
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context) {
     parserStatus_e result = USTREAM_FAULT;
@@ -31,13 +41,13 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
             os_memset(context, 0, sizeof(txContent_t));
 
             // check that input data is null terminated
-            for(index=0; index<dataLength; ++index)
+            /*for(index=0; index<dataLength; ++index)
             {
                 if(data[index]== '\0') break;
             }
             if(index == dataLength) THROW(0x6a80);
-
-            pos = strstr(data, search);
+            */
+            pos = sstrstr(data, search, dataLength);
             if (pos == NULL) THROW(0x6a80);
             index = (pos-data)+*(pos-1);
             // contact type
@@ -75,7 +85,7 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                         if ((data[index]&PB_BASE128) == 0) break;
                         b128+=7;
                     }
-                    if (index == dataLength) THROW(0x6a88);
+                    if (index > dataLength) THROW(0x6a88);
 
                     // Bandwidth estimation
                     context->bandwidth = dataLength  // raw data length
