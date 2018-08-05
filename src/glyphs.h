@@ -1,3 +1,33 @@
+#ifndef GLYPH_badge_transaction_BPP
+#define GLYPH_badge_transaction_WIDTH 50
+#define GLYPH_badge_transaction_HEIGHT 50
+#define GLYPH_badge_transaction_BPP 2
+extern
+unsigned int const C_badge_transaction_colors[]
+;
+extern	
+unsigned char const C_badge_transaction_bitmap[];
+#ifdef OS_IO_SEPROXYHAL
+#include "os_io_seproxyhal.h"
+extern
+const bagl_icon_details_t C_badge_transaction;
+#endif // GLYPH_badge_transaction_BPP
+#endif // OS_IO_SEPROXYHAL
+#ifndef GLYPH_badge_tron_BPP
+#define GLYPH_badge_tron_WIDTH 50
+#define GLYPH_badge_tron_HEIGHT 50
+#define GLYPH_badge_tron_BPP 2
+extern
+unsigned int const C_badge_tron_colors[]
+;
+extern	
+unsigned char const C_badge_tron_bitmap[];
+#ifdef OS_IO_SEPROXYHAL
+#include "os_io_seproxyhal.h"
+extern
+const bagl_icon_details_t C_badge_tron;
+#endif // GLYPH_badge_tron_BPP
+#endif // OS_IO_SEPROXYHAL
 #ifndef GLYPH_icon_BPP
 #define GLYPH_icon_WIDTH 16
 #define GLYPH_icon_HEIGHT 16
