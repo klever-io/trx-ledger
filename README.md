@@ -68,6 +68,7 @@ Enter your PIN and **make sure you're seeing the Dashboard app**.
 virtualenv -p python3 ledger
 source ledger/bin/activate
 pip install ledgerblue
+or pip install git+https://github.com/LedgerHQ/blue-loader-python.git 
 ```
 
 If you run into errors here, make sure you have the required dependencies installed. See [Ledger - Loader Python](https://github.com/LedgerHQ/blue-loader-python).

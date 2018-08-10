@@ -55,6 +55,9 @@ dkms.conf
 #virtual env pip
 ledger/
 
+# SDK
+/.env
+
 # IDE
 /.vscode
 /.idea
