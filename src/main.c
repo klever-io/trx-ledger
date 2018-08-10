@@ -833,7 +833,7 @@ ui_approval_blue_cancel_callback(const bagl_element_t *e) {
 }
 
 typedef enum {
-    APPROVAL_TRANFER,
+    APPROVAL_TRANSFER,
     APPROVAL_TRANSACTION,
 } ui_approval_blue_state_t;
 ui_approval_blue_state_t G_ui_approval_blue_state;
@@ -842,7 +842,7 @@ const char *ui_approval_blue_values[5];
 // variable part of the structureconst char *ui_approval_blue_values[5];
 
 const char *const ui_approval_blue_details_name[][7] = {
-    /*APPROVAL_TRANFER*/
+    /*APPROVAL_TRANSFER*/
     {
         "AMOUNT",
         "TOKEN",
@@ -850,7 +850,7 @@ const char *const ui_approval_blue_details_name[][7] = {
         NULL,
         NULL,
         "CONFIRM TRANSFER",
-        "Transafer details",
+        "Transfer details",
     },
     /*APPROVAL_TRANSACTION*/
     {
@@ -2010,7 +2010,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
 
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANFER;
+                G_ui_approval_blue_state = APPROVAL_TRANSFER;
                 ui_approval_transaction_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
