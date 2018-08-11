@@ -99,4 +99,4 @@ include $(BOLOS_SDK)/Makefile.rules
 dep/%.d: %.c Makefile.genericwallet
 
 listvariants:
-	@echo VARIANTS tron
+	@echo VARIANTS COIN tron
