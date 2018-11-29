@@ -134,6 +134,9 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                 case 11: // Freeze Balance Contract
                 case 12: // Unfreeze Balance Contract
                 case 13: // Withdraw Balance Contract
+                case 16: // Proposal Create Contract
+                case 17: // Proposal Approve Contract
+                case 18: // Proposal Delete Contract
                 default:
                     result = USTREAM_FINISHED;
             }
@@ -285,8 +288,19 @@ bool setContractType(uint8_t type, volatile char * out){
         case 15:
             os_memmove(out,"Update Asset\0", 13);
             break;
+        case 16:
+            os_memmove(out,"Proposal Create\0", 16);
+            break;
+        case 17:
+            os_memmove(out,"Proposal Approve\0", 17);
+            break;
+        case 18:
+            os_memmove(out,"Proposal Delete\0", 16);
+            break;
         default: 
         return false;
     };
     return true;
 }
+
+ 
