@@ -32,11 +32,15 @@ typedef enum parserStatus_e {
 
 typedef struct txContent_t {
     uint64_t amount;
+    uint64_t amount2;
+    uint64_t exchangeID;
     uint64_t bandwidth;
     uint8_t account[ADDRESS_SIZE];
     uint8_t destination[ADDRESS_SIZE];
     uint8_t tokenName[32];
     uint8_t tokenNameLength;
+    uint8_t tokenName2[32];
+    uint8_t tokenName2Length;
     uint8_t contractType;
 } txContent_t;
 
@@ -60,6 +64,7 @@ typedef struct transactionContext_t {
 } transactionContext_t;
 
 bool setContractType(uint8_t type, volatile char * out);
+bool setExchangeContractDetail(uint8_t type, volatile char * out);
 
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 
