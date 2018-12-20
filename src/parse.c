@@ -80,7 +80,7 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80);
                     // find end of base128
-                    for(; index<dataLength; ++index){
+                    for(b128=0; index<dataLength; ++index){
                         context->amount += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
                         if ((data[index]&PB_BASE128) == 0) break;
                         b128+=7;
@@ -130,10 +130,167 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                                                 +70; //signature length
                     // DONE
                 break;
+                case 41: // Create Exchange
+                    // owner_address
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
+                    // first_token_id 
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
+                    context->tokenName[context->tokenNameLength]='\0';
+                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    // first_token_balance 
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->amount += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    if (context->tokenName[0]=='_'){
+                        os_memmove(context->tokenName,"TRX\0",4);
+                        context->tokenNameLength=3;
+                    }
+                    // second_token_id 
+                    if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    context->tokenName2Length=data[index]; if (context->tokenName2Length > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenName2Length > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName2,data+index,context->tokenName2Length);
+                    context->tokenName2[context->tokenName2Length]='\0';
+                    index+=context->tokenName2Length; if (index>dataLength) THROW(0x6a80);
+                    // second_token_balance 
+                    if ((data[index]>>PB_FIELD_R)!=5 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->amount2 += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    if (index > dataLength) THROW(0x6a88);
+                    // Check if TRX
+                    if (context->tokenName2[0]=='_'){
+                        os_memmove(context->tokenName2,"TRX\0",4);
+                        context->tokenName2Length=4;
+                    }
+
+                    // Bandwidth estimation
+                    context->bandwidth = dataLength  // raw data length
+                                                +70; //signature length
+                break;
+                case 42: // Exchange Inject
+                case 43: // Exchange Withdraw
+                    // owner_address
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
+                    // Exchange ID
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->exchangeID += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    // token_id 
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
+                    context->tokenName[context->tokenNameLength]='\0';
+                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    // quant 
+                    if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->amount += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    // Check if TRX
+                    if (context->tokenName[0]=='_'){
+                        os_memmove(context->tokenName,"TRX\0",4);
+                        context->tokenNameLength=3;
+                    }
+                break;
+                case 44: // Exchange Transaction
+                    // owner_address
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
+                    // Exchange ID
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->exchangeID += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    // token_id 
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
+                    context->tokenName[context->tokenNameLength]='\0';
+                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    // quant 
+                    if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->amount += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    // expected amount 
+                    if ((data[index]>>PB_FIELD_R)!=5 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    for(b128=0; index<dataLength; ++index){
+                        context->amount2 += ((uint64_t)( data[index] & PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128) == 0) break;
+                        b128+=7;
+                    }
+                    
+                    index++;if (index > dataLength) THROW(0x6a88);
+                    // Check if TRX
+                    if (context->tokenName[0]=='_'){
+                        os_memmove(context->tokenName,"TRX\0",4);
+                        context->tokenNameLength=3;
+                    }
+                break;
                 case 4: // Vote Witness
                 case 11: // Freeze Balance Contract
                 case 12: // Unfreeze Balance Contract
                 case 13: // Withdraw Balance Contract
+                case 16: // Proposal Create Contract
+                case 17: // Proposal Approve Contract
+                case 18: // Proposal Delete Contract
                 default:
                     result = USTREAM_FINISHED;
             }
@@ -148,6 +305,29 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
     END_TRY;
     return result;
 }
+/*
+message ExchangeInjectContract {
+  bytes owner_address = 1;
+  int64 exchange_id = 2;
+  bytes token_id = 3;
+  int64 quant = 4;
+}
+
+message ExchangeWithdrawContract {
+  bytes owner_address = 1;
+  int64 exchange_id = 2;
+  bytes token_id = 3;
+  int64 quant = 4;
+}
+
+message ExchangeTransactionContract {
+  bytes owner_address = 1;
+  int64 exchange_id = 2;
+  bytes token_id = 3;
+  int64 quant = 4;
+  int64 expected = 5;
+}
+*/
 
 bool adjustDecimals(char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals) {
@@ -285,8 +465,39 @@ bool setContractType(uint8_t type, volatile char * out){
         case 15:
             os_memmove(out,"Update Asset\0", 13);
             break;
+        case 16:
+            os_memmove(out,"Proposal Create\0", 16);
+            break;
+        case 17:
+            os_memmove(out,"Proposal Approve\0", 17);
+            break;
+        case 18:
+            os_memmove(out,"Proposal Delete\0", 16);
+            break;
         default: 
         return false;
     };
     return true;
 }
+
+bool setExchangeContractDetail(uint8_t type, volatile char * out){
+    switch (type){
+        case 41:
+            os_memmove(out,"create\0", 7);
+            break;
+        case 42:
+            os_memmove(out,"inject\0", 7);
+            break;
+        case 43:
+            os_memmove(out,"withdraw\0", 9);
+            break;
+        case 44:
+            os_memmove(out,"transaction\0", 12);
+            break;
+        default: 
+        return false;
+    };
+    return true;
+}
+//exchangeContractDetails
+ 
