@@ -18,6 +18,8 @@
 #include "parse.h"
 #include <string.h>
 
+#include "tokens.h"
+
 char *sstrstr(char *haystack, char *needle, size_t length)
 {
     size_t needle_length = strlen(needle);
@@ -30,12 +32,27 @@ char *sstrstr(char *haystack, char *needle, size_t length)
     return NULL;
 }
 
+tokenDefinition_t* getKnownToken(txContent_t *context) {
+    uint8_t i;
+
+    tokenDefinition_t *currentToken = NULL;
+    for (i=0; i<NUM_TOKENS_TRC20; i++) {
+        currentToken = (tokenDefinition_t *)PIC(&TOKENS_TRC20[i]);
+        if (os_memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) == 0) {
+            return currentToken;
+        }
+    }
+    return NULL;
+}
+
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context) {
     parserStatus_e result = USTREAM_FAULT;
     uint8_t *pos;
     uint8_t index;
     uint8_t search[] = "type.googleapis";
     uint8_t b128=0;
+    const uint8_t SELECTOR[] = {0xA9,0x05,0x9C,0xBB};
+    tokenDefinition_t* TRC20;
     BEGIN_TRY {
         TRY {
             os_memset(context, 0, sizeof(txContent_t));
@@ -125,6 +142,59 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                         index++; if (index>dataLength) THROW(0x6a88);
                         b128+=7;
                     }
+                    // Bandwidth estimation
+                    context->bandwidth = dataLength  // raw data length
+                                                +70; //signature length
+                    // DONE
+                break;
+                case 31: // TriggerSmartContract TRC20 transafer
+                    // address from
+                    if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->account,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
+                    // contract address 
+                    if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80); 
+                    if (data[index]!=ADDRESS_SIZE ) THROW(0x6a80);
+                    index++;if (index+ADDRESS_SIZE>dataLength) THROW(0x6a80); 
+                    os_memmove(context->contractAddress,data+index,ADDRESS_SIZE);
+                    index+=ADDRESS_SIZE;if (index>dataLength) THROW(0x6a80); 
+                    // field 3 - callValue 
+                    /*
+                    if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    // find end of base128
+                    while(index<dataLength){
+                        //NONEED += ((uint64_t)( (data[index])& PB_BASE128DATA) << b128) ;
+                        if ((data[index]&PB_BASE128)==0) break;
+                        index++; if (index>dataLength) THROW(0x6a88);
+                        b128+=7;
+                    }
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    */
+                    // field 4 - data
+                    if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+                    index++;if (index>dataLength) THROW(0x6a80);
+                    if (data[index]!=TRC20_DATA_FIELD_SIZE ) THROW(0x6a80);
+                    index++;if (index+TRC20_DATA_FIELD_SIZE>dataLength) THROW(0x6a80);
+                    // check if transfer(address, uint256) function
+                    if (os_memcmp(&data[index], SELECTOR, 4) != 0) THROW(0x6a80);
+                    // TO Address
+                    os_memmove(context->destination, data+index+15, ADDRESS_SIZE);
+                    //set MainNet PREFIX
+                    context->destination[0]=ADD_PRE_FIX_BYTE_MAINNET;
+                    // Amount
+                    os_memmove(context->TRC20Amount, data+index+36, 32);
+                    
+                    TRC20 = getKnownToken(context);
+                    if (TRC20 == NULL) THROW(0x6a80);
+                    context->decimals = TRC20->decimals;
+                    context->tokenNameLength = strlen(TRC20->ticker)+1;
+                    os_memmove(context->tokenName, TRC20->ticker, context->tokenNameLength);
+
                     // Bandwidth estimation
                     context->bandwidth = dataLength  // raw data length
                                                 +70; //signature length

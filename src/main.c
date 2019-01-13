@@ -28,6 +28,7 @@
 
 
 #include "parse.h"
+#include "uint256.h"
 
 
 extern bool fidoActivated;
@@ -2482,6 +2483,13 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     
 }
 
+void convertUint256BE(uint8_t *data, uint32_t length, uint256_t *target) {
+    uint8_t tmp[32];
+    os_memset(tmp, 0, 32);
+    os_memmove(tmp + 32 - length, data, length);
+    readu256BE(tmp, target);
+}
+
 // APDU Sign
 void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 uint16_t dataLength, volatile unsigned int *flags,
@@ -2489,6 +2497,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     UNUSED(tx);
     uint32_t i;
+    uint256_t uint256;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
@@ -2528,20 +2537,25 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     }
 
     switch (txContent.contractType){
-        case 1:
-        case 2:
+        case 1: // TRX Transfer
+        case 2: // TRC10 Transfer
+        case 31: // TRC20 Transfer
             // get Hash
             cx_hash((cx_hash_t *)&sha2, CX_LAST, tmpCtx.transactionContext.rawTx,
                 tmpCtx.transactionContext.rawTxLength, tmpCtx.transactionContext.hash);
 
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
+            if (txContent.contractType==31){
+                convertUint256BE(txContent.TRC20Amount, 32, &uint256);
+                tostring256(&uint256, 10, (char *)fullAmount2, sizeof(fullAmount2));   
+                if (!adjustDecimals((char *)fullAmount2, strlen(fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals))
+                    THROW(0x6B00);
+            }else
+                print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
+
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
             fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
                         
-            /*os_memmove((void *)(fullAddress + 5), "...", 3);
-            os_memmove((void *)(fullAddress + 8), (void *)(fullAddress + BASE58CHECK_ADDRESS_SIZE - 4), 4);*/
-            //fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
             // get token name
             os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
 
