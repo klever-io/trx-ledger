@@ -25,7 +25,7 @@ APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/195'" --curve secp256k1 $(COMMON_LOA
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-APPVERSION=0.0.2
+APPVERSION = $(file < VERSION)
 APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
 APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
 APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
@@ -34,7 +34,8 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 ifeq ($(TARGET_NAME),TARGET_BLUE)
 ICONNAME=icon_blue.gif
 else
-ICONNAME=icon.gif
+#ICONNAME=icon.gif
+ICONNAME=icon_r.gif
 endif
 
 

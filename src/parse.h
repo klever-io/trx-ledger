@@ -13,9 +13,11 @@
 #define BASE58CHECK_PK_SIZE 64
 #define HASH_SIZE 32
 
+#define TRC20_DATA_FIELD_SIZE 68
+
 #define SUN_DIG 6
 #define ADD_PRE_FIX_BYTE_MAINNET 0x41
-#define MAX_RAW_TX 200
+#define MAX_RAW_TX 240
 
 #define PB_TYPE 0x07
 #define PB_FIELD_R 0x03
@@ -37,6 +39,9 @@ typedef struct txContent_t {
     uint64_t bandwidth;
     uint8_t account[ADDRESS_SIZE];
     uint8_t destination[ADDRESS_SIZE];
+    uint8_t contractAddress[ADDRESS_SIZE];
+    uint8_t TRC20Amount[32];
+    uint8_t decimals;
     uint8_t tokenName[32];
     uint8_t tokenNameLength;
     uint8_t tokenName2[32];
@@ -70,5 +75,7 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
                                 uint32_t outlen, uint8_t sun);
+bool adjustDecimals(char *src, uint32_t srcLength, char *target,
+                    uint32_t targetLength, uint8_t decimals);
 
 #endif
