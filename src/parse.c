@@ -77,8 +77,8 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
             index+=2; if (index>dataLength) THROW(0x6a80);  
             switch (context->contractType){
                 case 1: // Send TRX
-                    context->tokenNameLength=4;
-                    os_memmove(context->tokenName,"TRX\0",context->tokenNameLength);
+                    context->tokenNamesLength[0]=4;
+                    os_memmove(context->tokenNames[0],"TRX\0",context->tokenNamesLength[0]);
                     // address 1
                     if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
@@ -110,14 +110,14 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     // DONE
                 break;
                 case 2: //Send Asset
-                    // Token Name
+                    // Token ID
                     if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
-                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
-                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
-                    context->tokenName[context->tokenNameLength]='\0';
-                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80); 
+                    context->tokenNamesLength[0]=data[index]; if (context->tokenNamesLength[0] > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNamesLength[0] > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenNames[0],data+index,context->tokenNamesLength[0]);
+                    context->tokenNames[0][context->tokenNamesLength[0]]='\0';
+                    index+=context->tokenNamesLength[0]; if (index>dataLength) THROW(0x6a80); 
                     // address 1
                     if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
@@ -191,9 +191,9 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     
                     TRC20 = getKnownToken(context);
                     if (TRC20 == NULL) THROW(0x6a80);
-                    context->decimals = TRC20->decimals;
-                    context->tokenNameLength = strlen(TRC20->ticker)+1;
-                    os_memmove(context->tokenName, TRC20->ticker, context->tokenNameLength);
+                    context->decimals[0] = TRC20->decimals;
+                    context->tokenNamesLength[0] = strlen(TRC20->ticker)+1;
+                    os_memmove(context->tokenNames[0], TRC20->ticker, context->tokenNamesLength[0]);
 
                     // Bandwidth estimation
                     context->bandwidth = dataLength  // raw data length
@@ -211,11 +211,11 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     // first_token_id 
                     if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
-                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
-                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
-                    context->tokenName[context->tokenNameLength]='\0';
-                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    context->tokenNamesLength[0]=data[index]; if (context->tokenNamesLength[0] > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNamesLength[0] > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenNames[0],data+index,context->tokenNamesLength[0]);
+                    context->tokenNames[0][context->tokenNamesLength[0]]='\0';
+                    index+=context->tokenNamesLength[0]; if (index>dataLength) THROW(0x6a80);
                     // first_token_balance 
                     if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80);
@@ -226,18 +226,18 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                         b128+=7;
                     }
                     index++;if (index > dataLength) THROW(0x6a88);
-                    if (context->tokenName[0]=='_'){
-                        os_memmove(context->tokenName,"TRX\0",4);
-                        context->tokenNameLength=3;
+                    if (context->tokenNames[0][0]=='_'){
+                        os_memmove(context->tokenNames[0],"TRX\0",4);
+                        context->tokenNamesLength[0]=3;
                     }
                     // second_token_id 
                     if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
-                    context->tokenName2Length=data[index]; if (context->tokenName2Length > 32) THROW(0x6a80); 
-                    index++;if (index+context->tokenName2Length > dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName2,data+index,context->tokenName2Length);
-                    context->tokenName2[context->tokenName2Length]='\0';
-                    index+=context->tokenName2Length; if (index>dataLength) THROW(0x6a80);
+                    context->tokenNamesLength[1]=data[index]; if (context->tokenNamesLength[1] > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNamesLength[1] > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenNames[1],data+index,context->tokenNamesLength[1]);
+                    context->tokenNames[1][context->tokenNamesLength[1]]='\0';
+                    index+=context->tokenNamesLength[1]; if (index>dataLength) THROW(0x6a80);
                     // second_token_balance 
                     if ((data[index]>>PB_FIELD_R)!=5 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80);
@@ -249,9 +249,9 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     }
                     if (index > dataLength) THROW(0x6a88);
                     // Check if TRX
-                    if (context->tokenName2[0]=='_'){
-                        os_memmove(context->tokenName2,"TRX\0",4);
-                        context->tokenName2Length=4;
+                    if (context->tokenNames[1][0]=='_'){
+                        os_memmove(context->tokenNames[1],"TRX\0",4);
+                        context->tokenNamesLength[1]=4;
                     }
 
                     // Bandwidth estimation
@@ -280,11 +280,11 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     // token_id 
                     if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
-                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
-                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
-                    context->tokenName[context->tokenNameLength]='\0';
-                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    context->tokenNamesLength[0]=data[index]; if (context->tokenNamesLength[0] > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNamesLength[0] > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenNames[0],data+index,context->tokenNamesLength[0]);
+                    context->tokenNames[0][context->tokenNamesLength[0]]='\0';
+                    index+=context->tokenNamesLength[0]; if (index>dataLength) THROW(0x6a80);
                     // quant 
                     if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80);
@@ -296,9 +296,9 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     }
                     index++;if (index > dataLength) THROW(0x6a88);
                     // Check if TRX
-                    if (context->tokenName[0]=='_'){
-                        os_memmove(context->tokenName,"TRX\0",4);
-                        context->tokenNameLength=3;
+                    if (context->tokenNames[0]=='_'){
+                        os_memmove(context->tokenNames[0],"TRX\0",4);
+                        context->tokenNamesLength[0]=3;
                     }
                 break;
                 case 44: // Exchange Transaction
@@ -322,11 +322,11 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     // token_id 
                     if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80); 
-                    context->tokenNameLength=data[index]; if (context->tokenNameLength > 32) THROW(0x6a80); 
-                    index++;if (index+context->tokenNameLength > dataLength) THROW(0x6a80); 
-                    os_memmove(context->tokenName,data+index,context->tokenNameLength);
-                    context->tokenName[context->tokenNameLength]='\0';
-                    index+=context->tokenNameLength; if (index>dataLength) THROW(0x6a80);
+                    context->tokenNamesLength[0]=data[index]; if (context->tokenNamesLength[0] > 32) THROW(0x6a80); 
+                    index++;if (index+context->tokenNamesLength[0] > dataLength) THROW(0x6a80); 
+                    os_memmove(context->tokenNames[0],data+index,context->tokenNamesLength[0]);
+                    context->tokenNames[0][context->tokenNamesLength[0]]='\0';
+                    index+=context->tokenNamesLength[0]; if (index>dataLength) THROW(0x6a80);
                     // quant 
                     if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
                     index++;if (index>dataLength) THROW(0x6a80);
@@ -349,9 +349,9 @@ parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context)
                     
                     index++;if (index > dataLength) THROW(0x6a88);
                     // Check if TRX
-                    if (context->tokenName[0]=='_'){
-                        os_memmove(context->tokenName,"TRX\0",4);
-                        context->tokenNameLength=3;
+                    if (context->tokenNames[0]=='_'){
+                        os_memmove(context->tokenNames[0],"TRX\0",4);
+                        context->tokenNamesLength[0]=3;
                     }
                 break;
                 case 4: // Vote Witness
@@ -570,4 +570,62 @@ bool setExchangeContractDetail(uint8_t type, volatile char * out){
     return true;
 }
 //exchangeContractDetails
- 
+
+// ALLOW SAME NAME TOKEN
+// CHECK SIGNATURE(ID+NAME)
+// Parse token Name and Signature
+parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context) {
+    parserStatus_e result = USTREAM_FAULT;
+    uint8_t index = 0;
+    BEGIN_TRY {
+        TRY {
+            // Get Token Name
+            if ((data[index]>>PB_FIELD_R)!=10 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+            index++;if (index>dataLength) THROW(0x6a80); 
+            context->tokenNameValidationLength=data[index]; if (context->tokenNameValidationLength > 32) THROW(0x6a80); 
+            index++;if (index+context->tokenNameValidationLength > dataLength) THROW(0x6a80);
+            os_memmove(context->tokenNameValidation,data+index,context->tokenNameValidationLength);
+            context->tokenNameValidation[context->tokenNameValidationLength]='\0';
+            index+=context->tokenNameValidationLength; if (index>dataLength) THROW(0x6a80);
+            // Get decimals
+            if ((data[index]>>PB_FIELD_R)!=11 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
+            index++;if (index>dataLength) THROW(0x6a80);
+            // find end of base128
+            uint8_t decimals = 0;
+            // find end of base128
+            for(int b128=0; index<dataLength; ++index){
+                decimals += ((uint8_t)( data[index] & PB_BASE128DATA) << b128) ;
+                if ((data[index]&PB_BASE128) == 0) break;
+                b128+=7;
+            }
+            index++;if (index > dataLength) THROW(0x6a88);
+            // Get Signature
+            if ((data[index]>>PB_FIELD_R)!=12 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
+            index++;if (index>dataLength) THROW(0x6a80); 
+            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
+            // Validate token ID + Name
+            int ret = verifyTokenNameID(context->tokenNames[token_id],context->tokenNameValidation,decimals,(uint8_t *)data+index, data[index-1]);
+            if (ret!=1)
+                THROW(0x6a80);
+            
+            // UPDATE Token with Name[ID]
+            uint8_t tmp[MAX_TOKEN_LENGTH];
+
+            snprintf(tmp, MAX_TOKEN_LENGTH,"%s[%s]",
+                context->tokenNameValidation, context->tokenNames[token_id]);
+            context->tokenNamesLength[token_id] = strlen(tmp);
+            os_memmove(context->tokenNames[token_id], tmp, context->tokenNamesLength[token_id]+1);
+
+            result = USTREAM_FINISHED;
+        }
+        CATCH_OTHER(e) {
+            os_memset(context->tokenNameValidation, 0, 32);
+            context->tokenNameValidationLength = 0;
+            result = USTREAM_FAULT;
+        }
+        FINALLY {
+        }
+    }
+    END_TRY;
+    return result;
+ }

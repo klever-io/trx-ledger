@@ -30,6 +30,7 @@
 #include "parse.h"
 #include "uint256.h"
 
+#include "tokens.h"
 
 extern bool fidoActivated;
 
@@ -51,6 +52,7 @@ uint32_t set_result_get_publicKey(void);
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
 #define P1_LAST 0x90
+#define P1_TRC10_NAME 0xA0
 #define P1_SIGN 0x10
 
 #define OFFSET_CLA 0
@@ -71,7 +73,7 @@ cx_sha256_t sha2;
 volatile char fullAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
 volatile char fullAmount[50];
-volatile char fullContract[50];
+volatile char fullContract[MAX_TOKEN_LENGTH];
 volatile char fullHash[HASH_SIZE*2+1];
 volatile char fullAmount2[50];
 volatile char exchangeContractDetail[50];
@@ -1952,7 +1954,7 @@ const bagl_element_t ui_approval_exchange_withdraw_nanos[] = {
 
      {{BAGL_LABELINE, 0x03,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "Token ID",
+     "Token Name",
      0,
      0,
      0,
@@ -2116,7 +2118,7 @@ const bagl_element_t ui_approval_exchange_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x03,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "Token ID",
+     "Token Name",
      0,
      0,
      0,
@@ -2517,6 +2519,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         }
 
         //Parse contract type
+        // Prevent buffer overflow
+        if (dataLength>MAX_RAW_TX){
+            PRINTF("RawTX buffer overflow\n");
+            THROW(0x6A80);
+        }
         // Load raw Data
         os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
         tmpCtx.transactionContext.rawTxLength = dataLength;
@@ -2527,7 +2534,19 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         }
         cx_sha256_init(&sha2); //init sha
         
-    } else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
+    } else if ((p1&0xF0) == P1_TRC10_NAME)  {
+        // Max 2 Tokens Name
+        if ((p1&0x07)>1)
+            THROW(0x6A80);
+        // Decode Token name and validate signature
+        if (parseTokenName((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+            PRINTF("Unexpected parser status\n");
+            THROW(0x6A80);
+        }
+        // if not last token name, return
+        if (!(p1&0x08)) THROW(0x9000);
+        dataLength = 0;
+    }else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
         THROW(0x6B00);
     }else {
 
@@ -2541,23 +2560,27 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         case 2: // TRC10 Transfer
         case 31: // TRC20 Transfer
             // get Hash
-            cx_hash((cx_hash_t *)&sha2, CX_LAST, tmpCtx.transactionContext.rawTx,
-                tmpCtx.transactionContext.rawTxLength, tmpCtx.transactionContext.hash);
-
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);
+            
             if (txContent.contractType==31){
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
                 tostring256(&uint256, 10, (char *)fullAmount2, sizeof(fullAmount2));   
-                if (!adjustDecimals((char *)fullAmount2, strlen(fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals))
+                if (!adjustDecimals((char *)fullAmount2, strlen(fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals[0]))
                     THROW(0x6B00);
             }else
-                print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
+                print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
             fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
-                        
+
             // get token name
-            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSFER;
@@ -2570,17 +2593,17 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
         break;
         case 41: // exchange create
-            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
-            cx_hash(&sha2, CX_LAST, workBuffer,
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
-            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
-            os_memmove((void *)fullAddress, txContent.tokenName2, txContent.tokenName2Length+1);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenName, "TRX", 3)==0)?SUN_DIG:0);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenName2, "TRX", 3)==0)?SUN_DIG:0);
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            os_memmove((void *)fullAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:0);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
             
@@ -2602,9 +2625,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             cx_hash(&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
-            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenName, "TRX", 3)==0)?SUN_DIG:0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
        
@@ -2625,10 +2648,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             cx_hash(&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
-            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenName, "TRX", 3)==0)?SUN_DIG:0);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenName, "TRX", 3)==0)?0:SUN_DIG);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?0:SUN_DIG);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
        
@@ -2714,7 +2737,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                            G_io_apdu_buffer + OFFSET_CDATA,
                            G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
-
+            
             case INS_GET_APP_CONFIGURATION:
                 // Request App configuration
                 handleGetAppConfiguration(
