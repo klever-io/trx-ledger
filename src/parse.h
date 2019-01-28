@@ -46,8 +46,6 @@ typedef struct txContent_t {
     uint8_t decimals[2];
     uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
     uint8_t tokenNamesLength[2];
-    uint8_t tokenNameValidation[33];
-    uint8_t tokenNameValidationLength;
     uint8_t contractType;
 } txContent_t;
 
@@ -70,11 +68,12 @@ typedef struct transactionContext_t {
     uint8_t signatureLength;
 } transactionContext_t;
 
-bool setContractType(uint8_t type, volatile char * out);
-bool setExchangeContractDetail(uint8_t type, volatile char * out);
+bool setContractType(uint8_t type, void * out);
+bool setExchangeContractDetail(uint8_t type, void * out);
 
 parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
+parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
                                 uint32_t outlen, uint8_t sun);

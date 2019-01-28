@@ -1589,7 +1589,7 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL,
      NULL,
      NULL},
-    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+    {{BAGL_LABELINE, 0x02, 12, 28, 104, 12, 0x00 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
      (char *)fullContract,
      0,
@@ -2477,7 +2477,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 #elif defined(TARGET_NANOS)
         ux_step = 0;
         ux_step_count = 2;
-        UX_DISPLAY(ui_address_nanos, ui_address_prepro);
+        UX_DISPLAY(ui_address_nanos, (bagl_element_callback_t) ui_address_prepro);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
@@ -2535,17 +2535,41 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         cx_sha256_init(&sha2); //init sha
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
-        // Max 2 Tokens Name
-        if ((p1&0x07)>1)
-            THROW(0x6A80);
-        // Decode Token name and validate signature
-        if (parseTokenName((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
-            PRINTF("Unexpected parser status\n");
-            THROW(0x6A80);
+        switch (txContent.contractType){
+            case 2:  // transafer asset
+            case 41: // create exchange
+                // Max 2 Tokens Name
+                if ((p1&0x07)>1)
+                    THROW(0x6A80);
+                // Decode Token name and validate signature
+                if (parseTokenName((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                    PRINTF("Unexpected parser status\n");
+                    THROW(0x6A80);
+                } 
+                // if not last token name, return
+                if (!(p1&0x08)) THROW(0x9000);
+                dataLength = 0; 
+
+                break;
+            case 42: // exchange Inject
+            case 43: // exchange withdraw
+            case 44: // exchange transaction
+                // Max 1 pair set
+                if ((p1&0x07)>0)
+                    THROW(0x6A80);
+                // error if not last
+                if (!(p1&0x08)) THROW(0x6A80);
+                // Decode Token name and validate signature
+                if (parseExchange((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                    PRINTF("Unexpected parser status\n");
+                    THROW(0x6A80);
+                }
+                dataLength = 0;
+                break;
+            default:
+                // Error if any other contract
+                THROW(0x6A80);
         }
-        // if not last token name, return
-        if (!(p1&0x08)) THROW(0x9000);
-        dataLength = 0;
     }else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
         THROW(0x6B00);
     }else {
@@ -2570,7 +2594,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (txContent.contractType==31){
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
                 tostring256(&uint256, 10, (char *)fullAmount2, sizeof(fullAmount2));   
-                if (!adjustDecimals((char *)fullAmount2, strlen(fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals[0]))
+                if (!adjustDecimals((char *)fullAmount2, strlen((const char *)fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals[0]))
                     THROW(0x6B00);
             }else
                 print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:txContent.decimals[0]);
@@ -2588,7 +2612,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
-                UX_DISPLAY(ui_approval_nanos, ui_approval_prepro);
+                UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
             #endif // #if TARGET_ID
 
         break;
@@ -2602,10 +2626,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             os_memmove((void *)fullAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
             
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -2613,23 +2637,23 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
-                UX_DISPLAY(ui_approval_exchange_nanos, ui_approval_exchange_prepro);
+                UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
             #endif // #if TARGET_ID
         break;
         case 42: // exchange Inject
         case 43: // exchange withdraw
-            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
-            cx_hash(&sha2, CX_LAST, workBuffer,
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -2637,23 +2661,25 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
-                UX_DISPLAY(ui_approval_exchange_withdraw_nanos, ui_approval_exchange_withdraw_prepro);
+                UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
             #endif // #if TARGET_ID
         break;
         case 44: // exchange transaction
-            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
-            cx_hash(&sha2, CX_LAST, workBuffer,
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
-            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            //os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
+
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:0);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp(txContent.tokenNames[0], "TRX", 3)==0)?0:SUN_DIG);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), txContent.decimals[1]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, exchangeContractDetail)) THROW(0x6A80);
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -2661,21 +2687,21 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
-                UX_DISPLAY(ui_approval_exchange_transaction_nanos, ui_approval_exchange_transaction_prepro);
+                UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
             #endif // #if TARGET_ID
         break;
         default:
-            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
-            cx_hash(&sha2, CX_LAST, workBuffer,
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
             // Write fullHash
-            array_hexstr(fullHash, tmpCtx.transactionContext.hash, 32);
+            array_hexstr((char *)fullHash, tmpCtx.transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, fullContract)) THROW(0x6A80);
+            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -2683,7 +2709,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 3;
-                UX_DISPLAY(ui_approval_simple_nanos, ui_approval_simple_prepro);
+                UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
             #endif // #if TARGET_ID
         break;
     }
