@@ -35,19 +35,18 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
 void getBase58FromAddres(uint8_t *address, uint8_t *out,
                                 cx_sha256_t* sha2) {
     uint8_t sha256[32];
-    uint8_t checkSum[4];
     uint8_t addchecksum[ADDRESS_SIZE+4];
     
     cx_sha256_init(sha2);
-    cx_hash(sha2, CX_LAST, address, 21, sha256);
+    cx_hash((cx_hash_t*)sha2, CX_LAST, address, 21, sha256);
     cx_sha256_init(sha2);
-    cx_hash(sha2, CX_LAST, sha256, 32, sha256);
+    cx_hash((cx_hash_t*)sha2, CX_LAST, sha256, 32, sha256);
     
     os_memmove(addchecksum, address , ADDRESS_SIZE);
     os_memmove(addchecksum+ADDRESS_SIZE, sha256, 4);
     
     
-    encode_base_58(&addchecksum[0],25,out,BASE58CHECK_ADDRESS_SIZE);
+    encode_base_58(&addchecksum[0],25,(char *)out,BASE58CHECK_ADDRESS_SIZE);
     
 }
 
@@ -55,7 +54,7 @@ void transactionHash(uint8_t *raw, uint16_t dataLength,
                         uint8_t *out, cx_sha256_t* sha2) {
    
     cx_sha256_init(sha2);
-    cx_hash(sha2, CX_LAST, raw, dataLength, out);    
+    cx_hash((cx_hash_t*)sha2, CX_LAST, raw, dataLength, out);    
 }
 
 void signTransaction(transactionContext_t *transactionContext) {
