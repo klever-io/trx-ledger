@@ -32,6 +32,7 @@ In order to make compiling as eas as possible you can make use of a docker image
 Make sure you have [Docker](https://www.docker.com/community-edition) installed.
 
 ### Step 1 - Build the image:
+> make sure to select the appropriate $BOLOS_SDK in Dockerfile
 ```bash
 docker build -t ledger-chain:latest .
 ```
@@ -64,6 +65,9 @@ Enter your PIN and **make sure you're seeing the Dashboard app**.
 ```
 
 ### Step 2 - Create new virtualenv
+#### linux dependencies for ledgerblue module
+> libudev1 libudev-dev libusb-1.0-0-dev
+
 ```bash
 virtualenv -p python3 ledger
 source ledger/bin/activate
