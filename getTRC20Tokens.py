@@ -2,6 +2,7 @@ import urllib.request, json
 from tronapi import Tron
 from binascii import unhexlify
 import codecs
+import time
 
 def conv(string):
     ret = "0x"+string[0:2]
@@ -9,13 +10,31 @@ def conv(string):
         ret += ",0x"+string[i*2:(i+1)*2]
     return ret
 
-with urllib.request.urlopen("https://api.tronscan.org/api/token_trc20?sort=issue_time&start=0&limit=100") as url:
+
+def urlopen_with_retry(toread, start):
+     for i in range(5):
+        try:
+           time.sleep(0.3) 
+           return urllib.request.urlopen("https://apilist.tronscan.org/api/token_trc20?sort=issue_time&limit={}&start={}".format(toread, start))
+        except Exception:
+            continue
+
+ItemsFields = 'trc20_tokens'
+toread = 20
+start = 0
+f= open("signedList_TRC20.txt","w+")
+tron = Tron()
+while (toread>0):
+    url = urlopen_with_retry(toread,start)
     data = json.loads(url.read().decode())
 
-    f= open("TRC20_out.txt","w+")
-    tron = Tron()
-    for T in data['trc20_tokens']:
+    for T in data[ItemsFields]:
         address = tron.address.to_hex(T['contract_address'])
         f.write('{}{}{}{}, \"${} \", {}{},'.format("{","{",conv(address),"}",T['symbol'],T['decimals'],"}" ))
         f.write('\n')
-    f.close()
+
+    if len(data[ItemsFields])<toread:
+        toread = 0
+    start = start + toread
+
+f.close()
