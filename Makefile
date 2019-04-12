@@ -25,7 +25,8 @@ APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/195'" --curve secp256k1 $(COMMON_LOA
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-APPVERSION=0.0.3
+APPVERSION = $(file < VERSION)
+
 APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
 APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
 APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
@@ -34,7 +35,8 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 ifeq ($(TARGET_NAME),TARGET_BLUE)
 ICONNAME=icon_blue.gif
 else
-ICONNAME=icon.gif
+#ICONNAME=icon.gif
+ICONNAME=icon_r.gif
 endif
 
 
@@ -83,8 +85,9 @@ include $(BOLOS_SDK)/Makefile.glyphs
 ### computed variables
 APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
-DEFINES   += U2F_PROXY_MAGIC=\"w0w\"
-DEFINES   += HAVE_IO_U2F HAVE_U2F 
+DEFINES   += U2F_PROXY_MAGIC=\"TRX\"
+DEFINES   += HAVE_IO_U2F HAVE_U2F
+DEFINES   += U2F_REQUEST_TIMEOUT=28000 # 28 seconds
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)

@@ -28,7 +28,9 @@
 
 
 #include "parse.h"
+#include "uint256.h"
 
+#include "tokens.h"
 
 extern bool fidoActivated;
 
@@ -50,6 +52,7 @@ uint32_t set_result_get_publicKey(void);
 #define P1_FIRST 0x00
 #define P1_MORE 0x80
 #define P1_LAST 0x90
+#define P1_TRC10_NAME 0xA0
 #define P1_SIGN 0x10
 
 #define OFFSET_CLA 0
@@ -70,8 +73,10 @@ cx_sha256_t sha2;
 volatile char fullAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
 volatile char fullAmount[50];
-volatile char fullContract[50];
+volatile char fullContract[MAX_TOKEN_LENGTH];
 volatile char fullHash[HASH_SIZE*2+1];
+volatile char fullAmount2[50];
+volatile char exchangeContractDetail[50];
 
 bagl_element_t tmp_element;
 
@@ -1584,7 +1589,7 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL,
      NULL,
      NULL},
-    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+    {{BAGL_LABELINE, 0x02, 12, 28, 104, 12, 0x00 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
      (char *)fullContract,
      0,
@@ -1670,7 +1675,560 @@ unsigned int ui_approval_prepro(const bagl_element_t *element) {
 }
 
 unsigned int ui_approval_nanos_button(unsigned int button_mask,
-                                      unsigned int button_mask_counter);
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
+
+// EXCHANGE TRANSACTIONS DETAILS
+const bagl_element_t ui_approval_exchange_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  21,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_TRANSACTION_BADGE  }, NULL, 0, 0,
+    // 0, NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Exchange",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)exchangeContractDetail,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABELINE, 0x02,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Token Name 1",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullContract,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Amount Token 1",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAmount,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Token Name 2",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x05, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Amount Token 2",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAmount2,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+  
+};
+
+/*
+ ux_step 0: confirm
+         1: amount
+         2: address
+*/
+unsigned int ui_approval_exchange_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 0x02:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x04:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x05:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_exchange_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
+// Show exchange withdraw/inject approval
+const bagl_element_t ui_approval_exchange_withdraw_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  21,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_TRANSACTION_BADGE  }, NULL, 0, 0,
+    // 0, NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Exchange",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)exchangeContractDetail,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABELINE, 0x02,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Exchange ID",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x03,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Token Name",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullContract,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Amount",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAmount,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+  
+};
+
+/*
+ ux_step 0: confirm
+         1: amount
+         2: address
+*/
+unsigned int ui_approval_exchange_withdraw_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 0x02:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x04:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_exchange_withdraw_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
+// Show exchange transaction details for approval
+const bagl_element_t ui_approval_exchange_transaction_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  21,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_TRANSACTION_BADGE  }, NULL, 0, 0,
+    // 0, NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Exchange",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)exchangeContractDetail,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABELINE, 0x02,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Exchange ID",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x03,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Token Name",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullContract,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Amount",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAmount,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x05, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Expected",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAmount2,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+  
+};
+
+/*
+ ux_step 0: confirm
+         1: amount
+         2: address
+*/
+unsigned int ui_approval_exchange_transaction_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 0x02:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x04:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x05:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_exchange_transaction_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
 
 #endif // #if defined(TARGET_NANOS)
 
@@ -1810,25 +2368,6 @@ unsigned int io_seproxyhal_touch_tx_simple_cancel(const bagl_element_t *e) {
     return 0; // do not redraw the widget
 }
 
-#if defined(TARGET_NANOS)
-
-unsigned int ui_approval_nanos_button(unsigned int button_mask,
-                                      unsigned int button_mask_counter) {
-    switch (button_mask) {
-    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
-        io_seproxyhal_touch_tx_cancel(NULL);
-        break;
-
-    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
-        io_seproxyhal_touch_tx_ok(NULL);
-        break;
-    }
-    }
-    return 0;
-}
-
-#endif // #if defined(TARGET_NANOS)
-
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     switch (channel & ~(IO_FLAGS)) {
     case CHANNEL_KEYBOARD:
@@ -1938,12 +2477,19 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 #elif defined(TARGET_NANOS)
         ux_step = 0;
         ux_step_count = 2;
-        UX_DISPLAY(ui_address_nanos, ui_address_prepro);
+        UX_DISPLAY(ui_address_nanos, (bagl_element_callback_t) ui_address_prepro);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
     }
     
+}
+
+void convertUint256BE(uint8_t *data, uint32_t length, uint256_t *target) {
+    uint8_t tmp[32];
+    os_memset(tmp, 0, 32);
+    os_memmove(tmp + 32 - length, data, length);
+    readu256BE(tmp, target);
 }
 
 // APDU Sign
@@ -1953,6 +2499,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     UNUSED(tx);
     uint32_t i;
+    uint256_t uint256;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         tmpCtx.transactionContext.pathLength = workBuffer[0];
@@ -1972,6 +2519,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         }
 
         //Parse contract type
+        // Prevent buffer overflow
+        if (dataLength>MAX_RAW_TX){
+            PRINTF("RawTX buffer overflow\n");
+            THROW(0x6A80);
+        }
         // Load raw Data
         os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
         tmpCtx.transactionContext.rawTxLength = dataLength;
@@ -1982,7 +2534,43 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         }
         cx_sha256_init(&sha2); //init sha
         
-    } else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
+    } else if ((p1&0xF0) == P1_TRC10_NAME)  {
+        switch (txContent.contractType){
+            case 2:  // transafer asset
+            case 41: // create exchange
+                // Max 2 Tokens Name
+                if ((p1&0x07)>1)
+                    THROW(0x6A80);
+                // Decode Token name and validate signature
+                if (parseTokenName((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                    PRINTF("Unexpected parser status\n");
+                    THROW(0x6A80);
+                } 
+                // if not last token name, return
+                if (!(p1&0x08)) THROW(0x9000);
+                dataLength = 0; 
+
+                break;
+            case 42: // exchange Inject
+            case 43: // exchange withdraw
+            case 44: // exchange transaction
+                // Max 1 pair set
+                if ((p1&0x07)>0)
+                    THROW(0x6A80);
+                // error if not last
+                if (!(p1&0x08)) THROW(0x6A80);
+                // Decode Token name and validate signature
+                if (parseExchange((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                    PRINTF("Unexpected parser status\n");
+                    THROW(0x6A80);
+                }
+                dataLength = 0;
+                break;
+            default:
+                // Error if any other contract
+                THROW(0x6A80);
+        }
+    }else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
         THROW(0x6B00);
     }else {
 
@@ -1992,22 +2580,31 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     }
 
     switch (txContent.contractType){
-        case 1:
-        case 2:
+        case 1: // TRX Transfer
+        case 2: // TRC10 Transfer
+        case 31: // TRC20 Transfer
             // get Hash
-            cx_hash((cx_hash_t *)&sha2, CX_LAST, tmpCtx.transactionContext.rawTx,
-                tmpCtx.transactionContext.rawTxLength, tmpCtx.transactionContext.hash);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);
+            
+            if (txContent.contractType==31){
+                convertUint256BE(txContent.TRC20Amount, 32, &uint256);
+                tostring256(&uint256, 10, (char *)fullAmount2, sizeof(fullAmount2));   
+                if (!adjustDecimals((char *)fullAmount2, strlen((const char *)fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals[0]))
+                    THROW(0x6B00);
+            }else
+                print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:txContent.decimals[0]);
 
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==1)?SUN_DIG:0);
             getBase58FromAddres(txContent.destination,
                                         (void *)fullAddress, &sha2);
             fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
-                        
-            /*os_memmove((void *)(fullAddress + 5), "...", 3);
-            os_memmove((void *)(fullAddress + 8), (void *)(fullAddress + BASE58CHECK_ADDRESS_SIZE - 4), 4);*/
-            //fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+
             // get token name
-            os_memmove((void *)fullContract, txContent.tokenName, txContent.tokenNameLength+1);
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSFER;
@@ -2015,22 +2612,96 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
-                UX_DISPLAY(ui_approval_nanos, ui_approval_prepro);
+                UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
             #endif // #if TARGET_ID
 
         break;
-        default:
-            cx_hash(&sha2, 0, workBuffer, dataLength, NULL);
+        case 41: // exchange create
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
-            cx_hash(&sha2, CX_LAST, workBuffer,
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);    
+            
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            os_memmove((void *)fullAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
+            // write exchange contract type
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
+            
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                ui_approval_exchange_create_blue_init();
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 5;
+                UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
+            #endif // #if TARGET_ID
+        break;
+        case 42: // exchange Inject
+        case 43: // exchange withdraw
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);    
+            
+            os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            // write exchange contract type
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
+       
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                ui_approval_exchange_withdraw_blue_init();
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 4;
+                UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
+            #endif // #if TARGET_ID
+        break;
+        case 44: // exchange transaction
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
+                    0, tmpCtx.transactionContext.hash);    
+            
+            //os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+            snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
+
+            print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
+            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), txContent.decimals[1]);
+            // write exchange contract type
+            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
+       
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                ui_approval_exchange_transaction_blue_init();
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 5;
+                UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
+            #endif // #if TARGET_ID
+        break;
+        default:
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
+                THROW(0x9000);
+            }
+            cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
                     0, tmpCtx.transactionContext.hash);    
             
             // Write fullHash
-            array_hexstr(fullHash, tmpCtx.transactionContext.hash, 32);
+            array_hexstr((char *)fullHash, tmpCtx.transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, fullContract)) THROW(0x6A80);
+            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -2038,7 +2709,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 3;
-                UX_DISPLAY(ui_approval_simple_nanos, ui_approval_simple_prepro);
+                UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
             #endif // #if TARGET_ID
         break;
     }
@@ -2092,7 +2763,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                            G_io_apdu_buffer + OFFSET_CDATA,
                            G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
-
+            
             case INS_GET_APP_CONFIGURATION:
                 // Request App configuration
                 handleGetAppConfiguration(
