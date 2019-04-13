@@ -98,15 +98,6 @@ ux_state_t ux;
 unsigned int ux_step;
 unsigned int ux_step_count;
 
-typedef struct internalStorage_t {
-    uint8_t fidoTransport;
-    uint8_t initialized;
-} internalStorage_t;
-
-WIDE internalStorage_t N_storage_real;
-#define N_storage (*(WIDE internalStorage_t *)PIC(&N_storage_real))
-
-
 const bagl_element_t *ui_menu_item_out_over(const bagl_element_t *e) {
     // the selection rectangle is after the none|touchable
     e = (const bagl_element_t *)(((unsigned int)e) + sizeof(bagl_element_t));
@@ -246,32 +237,9 @@ const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_settings[];
 const ux_menu_entry_t menu_settings_browser[];
 
-// change the setting
-void menu_settings_browser_change(unsigned int enabled) {
-    uint8_t fidoTransport = enabled;
-    nvm_write(&N_storage.fidoTransport, (void *)&fidoTransport,
-              sizeof(uint8_t));
-    // go back to the menu entry
-    UX_MENU_DISPLAY(1, menu_settings, NULL);
-}
-
-// show the currently activated entry
-void menu_settings_browser_init(unsigned int ignored) {
-    UNUSED(ignored);
-    UX_MENU_DISPLAY(N_storage.fidoTransport ? 1 : 0, menu_settings_browser,
-                    NULL);
-}
-
-// Menu Entry Yes/No
-const ux_menu_entry_t menu_settings_browser[] = {
-    {NULL, menu_settings_browser_change, 0, NULL, "No", NULL, 0, 0},
-    {NULL, menu_settings_browser_change, 1, NULL, "Yes", NULL, 0, 0},
-    UX_MENU_END};
-
 // Menu Settings
 const ux_menu_entry_t menu_settings[] = {
-    {NULL, menu_settings_browser_init, 0, NULL, "Browser support", NULL, 0, 0},
-    {menu_main, NULL, 1, &C_icon_back, "Back", NULL, 61, 40},
+    {menu_main, NULL, 0, &C_icon_back, "Back", NULL, 61, 40},
     UX_MENU_END};
 
 // Menu About
@@ -291,18 +259,6 @@ const ux_menu_entry_t menu_main[] = {
 #endif // #if TARGET_NANOS
 
 #if defined(TARGET_BLUE)
-
-const bagl_element_t *ui_settings_blue_toggle_browser(const bagl_element_t *e) {
-    // swap setting and request redraw of settings elements
-    uint8_t setting = N_storage.fidoTransport ? 0 : 1;
-    nvm_write(&N_storage.fidoTransport, (void *)&setting, sizeof(uint8_t));
-
-    // only refresh settings mutable drawn elements
-    UX_REDISPLAY_IDX(8);
-
-    // won't redisplay the bagl_none
-    return 0;
-}
 
 // don't perform any draw/color change upon finger event over settings
 const bagl_element_t *ui_settings_out_over(const bagl_element_t *e) {
@@ -386,14 +342,6 @@ const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
     if (e->component.userid) {
         os_memmove(&tmp_element, e, sizeof(bagl_element_t));
         switch (e->component.userid) {
-        case 0x01:
-            // swap icon content
-            if (N_storage.fidoTransport) {
-                tmp_element.text = &C_icon_toggle_set;
-            } else {
-                tmp_element.text = &C_icon_toggle_reset;
-            }
-            break;
         }
         return &tmp_element;
     }
@@ -840,6 +788,9 @@ ui_approval_blue_cancel_callback(const bagl_element_t *e) {
 typedef enum {
     APPROVAL_TRANSFER,
     APPROVAL_TRANSACTION,
+    APPROVAL_EXCHANGE_CREATE,
+    APPROVAL_EXCHANGE_TRANSACTION,
+    APPROVAL_EXCHANGE_WITHDRAW_INJECT,
 } ui_approval_blue_state_t;
 ui_approval_blue_state_t G_ui_approval_blue_state;
 // pointer to value to be displayed
@@ -866,6 +817,36 @@ const char *const ui_approval_blue_details_name[][7] = {
         NULL,
         "CONFIRM TRANSACTION",
         "Transaction details",
+    },
+    /*APPROVAL_EXCHANGE_CREATE*/
+    {
+        "TOKEN 1",
+        "AMOUNT",
+        "TOKEN 2",
+        "AMOUNT",
+        NULL,
+        "CONFIRM EXCHANGE",
+        "Exchange Create Details",
+    },
+    /*APPROVAL_EXCHANGE_TRANSACTION*/
+    {
+        "EXCHANGE ID",
+        "TOKEN PAIR",
+        "AMOUNT",
+        "EXPECTED",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Exchange Pair Details",
+    },
+    /*APPROVAL_EXCHANGE_WITHDRAW/INJECT*/
+    {
+        "ACTION",
+        "EXCHANGE ID",
+        "TOKEN NAME",
+        "AMOUNT",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Exchange MX Details",
     },
 };
 
@@ -1396,6 +1377,49 @@ void ui_approval_simple_transaction_blue_init(void) {
     ui_approval_blue_values[0] = fullContract;
     ui_approval_blue_values[1] = fullHash;
     ui_approval_blue_values[2] = fullContract;
+    
+    ui_approval_blue_init();
+}
+
+// BANCOR EXCHANGE
+void ui_approval_exchange_withdraw_inject_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = exchangeContractDetail;
+    ui_approval_blue_values[1] = fullAddress;
+    ui_approval_blue_values[2] = fullContract;
+    ui_approval_blue_values[3] = fullAmount;
+    
+    ui_approval_blue_init();
+}
+
+void ui_approval_exchange_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = fullAddress;
+    ui_approval_blue_values[1] = fullContract;
+    ui_approval_blue_values[2] = fullAmount;
+    ui_approval_blue_values[3] = fullAmount2;
+    
+    ui_approval_blue_init();
+}
+
+void ui_approval_exchange_create_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = fullContract;
+    ui_approval_blue_values[1] = fullAmount;
+    ui_approval_blue_values[2] = fullAddress;
+    ui_approval_blue_values[3] = fullAmount2;
     
     ui_approval_blue_init();
 }
@@ -2632,7 +2656,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
             
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                G_ui_approval_blue_state = APPROVAL_EXCHANGE_CREATE;
                 ui_approval_exchange_create_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
@@ -2656,8 +2680,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
-                ui_approval_exchange_withdraw_blue_init();
+                G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
+                ui_approval_exchange_withdraw_inject_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
@@ -2682,7 +2706,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                G_ui_approval_blue_state = APPROVAL_EXCHANGE_TRANSACTION;
                 ui_approval_exchange_transaction_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
@@ -2957,17 +2981,7 @@ __attribute__((section(".boot"))) int main(void) {
         BEGIN_TRY {
             TRY {
                 io_seproxyhal_init();
-
-                if (N_storage.initialized != 0x01) {
-                    internalStorage_t storage;
-                    storage.fidoTransport = 0x00;
-                    storage.initialized = 0x01;
-                    nvm_write(&N_storage, (void *)&storage,
-                              sizeof(internalStorage_t));
-                }
-
                 USB_power(1);
-
                 ui_idle();
 
                 //Call Tron main Loop
