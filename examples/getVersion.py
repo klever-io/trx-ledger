@@ -15,4 +15,4 @@ print("Request app Version")
 dongle = getDongle(True)
 result = dongle.exchange(bytearray.fromhex(apduMessage))
 
-print('Version={:d}.{:d}.{:d}'.format(result[1],result[0],result[3]))
+print('Version={:d}.{:d}.{:d}'.format(result[1],result[2],result[3]))
