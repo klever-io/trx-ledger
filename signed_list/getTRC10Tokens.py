@@ -12,7 +12,7 @@ def urlopen_with_retry(toread, start):
         try:
            time.sleep(0.3) 
            #return urllib.request.urlopen("https://apilist.tronscan.org/api/token?sort=-name&limit={}&start={}&totalAll=1".format(toread, start))
-           return urllib.request.urlopen("https://api.trxplorer.io/v2/tokens?limit={}&start={}".format(toread, start))
+           return urllib.request.urlopen("https://api.trxplorer.io/v2/tokens?type=0&limit={}&start={}".format(toread, start))
         except Exception:
             continue
     
