@@ -33,10 +33,10 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
-ICONNAME=icon_blue.gif
+ICONNAME=icons/icon_blue.gif
 else
 #ICONNAME=icon.gif
-ICONNAME=icon_r.gif
+ICONNAME=icons/icon_r.gif
 endif
 
 
