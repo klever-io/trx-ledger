@@ -90,13 +90,18 @@ unsigned int io_seproxyhal_touch_tx_simple_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_tx_simple_cancel(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e);
-unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e);
+
 void ui_idle(void);
+#ifdef TARGET_NANOX
+#include "ux.h"
+ux_state_t G_ux;
+bolos_ux_params_t G_ux_params;
+#else // TARGET_NANOX
 ux_state_t ux;
 // display stepped screens
 unsigned int ux_step;
 unsigned int ux_step_count;
+#endif // TARGET_NANOX
 
 const bagl_element_t *ui_menu_item_out_over(const bagl_element_t *e) {
     // the selection rectangle is after the none|touchable
@@ -821,9 +826,9 @@ const char *const ui_approval_blue_details_name[][7] = {
     /*APPROVAL_EXCHANGE_CREATE*/
     {
         "TOKEN 1",
-        "AMOUNT",
+        "AMOUNT 1",
         "TOKEN 2",
-        "AMOUNT",
+        "AMOUNT 2",
         NULL,
         "CONFIRM EXCHANGE",
         "Exchange Create Details",
@@ -1376,8 +1381,7 @@ void ui_approval_simple_transaction_blue_init(void) {
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
     ui_approval_blue_values[0] = fullContract;
     ui_approval_blue_values[1] = fullHash;
-    ui_approval_blue_values[2] = fullContract;
-    
+        
     ui_approval_blue_init();
 }
 
@@ -2256,11 +2260,427 @@ unsigned int ui_approval_exchange_transaction_nanos_button(unsigned int button_m
 
 #endif // #if defined(TARGET_NANOS)
 
+#if defined(TARGET_NANOX)
+
+void display_settings(void);
+
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_idle_flow_1_step,
+    bnn, //pnn,
+    {
+      "", //&C_icon_dashboard,
+      "Application",
+      "is ready",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_idle_flow_2_step,
+    bn,
+    {
+      "Version",
+      APPVERSION,
+    });
+UX_FLOW_DEF_VALID(
+    ux_idle_flow_3_step,
+    pb,
+    display_settings(),
+    {
+      &C_icon_eye,
+      "Settings",
+    });
+UX_FLOW_DEF_VALID(
+    ux_idle_flow_4_step,
+    pb,
+    os_sched_exit(-1),
+    {
+      &C_icon_dashboard,
+      "Quit",
+    });
+const ux_flow_step_t *        const ux_idle_flow [] = {
+  &ux_idle_flow_1_step,
+  &ux_idle_flow_2_step,
+  &ux_idle_flow_3_step,
+  &ux_idle_flow_4_step,
+  FLOW_END_STEP,
+};
+
+
+UX_FLOW_DEF_VALID(
+    ux_settings_flow_1_step,
+    pb,
+    ui_idle(),
+    {
+      &C_icon_back,
+      "Back",
+    });
+
+const ux_flow_step_t *        const ux_settings_flow [] = {
+  &ux_settings_flow_1_step,
+  FLOW_END_STEP,
+};
+
+void display_settings() {
+  ux_flow_init(0, ux_settings_flow, NULL);
+}
+
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_display_public_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Verify",
+      "address",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_display_public_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Address",
+      .text = fullAddress,
+    });
+UX_FLOW_DEF_VALID(
+    ux_display_public_flow_3_step,
+    pb,
+    io_seproxyhal_touch_address_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Approve",
+    });
+UX_FLOW_DEF_VALID(
+    ux_display_public_flow_4_step,
+    pb,
+    io_seproxyhal_touch_address_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_display_public_flow [] = {
+  &ux_display_public_flow_1_step,
+  &ux_display_public_flow_2_step,
+  &ux_display_public_flow_3_step,
+  &ux_display_public_flow_4_step,
+  FLOW_END_STEP,
+};
+
+// Simple Transaction:
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_st_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Verify",
+      fullContract
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_st_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Hash",
+      .text = fullHash
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_st_flow_3_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Approve",
+      "and send",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_st_flow_4_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_st_flow [] = {
+  &ux_approval_st_flow_1_step,
+  &ux_approval_st_flow_2_step,
+  &ux_approval_st_flow_3_step,
+  &ux_approval_st_flow_4_step,
+  FLOW_END_STEP,
+};
+
+// TRANSFER
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_tx_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "transfer",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_tx_2_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = fullAmount
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_tx_3_step,
+    bnnn_paging,
+    {
+      .title = "Token",
+      .text = fullContract,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_tx_4_step,
+    bnnn_paging,
+    {
+      .title = "Address",
+      .text = fullAddress,
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_tx_5_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_tx_6_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_tx_flow [] = {
+  &ux_approval_tx_1_step,
+  &ux_approval_tx_2_step,
+  &ux_approval_tx_3_step,
+  &ux_approval_tx_4_step,
+  &ux_approval_tx_5_step,
+  &ux_approval_tx_6_step,
+  FLOW_END_STEP,
+};
+
+// EXCHANGE CREATE
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_create_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "exchange",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_create_2_step,
+    bnnn_paging,
+    {
+      .title = "Token 1",
+      .text = fullContract
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_create_3_step,
+    bnnn_paging,
+    {
+      .title = "Amount 1",
+      .text = fullAmount,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_create_4_step,
+    bnnn_paging,
+    {
+      .title = "Token 2",
+      .text = fullAddress,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_create_5_step,
+    bnnn_paging,
+    {
+      .title = "Amount 2",
+      .text = fullAmount2,
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_create_6_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and create",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_create_7_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_exchange_create_flow [] = {
+  &ux_approval_exchange_create_1_step,
+  &ux_approval_exchange_create_2_step,
+  &ux_approval_exchange_create_3_step,
+  &ux_approval_exchange_create_4_step,
+  &ux_approval_exchange_create_5_step,
+  &ux_approval_exchange_create_6_step,
+  &ux_approval_exchange_create_7_step,
+  FLOW_END_STEP,
+};
+
+// EXCHANGE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_transaction_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "transaction",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_transaction_2_step,
+    bnnn_paging,
+    {
+      .title = "Exchange ID",
+      .text = fullAddress
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_transaction_3_step,
+    bnnn_paging,
+    {
+      .title = "Token pair",
+      .text = fullContract,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_transaction_4_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = fullAmount,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_transaction_5_step,
+    bnnn_paging,
+    {
+      .title = "Expected",
+      .text = fullAmount2,
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_transaction_6_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_transaction_7_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_exchange_transaction_flow [] = {
+  &ux_approval_exchange_transaction_1_step,
+  &ux_approval_exchange_transaction_2_step,
+  &ux_approval_exchange_transaction_3_step,
+  &ux_approval_exchange_transaction_4_step,
+  &ux_approval_exchange_transaction_5_step,
+  &ux_approval_exchange_transaction_6_step,
+  &ux_approval_exchange_transaction_7_step,
+  FLOW_END_STEP,
+};
+
+
+// EXCHANGE WITHDRAW INJECT
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_wi_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "transaction",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_wi_2_step,
+    bnnn_paging,
+    {
+      .title = "Action",
+      .text = exchangeContractDetail
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_wi_3_step,
+    bnnn_paging,
+    {
+      .title = "Excahnge ID",
+      .text = fullAddress,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_wi_4_step,
+    bnnn_paging,
+    {
+      .title = "Token name",
+      .text = fullContract,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_exchange_wi_5_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = fullAmount,
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_wi_6_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_exchange_wi_7_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_exchange_wi_flow [] = {
+  &ux_approval_exchange_wi_1_step,
+  &ux_approval_exchange_wi_2_step,
+  &ux_approval_exchange_wi_3_step,
+  &ux_approval_exchange_wi_4_step,
+  &ux_approval_exchange_wi_5_step,
+  &ux_approval_exchange_wi_6_step,
+  &ux_approval_exchange_wi_7_step,
+  FLOW_END_STEP,
+};
+
+#endif // #if defined(TARGET_NANOX)
+
 void ui_idle(void) {
 #if defined(TARGET_BLUE)
     UX_DISPLAY(ui_idle_blue, NULL);
 #elif defined(TARGET_NANOS)
     UX_MENU_DISPLAY(0, menu_main, NULL);
+#elif defined(TARGET_NANOX)
+    // reserve a display stack slot if none yet
+    if(G_ux.stack_count == 0) {
+        ux_stack_push();
+    }
+    ux_flow_init(0, ux_idle_flow, NULL);
 #endif // #if TARGET_ID
 }
 
@@ -2502,6 +2922,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         ux_step = 0;
         ux_step_count = 2;
         UX_DISPLAY(ui_address_nanos, (bagl_element_callback_t) ui_address_prepro);
+#elif defined(TARGET_NANOX)
+        ux_flow_init(0, ux_display_public_flow, NULL);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
@@ -2637,6 +3059,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step = 0;
                 ux_step_count = 4;
                 UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0, ux_approval_tx_flow, NULL);
             #endif // #if TARGET_ID
 
         break;
@@ -2662,6 +3086,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0, ux_approval_exchange_create_flow, NULL);
             #endif // #if TARGET_ID
         break;
         case 42: // exchange Inject
@@ -2686,6 +3112,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step = 0;
                 ux_step_count = 4;
                 UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0, ux_approval_exchange_wi_flow, NULL);
             #endif // #if TARGET_ID
         break;
         case 44: // exchange transaction
@@ -2712,6 +3140,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0, ux_approval_exchange_transaction_flow, NULL);
             #endif // #if TARGET_ID
         break;
         default:
@@ -2734,6 +3164,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step = 0;
                 ux_step_count = 3;
                 UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0, ux_approval_st_flow, NULL);
             #endif // #if TARGET_ID
         break;
     }
@@ -2926,20 +3358,18 @@ unsigned char io_event(unsigned char channel) {
         break;
 
     case SEPROXYHAL_TAG_TICKER_EVENT:
-        UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {
-            if (UX_ALLOWED) {
-#if 0
-                if (skipWarning && (ux_step == 0)) {
-                    ux_step++;
-                }
-#endif
-                if (ux_step_count) {
-                    // prepare next screen
-                    ux_step = (ux_step + 1) % ux_step_count;
-                    // redisplay screen
-                    UX_REDISPLAY();
-                }
+        UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer,
+        {
+          #ifndef TARGET_NANOX
+          if (UX_ALLOWED) {
+            if (ux_step_count) {
+              // prepare next screen
+              ux_step = (ux_step+1)%ux_step_count;
+              // redisplay screen
+              UX_REDISPLAY();
             }
+          }
+          #endif // TARGET_NANOX
         });
         break;
     }
@@ -2981,6 +3411,11 @@ __attribute__((section(".boot"))) int main(void) {
         BEGIN_TRY {
             TRY {
                 io_seproxyhal_init();
+                #ifdef TARGET_NANOX
+                // grab the current plane mode setting
+                G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
+                #endif // TARGET_NANOX
+
                 USB_power(1);
                 ui_idle();
 
