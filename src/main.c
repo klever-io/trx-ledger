@@ -2267,9 +2267,9 @@ void display_settings(void);
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
     ux_idle_flow_1_step,
-    bnn, //pnn,
+    pnn,
     {
-      "", //&C_icon_dashboard,
+      &C_icon,
       "Application",
       "is ready",
     });
@@ -3150,7 +3150,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);    
+                    0, tmpCtx.transactionContext.hash);
             
             // Write fullHash
             array_hexstr((char *)fullHash, tmpCtx.transactionContext.hash, 32);

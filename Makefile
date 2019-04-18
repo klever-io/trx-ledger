@@ -21,7 +21,7 @@ endif
 include $(BOLOS_SDK)/Makefile.defines
 
 APPNAME = Tron
-APP_LOAD_PARAMS=--appFlags 0x40 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
+APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
 
 splitVersion=$(word $2, $(subst ., , $1))
 
@@ -52,10 +52,8 @@ all: default
 # Platform #
 ############
 
-DEFINES   += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=128
+DEFINES   += OS_IO_SEPROXYHAL
 DEFINES   += HAVE_BAGL HAVE_SPRINTF
-#DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-DEFINES   += PRINTF\(...\)=
 DEFINES   += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 DEFINES   +=  LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
 
@@ -67,6 +65,7 @@ DEFINES   += APPVERSION=\"$(APPVERSION)\"
 DEFINES   += CX_COMPLIANCE_141
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
+DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=300
 # BLE
 DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
 DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
@@ -77,6 +76,21 @@ DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
 DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
+else
+DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
+endif
+
+# Enabling debug PRINTF
+DEBUG = 0
+ifneq ($(DEBUG),0)
+
+        ifeq ($(TARGET_NAME),TARGET_NANOX)
+                DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
+        else
+                DEFINES   += HAVE_PRINTF PRINTF=screen_printf
+        endif
+else
+        DEFINES   += PRINTF\(...\)=
 endif
 
 ##############
