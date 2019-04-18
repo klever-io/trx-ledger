@@ -2285,7 +2285,7 @@ UX_FLOW_DEF_VALID(
     pb,
     display_settings(),
     {
-      &C_icon_eye,
+      &C_icon_coggle,
       "Settings",
     });
 UX_FLOW_DEF_VALID(
@@ -2293,7 +2293,7 @@ UX_FLOW_DEF_VALID(
     pb,
     os_sched_exit(-1),
     {
-      &C_icon_dashboard,
+      &C_icon_dashboard_x,
       "Quit",
     });
 const ux_flow_step_t *        const ux_idle_flow [] = {
