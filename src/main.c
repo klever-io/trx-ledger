@@ -2300,7 +2300,7 @@ UX_FLOW_DEF_VALID(
 const ux_flow_step_t *        const ux_idle_flow [] = {
   &ux_idle_flow_1_step,
   &ux_idle_flow_2_step,
-  &ux_idle_flow_3_step,
+  //&ux_idle_flow_3_step,
   &ux_idle_flow_4_step,
   FLOW_END_STEP,
 };
@@ -3031,12 +3031,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         case 2: // TRC10 Transfer
         case 31: // TRC20 Transfer
             // get Hash
-            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL, 32);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);
+                    0, tmpCtx.transactionContext.hash, 32);
             
             if (txContent.contractType==31){
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
@@ -3066,12 +3066,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
         break;
         case 41: // exchange create
-            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL, 32);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);    
+                    0, tmpCtx.transactionContext.hash, 32);    
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             os_memmove((void *)fullAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
@@ -3093,12 +3093,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         break;
         case 42: // exchange Inject
         case 43: // exchange withdraw
-            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL, 32);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);    
+                    0, tmpCtx.transactionContext.hash, 32);    
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
@@ -3118,12 +3118,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         case 44: // exchange transaction
-            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL, 32);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);    
+                    0, tmpCtx.transactionContext.hash, 32);    
             
             //os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
@@ -3146,12 +3146,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         default:
-            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL);
+            cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL, 32);
             if ((p1 == P1_MORE) || (p1 == P1_FIRST)) {
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash);
+                    0, tmpCtx.transactionContext.hash, 32);
             
             // Write fullHash
             array_hexstr((char *)fullHash, tmpCtx.transactionContext.hash, 32);

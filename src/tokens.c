@@ -110,7 +110,7 @@ int verifyTokenNameID(const char *tokenId, const char *tokenName, uint8_t decima
     snprintf((char *)buffer, sizeof(buffer), "%s%s%c",tokenId, tokenName, decimals);
    
     cx_sha256_init(&sha2); //init sha
-    cx_hash((cx_hash_t *)&sha2, CX_LAST, buffer, strlen(tokenId)+strlen(tokenName)+1, hash);
+    cx_hash((cx_hash_t *)&sha2, CX_LAST, buffer, strlen(tokenId)+strlen(tokenName)+1, hash, 32);
    
     cx_ecfp_init_public_key(CX_CURVE_256K1,(uint8_t *)PIC(&token_public_key), 65, &publicKey);
     
@@ -127,7 +127,7 @@ int verifyExchangeID(const unsigned char *exchangeValidation, uint8_t datLength,
     uint8_t hash[32];
     
     cx_sha256_init(&sha2); //init sha
-    cx_hash((cx_hash_t *)&sha2, CX_LAST, exchangeValidation, datLength, hash);
+    cx_hash((cx_hash_t *)&sha2, CX_LAST, exchangeValidation, datLength, hash, 32);
    
     cx_ecfp_init_public_key(CX_CURVE_256K1,(uint8_t *)PIC(&token_public_key), 65, &publicKey);
     
