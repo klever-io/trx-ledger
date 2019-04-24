@@ -256,7 +256,7 @@ const ux_menu_entry_t menu_about[] = {
 // Main menu
 const ux_menu_entry_t menu_main[] = {
     {NULL, NULL, 0, &C_icon, "Use wallet to", "view accounts", 33, 12},
-    {menu_settings, NULL, 0, NULL, "Settings", NULL, 0, 0},
+    //{menu_settings, NULL, 0, NULL, "Settings", NULL, 0, 0},
     {menu_about, NULL, 0, NULL, "About", NULL, 0, 0},
     {NULL, os_sched_exit, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
     UX_MENU_END};
@@ -2280,7 +2280,7 @@ UX_FLOW_DEF_NOCB(
       "Version",
       APPVERSION,
     });
-UX_FLOW_DEF_VALID(
+/*UX_FLOW_DEF_VALID(
     ux_idle_flow_3_step,
     pb,
     display_settings(),
@@ -2288,6 +2288,7 @@ UX_FLOW_DEF_VALID(
       &C_icon_coggle,
       "Settings",
     });
+*/
 UX_FLOW_DEF_VALID(
     ux_idle_flow_4_step,
     pb,
