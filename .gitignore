@@ -21,6 +21,8 @@
 *.a
 *.la
 *.lo
+glyphs.c
+glyphs.h
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -51,6 +53,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
 
 #virtual env pip
 ledger/
