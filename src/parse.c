@@ -628,6 +628,9 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
 
             result = USTREAM_FINISHED;
         }
+        CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
+        }
         CATCH_OTHER(e) {
             result = USTREAM_FAULT;
         }
@@ -770,6 +773,9 @@ parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLengt
 
 
             result = USTREAM_FINISHED;
+        }
+        CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
         }
         CATCH_OTHER(e) {
             result = USTREAM_FAULT;

@@ -3234,6 +3234,9 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                 break;
             }
         }
+        CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
+        }
         CATCH_OTHER(e) {
             switch (e & 0xF000) {
             case 0x6000:
@@ -3292,6 +3295,9 @@ void tron_main(void) {
                 }
 
                 handleApdu(&flags, &tx);
+            }
+            CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
             }
             CATCH_OTHER(e) {
                 switch (e & 0xF000) {

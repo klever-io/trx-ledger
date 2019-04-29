@@ -25,6 +25,8 @@ transactionBIG2 = "14bed152d7439fb5b6791409100112190a15414d1ef8673f916debb7e2515
 transactionBIG3 = "1541b3ee0112190aa98edc11a6efb146e86a3e153d0a0933100112190a1541496e85711fa3b7ba5a093af635269a67230ac2c714"
 transactionBIG4 = "81e8864f0fc1f601b836b74c40548287100112190a1541c189fa6fc9ed7a3580c3fe291915d5c6a6259be710017082f1cfada62d"
 
+signatureTest = "7b74891516d57580ab669d8d4dd84cbf202108affd9d7102b33b6d81c8fa3796678512f6e6db923bac96f20fa3ba5f06fab3007678ce354f0a4ef7d37e3f7dcd01"
+
 # Create APDU message.
 # CLA 0xE0
 # INS 0x04 	SIGN
@@ -60,3 +62,7 @@ result3 = dongle.exchange(bytearray.fromhex(apduMessage))
 apduMessage = "E0049000" + '{:02x}'.format(  int(len(transactionBIG4) / 2)) +  transactionBIG4
 result4 = dongle.exchange(bytearray.fromhex(apduMessage))
 
+if (binascii.hexlify(result4[0:65]).decode()==signatureTest):
+	print("Hash signature match")
+else:
+	print("Hash signature error")
