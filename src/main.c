@@ -2975,9 +2975,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
         tmpCtx.transactionContext.rawTxLength = dataLength;
         //Parse Raw transaction dada
-        if (parseTx(workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+        parserStatus_e e = parseTx(workBuffer, dataLength, &txContent);
+        if (e != USTREAM_FINISHED) {
             PRINTF("Unexpected parser status\n");
-            THROW(0x6A80);
+            THROW(0x6800 | (e & 0x7FF));
         }
         cx_sha256_init(&sha2); //init sha
         
@@ -2989,9 +2990,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if ((p1&0x07)>1)
                     THROW(0x6A80);
                 // Decode Token name and validate signature
-                if (parseTokenName((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                parserStatus_e e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
+                if (e != USTREAM_FINISHED) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6A80);
+                    THROW(0x6800 | (e & 0x7FF));
                 } 
                 // if not last token name, return
                 if (!(p1&0x08)) THROW(0x9000);
@@ -3007,9 +3009,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 // error if not last
                 if (!(p1&0x08)) THROW(0x6A80);
                 // Decode Token name and validate signature
-                if (parseExchange((p1&0x07),workBuffer, dataLength, &txContent) != USTREAM_FINISHED) {
+                parserStatus_e e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent)
+                if ( e != USTREAM_FINISHED) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6A80);
+                    THROW(0x6800 | (e & 0x7FF));
                 }
                 dataLength = 0;
                 break;
@@ -3234,6 +3237,9 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                 break;
             }
         }
+        CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
+        }
         CATCH_OTHER(e) {
             switch (e & 0xF000) {
             case 0x6000:
@@ -3292,6 +3298,9 @@ void tron_main(void) {
                 }
 
                 handleApdu(&flags, &tx);
+            }
+            CATCH(EXCEPTION_IO_RESET) {
+                THROW(EXCEPTION_IO_RESET);
             }
             CATCH_OTHER(e) {
                 switch (e & 0xF000) {
