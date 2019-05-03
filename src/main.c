@@ -2983,6 +2983,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         cx_sha256_init(&sha2); //init sha
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
+        parserStatus_e e;
         switch (txContent.contractType){
             case 2:  // transafer asset
             case 41: // create exchange
@@ -2990,7 +2991,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if ((p1&0x07)>1)
                     THROW(0x6A80);
                 // Decode Token name and validate signature
-                parserStatus_e e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
+                e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
                 if (e != USTREAM_FINISHED) {
                     PRINTF("Unexpected parser status\n");
                     THROW(0x6800 | (e & 0x7FF));
@@ -3009,7 +3010,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 // error if not last
                 if (!(p1&0x08)) THROW(0x6A80);
                 // Decode Token name and validate signature
-                parserStatus_e e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent)
+                e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent);
                 if ( e != USTREAM_FINISHED) {
                     PRINTF("Unexpected parser status\n");
                     THROW(0x6800 | (e & 0x7FF));
