@@ -45,6 +45,7 @@ uint32_t set_result_get_publicKey(void);
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
+#define INS_GET_ECDH_SECRET 0x0A
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
 #define P2_NO_CHAINCODE 0x00
@@ -62,10 +63,8 @@ uint32_t set_result_get_publicKey(void);
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
 
-union {
-    publicKeyContext_t publicKeyContext;
-    transactionContext_t transactionContext;
-} tmpCtx;
+publicKeyContext_t publicKeyContext;
+transactionContext_t transactionContext;
 txContent_t txContent;
 
 cx_sha3_t sha3;
@@ -180,7 +179,7 @@ const bagl_element_t ui_idle_blue[] = {
 
     // BADGE_TRON.GIF
     {{BAGL_ICON, 0x00, 135, 178, 50, 50, 0, 0, BAGL_FILL, 0, COLOR_BG_1, 0, 0},
-     &C_badge_tron,
+     (const char *)&C_badge_tron,
      0,
      0,
      0,
@@ -240,7 +239,6 @@ unsigned int ui_idle_blue_button(unsigned int button_mask,
 
 const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_settings[];
-const ux_menu_entry_t menu_settings_browser[];
 
 // Menu Settings
 const ux_menu_entry_t menu_settings[] = {
@@ -405,7 +403,7 @@ const bagl_element_t ui_address_blue[] = {
 
     {{BAGL_LABELINE, 0x10, 30, 136, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -414,7 +412,7 @@ const bagl_element_t ui_address_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x11, 30, 159, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -452,10 +450,10 @@ unsigned int ui_address_blue_prepro(const bagl_element_t *element) {
     if (element->component.userid > 0) {
         unsigned int length = strlen(fullAddress);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
-            os_memset(addressSummary, 0, MAX_CHAR_PER_LINE + 1);
-            os_memmove(addressSummary,
-                       fullAddress + (element->component.userid & 0xF) *
-                                         MAX_CHAR_PER_LINE,
+            os_memset((void *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
+            os_memmove((void *)addressSummary,
+                       (const char *) (fullAddress + (element->component.userid & 0xF) *
+                                         MAX_CHAR_PER_LINE),
                        MIN(length - (element->component.userid & 0xF) *
                                         MAX_CHAR_PER_LINE,
                            MAX_CHAR_PER_LINE));
@@ -608,7 +606,7 @@ const bagl_element_t ui_details_blue[] = {
     /// TOP STATUS BAR
     {{BAGL_LABELINE, 0x01, 0, 45, 320, 30, 0, 0, BAGL_FILL, 0xFFFFFF, COLOR_APP,
       BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -640,7 +638,7 @@ const bagl_element_t ui_details_blue[] = {
 
     {{BAGL_LABELINE, 0x10, 30, 136, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -649,7 +647,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x11, 30, 159, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -658,7 +656,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x12, 30, 182, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -667,7 +665,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x13, 30, 205, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -676,7 +674,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x14, 30, 228, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char*)addressSummary,
      0,
      0,
      0,
@@ -685,7 +683,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x15, 30, 251, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -694,7 +692,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x16, 30, 274, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -703,7 +701,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x17, 30, 297, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -712,7 +710,7 @@ const bagl_element_t ui_details_blue[] = {
      NULL},
     {{BAGL_LABELINE, 0x18, 30, 320, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -722,7 +720,7 @@ const bagl_element_t ui_details_blue[] = {
     //"..." at the end if too much
     {{BAGL_LABELINE, 0x19, 30, 343, 260, 30, 0, 0, BAGL_FILL, 0x000000,
       COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0},
-     addressSummary,
+     (const char *)addressSummary,
      0,
      0,
      0,
@@ -747,10 +745,10 @@ unsigned int ui_details_blue_prepro(const bagl_element_t *element) {
     } else if (element->component.userid > 0) {
         unsigned int length = strlen(ui_details_content);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
-            os_memset(addressSummary, 0, MAX_CHAR_PER_LINE + 1);
-            os_memmove(addressSummary,
-                       ui_details_content + (element->component.userid & 0xF) *
-                                                MAX_CHAR_PER_LINE,
+            os_memset((const char *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
+            os_memmove((const char *)addressSummary,
+                       (const char *) (ui_details_content + (element->component.userid & 0xF) *
+                                                MAX_CHAR_PER_LINE),
                        MIN(length - (element->component.userid & 0xF) *
                                         MAX_CHAR_PER_LINE,
                            MAX_CHAR_PER_LINE));
@@ -1366,9 +1364,9 @@ void ui_approval_transaction_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = fullAmount;
-    ui_approval_blue_values[1] = fullContract;
-    ui_approval_blue_values[2] = fullAddress;
+    ui_approval_blue_values[0] = (const char*)fullAmount;
+    ui_approval_blue_values[1] = (const char*)fullContract;
+    ui_approval_blue_values[2] = (const char*)fullAddress;
     
     ui_approval_blue_init();
 }
@@ -1379,8 +1377,8 @@ void ui_approval_simple_transaction_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = fullContract;
-    ui_approval_blue_values[1] = fullHash;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)fullHash;
         
     ui_approval_blue_init();
 }
@@ -1392,10 +1390,10 @@ void ui_approval_exchange_withdraw_inject_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = exchangeContractDetail;
-    ui_approval_blue_values[1] = fullAddress;
-    ui_approval_blue_values[2] = fullContract;
-    ui_approval_blue_values[3] = fullAmount;
+    ui_approval_blue_values[0] = (const char*)exchangeContractDetail;
+    ui_approval_blue_values[1] = (const char*)fullAddress;
+    ui_approval_blue_values[2] = (const char*)fullContract;
+    ui_approval_blue_values[3] = (const char*)fullAmount;
     
     ui_approval_blue_init();
 }
@@ -1406,10 +1404,10 @@ void ui_approval_exchange_transaction_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = fullAddress;
-    ui_approval_blue_values[1] = fullContract;
-    ui_approval_blue_values[2] = fullAmount;
-    ui_approval_blue_values[3] = fullAmount2;
+    ui_approval_blue_values[0] = (const char*)fullAddress;
+    ui_approval_blue_values[1] = (const char*)fullContract;
+    ui_approval_blue_values[2] = (const char*)fullAmount;
+    ui_approval_blue_values[3] = (const char*)fullAmount2;
     
     ui_approval_blue_init();
 }
@@ -1420,15 +1418,264 @@ void ui_approval_exchange_create_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = fullContract;
-    ui_approval_blue_values[1] = fullAmount;
-    ui_approval_blue_values[2] = fullAddress;
-    ui_approval_blue_values[3] = fullAmount2;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)fullAmount;
+    ui_approval_blue_values[2] = (const char*)fullAddress;
+    ui_approval_blue_values[3] = (const char*)fullAmount2;
     
     ui_approval_blue_init();
 }
 
 #endif // #if defined(TARGET_BLUE)
+
+// PGP ECDH
+unsigned int io_seproxyhal_touch_ecdh_cancel(const bagl_element_t *e) {
+    G_io_apdu_buffer[0] = 0x69;
+    G_io_apdu_buffer[1] = 0x85;
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    // Display back the original UX
+    ui_idle();
+    return 0; // do not redraw the widget
+}
+
+unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
+    uint8_t privateKeyData[32];
+    cx_ecfp_private_key_t privateKey;
+    uint32_t tx = 0;
+
+    os_memmove(G_io_apdu_buffer, transactionContext.bip32Path, transactionContext.pathLength);
+    tx = transactionContext.pathLength;
+
+    // Get private key
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
+            transactionContext.pathLength, privateKeyData, NULL);
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    
+    tx = cx_ecdh(&privateKey, CX_ECDH_POINT,
+                    transactionContext.rawTx, 65,
+                    G_io_apdu_buffer, 160);
+    
+    // Clear tmp buffer data
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    // Display back the original UX
+    ui_idle();
+    return 0; // do not redraw the widget
+}
+
+
+#if defined(TARGET_BLUE)
+
+unsigned int
+ui_approval_pgp_ecdh_blue_button(unsigned int button_mask,
+                                 unsigned int button_mask_counter) {
+    return 0;
+}
+
+// UI to approve or deny the signature proposal
+static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
+    {{BAGL_RECTANGLE, 0x00, 0, 68, 320, 413, 0, 0, BAGL_FILL, COLOR_BG_1,
+      0x000000, 0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    // erase screen (only under the status bar)
+    {{BAGL_RECTANGLE, 0x00, 0, 20, 320, 48, 0, 0, BAGL_FILL, COLOR_APP,
+      COLOR_APP, 0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     /// TOP STATUS BAR
+    {{BAGL_LABELINE, 0x00, 0, 45, 320, 30, 0, 0, BAGL_FILL, 0xFFFFFF, COLOR_APP,
+      BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "TRON SHARED SECRETE",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABEL, 0x00, 0, 87, 320, 32, 0, 0, 0, 0x000000, 0xF9F9F9,
+      BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Confirm ECDH with Address:",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABEL, 0x00, 0, 136, 320, 33, 0, 0, 0, 0x000000, 0xF9F9F9,
+      BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (const char *)fullAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    
+    {{BAGL_BUTTON | BAGL_FLAG_TOUCHABLE, 0x00, 35, 385, 120, 40, 0, 6,
+      BAGL_FILL, 0xcccccc, COLOR_BG_1,
+      BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_CENTER |
+          BAGL_FONT_ALIGNMENT_MIDDLE,
+      0},
+     "CANCEL",
+     0,
+     0x37ae99,
+     COLOR_BG_1,
+     io_seproxyhal_touch_ecdh_cancel,
+     NULL,
+     NULL},
+    {{BAGL_BUTTON | BAGL_FLAG_TOUCHABLE, 0x00, 165, 385, 120, 40, 0, 6,
+      BAGL_FILL, 0x41ccb4, COLOR_BG_1,
+      BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_CENTER |
+          BAGL_FONT_ALIGNMENT_MIDDLE,
+      0},
+     "CONFIRM",
+     0,
+     0x37ae99,
+     COLOR_BG_1,
+     io_seproxyhal_touch_ecdh_ok,
+     NULL,
+     NULL},
+  
+};
+
+#endif // #if defined(TARGET_BLUE)
+
+#if defined(TARGET_NANOS)
+unsigned int ui_approval_pgp_ecdh_nanos_button(unsigned int button_mask,
+                                     unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT: // CANCEL
+        io_seproxyhal_touch_ecdh_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: { // OK
+        io_seproxyhal_touch_ecdh_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
+const bagl_element_t ui_approval_pgp_ecdh_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  31,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_EYE_BADGE  }, NULL, 0, 0, 0,
+    // NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Confirm",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Shared Secret",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "EDCH Address",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+};
+
+unsigned int ui_approval_pgp_ecdh_prepro(const bagl_element_t *element) {
+    if (element->component.userid > 0) {
+        unsigned int display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 1:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 2:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                break;
+            case 3:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+        return display;
+    }
+    return 1;
+}
+
+#endif // #if defined(TARGET_NANOS)
 
 #if defined(TARGET_NANOS)
 const bagl_element_t ui_approval_simple_nanos[] = {
@@ -2758,10 +3005,10 @@ unsigned int ui_approval_simple_nanos_button(unsigned int button_mask,
 unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     uint32_t tx = 0;
     
-    signTransaction(&tmpCtx.transactionContext);
+    signTransaction(&transactionContext);
     // send to output buffer
-    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
-    tx=tmpCtx.transactionContext.signatureLength;
+    os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
+    tx=transactionContext.signatureLength;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2787,10 +3034,10 @@ unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e) {
 unsigned int io_seproxyhal_touch_tx_simple_ok(const bagl_element_t *e) {
     uint32_t tx = 0;
     
-    signTransaction(&tmpCtx.transactionContext);
+    signTransaction(&transactionContext);
     // send to output buffer
-    os_memmove(G_io_apdu_buffer, tmpCtx.transactionContext.signature, tmpCtx.transactionContext.signatureLength);
-    tx=tmpCtx.transactionContext.signatureLength;
+    os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
+    tx=transactionContext.signatureLength;
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2844,10 +3091,10 @@ uint32_t set_result_get_publicKey() {
     uint32_t tx = 0;
     uint32_t addressLength = BASE58CHECK_ADDRESS_SIZE;
     G_io_apdu_buffer[tx++] = 65;
-    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.publicKey.W, 65);
+    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.publicKey.W, 65);
     tx += 65;
     G_io_apdu_buffer[tx++] = addressLength;
-    os_memmove(G_io_apdu_buffer + tx, tmpCtx.publicKeyContext.address58,
+    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.address58,
                addressLength);
     tx += addressLength;
     return tx;
@@ -2892,7 +3139,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                                privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    cx_ecfp_generate_pair(CX_CURVE_256K1, &tmpCtx.publicKeyContext.publicKey,
+    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
                           &privateKey, 1);
 
     // Clear tmp buffer data
@@ -2900,14 +3147,14 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Get address from PK
-    getAddressFromKey(&tmpCtx.publicKeyContext.publicKey,
-                                tmpCtx.publicKeyContext.address,&sha3);
+    getAddressFromKey(&publicKeyContext.publicKey,
+                                publicKeyContext.address,&sha3);
                                 
     // Get Base58
-    getBase58FromAddres(tmpCtx.publicKeyContext.address,
-                                tmpCtx.publicKeyContext.address58, &sha2);
+    getBase58FromAddres(publicKeyContext.address,
+                                publicKeyContext.address58, &sha2);
     
-    os_memmove((void *)fullAddress,tmpCtx.publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
+    os_memmove((void *)fullAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
     fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
   
     if (p1 == P1_NON_CONFIRM) {
@@ -2949,16 +3196,16 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     uint256_t uint256;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        tmpCtx.transactionContext.pathLength = workBuffer[0];
-        if ((tmpCtx.transactionContext.pathLength < 0x01) ||
-            (tmpCtx.transactionContext.pathLength > MAX_BIP32_PATH)) {
+        transactionContext.pathLength = workBuffer[0];
+        if ((transactionContext.pathLength < 0x01) ||
+            (transactionContext.pathLength > MAX_BIP32_PATH)) {
             PRINTF("Invalid path\n");
             THROW(0x6a80);
         }
         workBuffer++;
         dataLength--;
-        for (i = 0; i < tmpCtx.transactionContext.pathLength; i++) {
-            tmpCtx.transactionContext.bip32Path[i] =
+        for (i = 0; i < transactionContext.pathLength; i++) {
+            transactionContext.bip32Path[i] =
                 (workBuffer[0] << 24) | (workBuffer[1] << 16) |
                 (workBuffer[2] << 8) | (workBuffer[3]);
             workBuffer += 4;
@@ -2972,8 +3219,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6A80);
         }
         // Load raw Data
-        os_memmove(tmpCtx.transactionContext.rawTx, workBuffer, dataLength);
-        tmpCtx.transactionContext.rawTxLength = dataLength;
+        os_memmove(transactionContext.rawTx, workBuffer, dataLength);
+        transactionContext.rawTxLength = dataLength;
         //Parse Raw transaction dada
         parserStatus_e e = parseTx(workBuffer, dataLength, &txContent);
         if (e != USTREAM_FINISHED) {
@@ -3040,7 +3287,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash, 32);
+                    0, transactionContext.hash, 32);
             
             if (txContent.contractType==31){
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
@@ -3075,7 +3322,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash, 32);    
+                    0, transactionContext.hash, 32);    
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             os_memmove((void *)fullAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
@@ -3102,7 +3349,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash, 32);    
+                    0, transactionContext.hash, 32);    
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)fullAddress,sizeof(fullAddress), 0);
@@ -3127,7 +3374,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash, 32);    
+                    0, transactionContext.hash, 32);    
             
             //os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
@@ -3155,10 +3402,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x9000);
             }
             cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer,
-                    0, tmpCtx.transactionContext.hash, 32);
+                    0, transactionContext.hash, 32);
             
             // Write fullHash
-            array_hexstr((char *)fullHash, tmpCtx.transactionContext.hash, 32);
+            array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
             if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
        
@@ -3198,6 +3445,83 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     THROW(0x9000);  //Return OK
 }
 
+// APDU Sign
+void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+                uint16_t dataLength, volatile unsigned int *flags,
+                volatile unsigned int *tx) {
+
+    UNUSED(tx);
+    uint32_t i;    
+    uint8_t privateKeyData[32];
+    cx_ecfp_private_key_t privateKey;
+    
+    if ((p1 != 0x00) || (p2 != 0x01) ) {
+            THROW(0x6B00);
+    }
+
+    transactionContext.pathLength = workBuffer[0];
+    if ((transactionContext.pathLength < 0x01) ||
+        (transactionContext.pathLength > MAX_BIP32_PATH)) {
+        PRINTF("Invalid path\n");
+        THROW(0x6a80);
+    }
+    workBuffer++;
+    dataLength--;
+
+    for (i = 0; i < transactionContext.pathLength; i++) {
+        transactionContext.bip32Path[i] =
+            (workBuffer[0] << 24) | (workBuffer[1] << 16) |
+            (workBuffer[2] << 8) | (workBuffer[3]);
+        workBuffer += 4;
+        dataLength -= 4;
+    }
+    if (dataLength != 65) {
+        THROW(0x6700);
+    }
+
+    // Load raw Data
+    os_memmove(transactionContext.rawTx, workBuffer, dataLength);
+    transactionContext.rawTxLength = dataLength;
+
+    // Get private key
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
+            transactionContext.pathLength, privateKeyData, NULL);
+
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
+                          &privateKey, 1);
+
+    // Clear tmp buffer data
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    // Get address from PK
+    getAddressFromKey(&publicKeyContext.publicKey,
+                                publicKeyContext.address,&sha3);         
+    // Get Base58
+    getBase58FromAddres(publicKeyContext.address,
+                                publicKeyContext.address58, &sha2);
+    
+    os_memmove((void *)fullAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
+    fullAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+
+    #if defined(TARGET_BLUE)
+        UX_DISPLAY(ui_approval_pgp_ecdh_blue, NULL);
+    #elif defined(TARGET_NANOS)
+        ux_step = 0;
+        ux_step_count = 2;
+        UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
+    #elif defined(TARGET_NANOX)
+        // reserve a display stack slot if none yet
+        if(G_ux.stack_count == 0) {
+            ux_stack_push();
+        }
+        ux_flow_init(0, ux_approval_pgp_ecdh_flow, NULL);
+    #endif
+    *flags |= IO_ASYNCH_REPLY;
+
+}
+
 // Check ADPU and process the assigned task
 void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     unsigned short sw = 0;
@@ -3231,6 +3555,14 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                break;
+
+            case INS_GET_ECDH_SECRET: 
+                // Request Signature
+                handleECDHSecret(G_io_apdu_buffer[OFFSET_P1],
+                           G_io_apdu_buffer[OFFSET_P2],
+                           G_io_apdu_buffer + OFFSET_CDATA,
+                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
 
             default:

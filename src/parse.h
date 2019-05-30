@@ -53,12 +53,9 @@ typedef struct publicKeyContext_t {
     cx_ecfp_public_key_t publicKey;
     uint8_t address[ADDRESS_SIZE];
     uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
-    uint8_t chainCode[32]; 
-    bool getChaincode;
 } publicKeyContext_t;
 
 typedef struct transactionContext_t {
-    cx_curve_t curve;
     uint8_t pathLength;
     uint32_t bip32Path[MAX_BIP32_PATH];
     uint8_t rawTx[MAX_RAW_TX];
