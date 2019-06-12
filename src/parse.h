@@ -9,6 +9,7 @@
 
 #define ADD_PRE_FIX_STRING "T"
 #define ADDRESS_SIZE 21
+#define TOKENID_SIZE 7
 #define BASE58CHECK_ADDRESS_SIZE 34
 #define BASE58CHECK_PK_SIZE 64
 #define HASH_SIZE 32
@@ -34,6 +35,37 @@ typedef enum parserStatus_e {
     USTREAM_FAULT
 } parserStatus_e;
 
+typedef enum contractType_e {
+    ACCOUNTCREATECONTRACT = 0,
+    TRANSFERCONTRACT,
+    TRANSFERASSETCONTRACT,
+    VOTEASSETCONTRACT,
+    VOTEWITNESSCONTRACT,
+    WITNESSCREATECONTRACT,
+    ASSETISSUECONTRACT,
+    WITNESSUPDATECONTRACT = 8,
+    PARTICIPATEASSETISSUECONTRACT,
+    ACCOUNTUPDATECONTRACT,
+    FREEZEBALANCECONTRACT,
+    UNFREEZEBALANCECONTRACT,
+    WITHDRAWBALANCECONTRACT,
+    UNFREEZEASSETCONTRACT,
+    UPDATEASSETCONTRACT,
+    PROPOSALCREATECONTRACT,
+    PROPOSALAPPROVECONTRACT,
+    PROPOSALDELETECONTRACT,
+    SETACCOUNTIDCONTRACT,
+    CUSTOMCONTRACT,
+    CREATESMARTCONTRACT = 30,
+    TRIGGERSMARTCONTRACT,
+    EXCHANGECREATECONTRACT = 41,
+    EXCHANGEINJECTCONTRACT,
+    EXCHANGEWITHDRAWCONTRACT,
+    EXCHANGETRANSACTIONCONTRACT,
+    UPDATEENERGYLIMITCONTRACT,
+    ACCOUNTPERMISSIONUPDATECONTRACT
+} contractType_e;
+
 typedef struct txContent_t {
     uint64_t amount;
     uint64_t amount2;
@@ -46,8 +78,27 @@ typedef struct txContent_t {
     uint8_t decimals[2];
     uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
     uint8_t tokenNamesLength[2];
-    uint8_t contractType;
+    uint8_t resource;
+    uint8_t TRC20Method;
+    contractType_e contractType;
+    uint64_t dataBytes;
 } txContent_t;
+
+typedef struct stage_t {
+    uint16_t total;
+    uint16_t count;
+} stage_t;
+
+typedef struct txContext_t {
+    cx_sha256_t *sha2;
+    bool initialized;
+    uint8_t queueBuffer[60];
+    uint8_t queueBufferLength;
+    uint32_t getNext;
+    // 
+    uint8_t stage;
+    stage_t stageQueue[3];
+} txContext_t;
 
 typedef struct publicKeyContext_t {
     cx_ecfp_public_key_t publicKey;
@@ -68,7 +119,6 @@ typedef struct transactionContext_t {
 bool setContractType(uint8_t type, void * out);
 bool setExchangeContractDetail(uint8_t type, void * out);
 
-parserStatus_e parseTx(uint8_t *data, uint32_t dataLength, txContent_t *context);
 parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 
@@ -76,5 +126,12 @@ unsigned short print_amount(uint64_t amount, uint8_t *out,
                                 uint32_t outlen, uint8_t sun);
 bool adjustDecimals(char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals);
+
+
+
+void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content);
+
+uint16_t processTx(txContext_t *context, uint8_t *buffer,
+                         uint32_t length, txContent_t *content);
 
 #endif

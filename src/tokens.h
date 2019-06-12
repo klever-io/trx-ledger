@@ -29,3 +29,5 @@ typedef struct tokenDefinition_t {
 #define NUM_TOKENS_TRC20 72
 
 extern tokenDefinition_t const TOKENS_TRC20[NUM_TOKENS_TRC20];
+
+extern const uint8_t SELECTOR[][4];
