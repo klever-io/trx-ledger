@@ -206,7 +206,7 @@ bool setExchangeContractDetail(uint8_t type, void * out){
 // ALLOW SAME NAME TOKEN
 // CHECK SIGNATURE(ID+NAME+PRECISION)
 // Parse token Name and Signature
-parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context) {
+parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
     parserStatus_e result = USTREAM_FAULT;
     uint8_t index = 0;
     uint8_t tokenNameValidation[33];
@@ -238,7 +238,8 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
             index++;if (index>dataLength) THROW(0x6a80); 
             index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
             // Validate token ID + Name
-            int ret = verifyTokenNameID((const char *)context->tokenNames[token_id],(const char *)tokenNameValidation,decimals,(uint8_t *)data+index, data[index-1]);
+            int ret = verifyTokenNameID((const char *)content->tokenNames[token_id],(const char *)tokenNameValidation,
+                        decimals,(uint8_t *)data+index, data[index-1], content->publicKeyContext);
             if (ret!=1)
                 THROW(0x6a80);
             
@@ -246,10 +247,10 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
             uint8_t tmp[MAX_TOKEN_LENGTH];
 
             snprintf((char *)tmp, MAX_TOKEN_LENGTH,"%s[%s]",
-                tokenNameValidation, context->tokenNames[token_id]);
-            context->tokenNamesLength[token_id] = strlen((const char *)tmp);
-            os_memmove(context->tokenNames[token_id], tmp, context->tokenNamesLength[token_id]+1);
-            context->decimals[token_id]=decimals;
+                tokenNameValidation, content->tokenNames[token_id]);
+            content->tokenNamesLength[token_id] = strlen((const char *)tmp);
+            os_memmove(content->tokenNames[token_id], tmp, content->tokenNamesLength[token_id]+1);
+            content->decimals[token_id]=decimals;
             
 
             result = USTREAM_FINISHED;
@@ -270,7 +271,7 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
 // Exchange Token ID + Name
 // CHECK SIGNATURE(EXCHANGEID+TOKEN1ID+NAME1+PRECISION1+TOKEN2ID+NAME2+PRECISION2)
 // Parse token Name and Signature
-parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context) {
+parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
     parserStatus_e result = USTREAM_FAULT;
     uint8_t index = 0;
     uint8_t tokenID[2][8];
@@ -293,7 +294,7 @@ parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLengt
                 b128+=7;
             }
             index++;if (index > dataLength) THROW(0x6a88);
-            if (context->exchangeID!= ID) THROW(0x6a80);
+            if (content->exchangeID!= ID) THROW(0x6a80);
             // Get Token ID 1
             if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
             index++;if (index>dataLength) THROW(0x6a80); 
@@ -368,17 +369,18 @@ parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLengt
                         tokenID[1], tokenNAME[1], tokenDecimals[1]);
 
             // Validate token ID + Name
-            int ret = verifyExchangeID((const unsigned char *)buffer, len + 2, (uint8_t *)data+index, data[index-1]);
+            int ret = verifyExchangeID((const unsigned char *)buffer, len + 2, 
+                            (uint8_t *)data+index, data[index-1], content->publicKeyContext);
             if (ret!=1)
                 THROW(0x6a80);
             
             // UPDATE Token with Name[ID]
             uint8_t firstToken = 0;
             uint8_t secondToken = 0;
-            if (strcmp((const char *)context->tokenNames[0], (const char *)tokenID[0])==0){
+            if (strcmp((const char *)content->tokenNames[0], (const char *)tokenID[0])==0){
                 firstToken = 0;
                 secondToken = 1;
-            }else if (strcmp((const char *)context->tokenNames[0], (const char *)tokenID[1])==0){
+            }else if (strcmp((const char *)content->tokenNames[0], (const char *)tokenID[1])==0){
                 firstToken = 1;
                 secondToken = 0;
             }else{
@@ -387,16 +389,16 @@ parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLengt
             
             snprintf((char *)buffer, MAX_TOKEN_LENGTH,"%s[%s]",
                 tokenNAME[0], tokenID[0]);
-            os_memmove(context->tokenNames[firstToken], buffer, strlen((const char *)buffer)+1);
-            context->tokenNamesLength[firstToken] = strlen((const char *)buffer);
-            context->decimals[firstToken]=tokenDecimals[0];
+            os_memmove(content->tokenNames[firstToken], buffer, strlen((const char *)buffer)+1);
+            content->tokenNamesLength[firstToken] = strlen((const char *)buffer);
+            content->decimals[firstToken]=tokenDecimals[0];
 
             snprintf((char *)buffer, MAX_TOKEN_LENGTH,"%s[%s]",
                 tokenNAME[1], tokenID[1]);
-            os_memmove(context->tokenNames[secondToken], buffer, strlen((const char *)buffer)+1);
-            context->tokenNamesLength[secondToken] = strlen((const char *)buffer);
-            context->decimals[secondToken]=tokenDecimals[1];
-            PRINTF("Lenths: %d,%d\n",context->tokenNamesLength[firstToken] ,context->tokenNamesLength[secondToken]);
+            os_memmove(content->tokenNames[secondToken], buffer, strlen((const char *)buffer)+1);
+            content->tokenNamesLength[secondToken] = strlen((const char *)buffer);
+            content->decimals[secondToken]=tokenDecimals[1];
+            PRINTF("Lenths: %d,%d\n",content->tokenNamesLength[firstToken] ,content->tokenNamesLength[secondToken]);
 
             result = USTREAM_FINISHED;
         }

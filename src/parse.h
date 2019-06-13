@@ -66,24 +66,6 @@ typedef enum contractType_e {
     ACCOUNTPERMISSIONUPDATECONTRACT
 } contractType_e;
 
-typedef struct txContent_t {
-    uint64_t amount;
-    uint64_t amount2;
-    uint64_t exchangeID;
-    uint64_t bandwidth;
-    uint8_t account[ADDRESS_SIZE];
-    uint8_t destination[ADDRESS_SIZE];
-    uint8_t contractAddress[ADDRESS_SIZE];
-    uint8_t TRC20Amount[32];
-    uint8_t decimals[2];
-    uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
-    uint8_t tokenNamesLength[2];
-    uint8_t resource;
-    uint8_t TRC20Method;
-    contractType_e contractType;
-    uint64_t dataBytes;
-} txContent_t;
-
 typedef struct stage_t {
     uint16_t total;
     uint16_t count;
@@ -115,6 +97,25 @@ typedef struct transactionContext_t {
     uint8_t signature[MAX_RAW_SIGNATURE];
     uint8_t signatureLength;
 } transactionContext_t;
+
+typedef struct txContent_t {
+    uint64_t amount;
+    uint64_t amount2;
+    uint64_t exchangeID;
+    uint64_t bandwidth;
+    uint8_t account[ADDRESS_SIZE];
+    uint8_t destination[ADDRESS_SIZE];
+    uint8_t contractAddress[ADDRESS_SIZE];
+    uint8_t TRC20Amount[32];
+    uint8_t decimals[2];
+    uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
+    uint8_t tokenNamesLength[2];
+    uint8_t resource;
+    uint8_t TRC20Method;
+    contractType_e contractType;
+    uint64_t dataBytes;
+    publicKeyContext_t *publicKeyContext;
+} txContent_t;
 
 bool setContractType(uint8_t type, void * out);
 bool setExchangeContractDetail(uint8_t type, void * out);

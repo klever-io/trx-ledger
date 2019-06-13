@@ -87,8 +87,7 @@ void signTransaction(transactionContext_t *transactionContext) {
     if (info & CX_ECCINFO_PARITY_ODD) {
         transactionContext->signature[64] |= 0x01;
     }
-    transactionContext->signatureLength = 65
-    ;
+    transactionContext->signatureLength = 65;
 
     return;
 

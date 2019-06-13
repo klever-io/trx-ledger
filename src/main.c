@@ -250,14 +250,14 @@ const ux_menu_entry_t menu_settings_details[];
 // change the setting
 void menu_settings_data_change(unsigned int enabled) {
   dataAllowed = enabled;
-  nvm_write(&N_storage.dataAllowed, (void*)&dataAllowed, sizeof(uint8_t));
+  nvm_write((void *)&N_storage.dataAllowed, (void*)&dataAllowed, sizeof(uint8_t));
   // go back to the menu entry
   UX_MENU_DISPLAY(0, menu_settings, NULL);
 }
 
 void menu_settings_details_change(unsigned int enabled) {
   contractDetails = enabled;
-  nvm_write(&N_storage.contractDetails, (void*)&contractDetails, sizeof(uint8_t));
+  nvm_write((void *)&N_storage.contractDetails, (void*)&contractDetails, sizeof(uint8_t));
   // go back to the menu entry
   UX_MENU_DISPLAY(0, menu_settings, NULL);
 }
@@ -3381,6 +3381,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         }
 
         initTx(&txContext, &sha2, &txContent);
+        txContent.publicKeyContext = &publicKeyContext;
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
         PRINTF("Setting token name\nContract type: %d\n",txContent.contractType);
@@ -3938,7 +3939,7 @@ __attribute__((section(".boot"))) int main(void) {
                   storage.dataAllowed = 0x00;
                   storage.contractDetails = 0x00;
                   storage.initialized = 0x01;
-                  nvm_write(&N_storage, (void*)&storage, sizeof(internalStorage_t));
+                  nvm_write((void*)&N_storage, (void*)&storage, sizeof(internalStorage_t));
                 }
                 dataAllowed = N_storage.dataAllowed;
                 contractDetails = N_storage.contractDetails;

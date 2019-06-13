@@ -16,9 +16,11 @@
 ********************************************************************************/
 
 #include "os.h"
+#include "parse.h"
 
-int verifyTokenNameID(const char *tokenId, const char *tokenName, uint8_t decimals, uint8_t *signature, uint8_t signatureLength);
-int verifyExchangeID(const unsigned char *exchangeValidation,  uint8_t datLength, uint8_t *signature, uint8_t signatureLength);
+
+int verifyTokenNameID(const char *tokenId, const char *tokenName, uint8_t decimals, uint8_t *signature, uint8_t signatureLength, publicKeyContext_t *publicKeyContext);
+int verifyExchangeID(const unsigned char *exchangeValidation,  uint8_t datLength, uint8_t *signature, uint8_t signatureLength, publicKeyContext_t *publicKeyContext);
 
 typedef struct tokenDefinition_t {
     uint8_t address[21];
