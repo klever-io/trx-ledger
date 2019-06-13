@@ -67,3 +67,7 @@ ledger/
 # IDE
 /.vscode
 /.idea
+
+# Tron Protogen
+examples/proto
+examples/protocol
