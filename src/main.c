@@ -309,6 +309,30 @@ const ux_menu_entry_t menu_main[] = {
 #endif // #if TARGET_NANOS
 
 #if defined(TARGET_BLUE)
+const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
+  // swap setting and request redraw of settings elements
+  uint8_t setting = N_storage.dataAllowed?0:1;
+  dataAllowed = setting;
+  nvm_write((void*)&N_storage.dataAllowed, (void*)&setting, sizeof(uint8_t));
+
+  // only refresh settings mutable drawn elements
+  UX_REDISPLAY_IDX(7);
+
+  // won't redisplay the bagl_none
+  return 0;
+}
+
+const bagl_element_t * ui_settings_blue_toggle_details(const bagl_element_t * e) {
+  // swap setting and request redraw of settings elements
+  uint8_t setting = N_storage.contractDetails?0:1;
+  nvm_write((void*)&N_storage.contractDetails, (void*)&setting, sizeof(uint8_t));
+
+  // only refresh settings mutable drawn elements
+  UX_REDISPLAY_IDX(7);
+
+  // won't redisplay the bagl_none
+  return 0;
+}
 
 // don't perform any draw/color change upon finger event over settings
 const bagl_element_t *ui_settings_out_over(const bagl_element_t *e) {
@@ -326,35 +350,17 @@ const bagl_element_t ui_settings_blue[] = {
     // fill      fg        bg      fid iid  txt   touchparams...       ]
     {{BAGL_RECTANGLE, 0x00, 0, 68, 320, 413, 0, 0, BAGL_FILL, COLOR_BG_1,
       0x000000, 0, 0},
-     NULL,
-     0,
-     0,
-     0,
-     NULL,
-     NULL,
-     NULL},
+     NULL, 0, 0, 0, NULL, NULL, NULL},
 
     // erase screen (only under the status bar)
     {{BAGL_RECTANGLE, 0x00, 0, 20, 320, 48, 0, 0, BAGL_FILL, COLOR_APP,
       COLOR_APP, 0, 0},
-     NULL,
-     0,
-     0,
-     0,
-     NULL,
-     NULL,
-     NULL},
+     NULL, 0, 0, 0, NULL, NULL, NULL},
 
     /// TOP STATUS BAR
     {{BAGL_LABELINE, 0x00, 0, 45, 320, 30, 0, 0, BAGL_FILL, 0xFFFFFF, COLOR_APP,
       BAGL_FONT_OPEN_SANS_SEMIBOLD_10_13PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "SETTINGS",
-     0,
-     0,
-     0,
-     NULL,
-     NULL,
-     NULL},
+     "SETTINGS", 0, 0, 0, NULL, NULL, NULL},
 
     {{BAGL_RECTANGLE | BAGL_FLAG_TOUCHABLE, 0x00, 0, 19, 50, 44, 0, 0,
       BAGL_FILL, COLOR_APP, COLOR_APP_LIGHT,
@@ -380,6 +386,19 @@ const bagl_element_t ui_settings_blue[] = {
      io_seproxyhal_touch_exit,
      NULL,
      NULL},
+
+    {{BAGL_LABELINE                       , 0x00,  30, 105, 160,  30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0   }, "Allow data", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE                       , 0x00,  30, 126, 260,  30, 0, 0, BAGL_FILL, 0x999999, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_8_11PX, 0   }, "Allow data field in transactions", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_NONE   | BAGL_FLAG_TOUCHABLE   , 0x00,   0,  78, 320,  68, 0, 0, BAGL_FILL, 0xFFFFFF, 0x000000, 0, 0   }, NULL, 0, 0xEEEEEE, 0x000000, ui_settings_blue_toggle_data, ui_settings_out_over, ui_settings_out_over },
+
+    {{BAGL_RECTANGLE, 0x00, 30, 146, 260, 1, 1, 0, 0, 0xEEEEEE, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x00, 30, 174, 160, 30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0}, "Allow contracts", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x00, 30, 195, 260, 30, 0, 0, BAGL_FILL, 0x999999, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_8_11PX, 0}, "Allow unverified contracts", 0, 0, 0, NULL, NULL, NULL},
+
+    {{BAGL_NONE | BAGL_FLAG_TOUCHABLE, 0x00, 0, 147, 320, 68, 0, 0, BAGL_FILL, 0xFFFFFF, 0x000000, 0, 0}, NULL, 0, 0xEEEEEE, 0x000000, ui_settings_blue_toggle_details, ui_settings_out_over, ui_settings_out_over},
+
+    {{BAGL_ICON, 0x02, 258, 167, 32, 18, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_ICON                           , 0x01, 258,  98,  32,  18, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, 0, 0   }, NULL, 0, 0, 0, NULL, NULL, NULL},
 };
 
 const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
@@ -392,6 +411,24 @@ const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
     if (e->component.userid) {
         os_memmove(&tmp_element, e, sizeof(bagl_element_t));
         switch (e->component.userid) {
+            case 0x01:
+                // swap icon content
+                if (N_storage.dataAllowed) {
+                    tmp_element.text = &C_icon_toggle_set;
+                }
+                else {
+                    tmp_element.text = &C_icon_toggle_reset;
+                }
+                break;
+            case 0x02:
+                // swap icon content
+                if (N_storage.contractDetails) {
+                    tmp_element.text = &C_icon_toggle_set;
+                }
+                else {
+                    tmp_element.text = &C_icon_toggle_reset;
+                }
+                break;
         }
         return &tmp_element;
     }
@@ -852,7 +889,7 @@ const char *const ui_approval_blue_details_name[][7] = {
     {
         "AMOUNT",
         "TOKEN",
-        "ADDRESS",
+        TRC20ActionSendAllow,
         "FROM",
         NULL,
         "CONFIRM TRANSFER",
@@ -1276,6 +1313,12 @@ const bagl_element_t ui_approval_blue[] = {
      NULL,
      NULL},
 
+    // EXTRA DATA field
+    {{BAGL_RECTANGLE, 0x90, 30, 364, 260, 1, 1, 0, 0, 0xEEEEEE, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x90, 30, 392, 120, 30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX, 0}, "CONTRACT DATA", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x90, 133, 392, 140, 30, 0, 0, BAGL_FILL, 0x666666, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX | BAGL_FONT_ALIGNMENT_RIGHT, 0}, "Present", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_ICON, 0x90, 278, 382, 12, 12, 0, 0, BAGL_FILL, 0, COLOR_BG_1, 0, 0}, &C_icon_warning, 0, 0, 0, NULL, NULL, NULL},
+
     {{BAGL_RECTANGLE | BAGL_FLAG_TOUCHABLE, 0x00, 40, 414, 115, 36, 0, 18,
       BAGL_FILL, 0xCCCCCC, COLOR_BG_1,
       BAGL_FONT_OPEN_SANS_REGULAR_11_14PX | BAGL_FONT_ALIGNMENT_CENTER |
@@ -1391,6 +1434,8 @@ const bagl_element_t *ui_approval_blue_prepro(const bagl_element_t *element) {
                                                  0xF] != NULL
                        ? element
                        : NULL;
+        case 0x90:
+            return (txContent.dataBytes>0);
         }
     }
     return element;
@@ -1567,7 +1612,7 @@ static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
 
     {{BAGL_LABEL, 0x00, 0, 87, 320, 32, 0, 0, 0, 0x000000, 0xF9F9F9,
       BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "Confirm ECDH with Address:",
+     "Confirm ECDH Address:",
      0,
      0,
      0,
@@ -1576,6 +1621,26 @@ static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
      NULL},
 
     {{BAGL_LABEL, 0x00, 0, 136, 320, 33, 0, 0, 0, 0x000000, 0xF9F9F9,
+      BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (const char *)fromAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABEL, 0x00, 0, 185, 320, 32, 0, 0, 0, 0x000000, 0xF9F9F9,
+      BAGL_FONT_OPEN_SANS_LIGHT_14px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Shared with",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABEL, 0x00, 0, 234, 320, 33, 0, 0, 0, 0x000000, 0xF9F9F9,
       BAGL_FONT_OPEN_SANS_SEMIBOLD_11_16PX | BAGL_FONT_ALIGNMENT_CENTER, 0},
      (const char *)toAddress,
      0,
@@ -1686,7 +1751,7 @@ const bagl_element_t ui_approval_pgp_ecdh_nanos[] = {
 
     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     "EDCH Address",
+     "ECDH Address",
      0,
      0,
      0,
@@ -1694,6 +1759,24 @@ const bagl_element_t ui_approval_pgp_ecdh_nanos[] = {
      NULL,
      NULL},
     {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fromAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Shared With",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
      (char *)toAddress,
      0,
@@ -2663,6 +2746,8 @@ unsigned int ui_approval_exchange_transaction_nanos_button(unsigned int button_m
 #if defined(TARGET_NANOX)
 
 void display_settings(void);
+void switch_settings_contract_data();
+void switch_settings_display_data();
 
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
@@ -2680,7 +2765,7 @@ UX_FLOW_DEF_NOCB(
       "Version",
       APPVERSION,
     });
-/*UX_FLOW_DEF_VALID(
+UX_FLOW_DEF_VALID(
     ux_idle_flow_3_step,
     pb,
     display_settings(),
@@ -2688,7 +2773,7 @@ UX_FLOW_DEF_NOCB(
       &C_icon_coggle,
       "Settings",
     });
-*/
+
 UX_FLOW_DEF_VALID(
     ux_idle_flow_4_step,
     pb,
@@ -2700,7 +2785,7 @@ UX_FLOW_DEF_VALID(
 const ux_flow_step_t *        const ux_idle_flow [] = {
   &ux_idle_flow_1_step,
   &ux_idle_flow_2_step,
-  //&ux_idle_flow_3_step,
+  &ux_idle_flow_3_step,
   &ux_idle_flow_4_step,
   FLOW_END_STEP,
 };
@@ -2708,6 +2793,28 @@ const ux_flow_step_t *        const ux_idle_flow [] = {
 
 UX_FLOW_DEF_VALID(
     ux_settings_flow_1_step,
+    bnnn,
+    switch_settings_contract_data(),
+    {
+      "Transactions data",
+      "Allow extra data",
+      "in transactions",
+      addressSummary,
+    });
+
+UX_FLOW_DEF_VALID(
+    ux_settings_flow_2_step,
+    bnnn,
+    switch_settings_display_data(),
+    {
+      "Unverified contracts",
+      "Allow unverified",
+      "contracts",
+      addressSummary + 20
+    });
+
+UX_FLOW_DEF_VALID(
+    ux_settings_flow_3_step,
     pb,
     ui_idle(),
     {
@@ -2717,12 +2824,30 @@ UX_FLOW_DEF_VALID(
 
 const ux_flow_step_t *        const ux_settings_flow [] = {
   &ux_settings_flow_1_step,
+  &ux_settings_flow_2_step,
+  &ux_settings_flow_3_step,
   FLOW_END_STEP,
 };
 
 void display_settings() {
+  strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 20, (N_storage.contractDetails ? "Allowed" : "NOT Allowed"));
   ux_flow_init(0, ux_settings_flow, NULL);
 }
+
+void switch_settings_contract_data() {
+  uint8_t value = (N_storage.dataAllowed ? 0 : 1);
+  dataAllowed = value;
+  nvm_write((void*)&N_storage.dataAllowed, (void*)&value, sizeof(uint8_t));
+  display_settings();
+}
+
+void switch_settings_display_data() {
+  uint8_t value = (N_storage.contractDetails ? 0 : 1);
+  nvm_write((void*)&N_storage.contractDetails, (void*)&value, sizeof(uint8_t));
+  display_settings();
+}
+
 
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
@@ -2755,6 +2880,14 @@ UX_FLOW_DEF_VALID(
     {
       &C_icon_crossmark,
       "Reject",
+    });
+
+UX_FLOW_DEF_NOCB(ux_approval_tx_data_warning_step,
+    pnn,
+    {
+      &C_icon_warning,
+      "Data",
+      "Present",
     });
 
 const ux_flow_step_t *        const ux_display_public_flow [] = {
@@ -2816,6 +2949,16 @@ const ux_flow_step_t *        const ux_approval_st_flow [] = {
   FLOW_END_STEP,
 };
 
+const ux_flow_step_t *        const ux_approval_st_data_warning_flow [] = {
+  &ux_approval_st_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_st_flow_2_step,
+  &ux_approval_st_flow_3_step,
+  &ux_approval_st_flow_4_step,
+  &ux_approval_st_flow_5_step,
+  FLOW_END_STEP,
+};
+
 // TRANSFER
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
@@ -2844,7 +2987,7 @@ UX_FLOW_DEF_NOCB(
     ux_approval_tx_4_step,
     bnnn_paging,
     {
-      .title = "To Address",
+      .title = TRC20ActionSendAllow,
       .text = toAddress,
     });
 UX_FLOW_DEF_NOCB(
@@ -2874,6 +3017,18 @@ UX_FLOW_DEF_VALID(
 
 const ux_flow_step_t *        const ux_approval_tx_flow [] = {
   &ux_approval_tx_1_step,
+  &ux_approval_tx_2_step,
+  &ux_approval_tx_3_step,
+  &ux_approval_tx_4_step,
+  &ux_approval_tx_5_step,
+  &ux_approval_tx_6_step,
+  &ux_approval_tx_7_step,
+  FLOW_END_STEP,
+};
+
+const ux_flow_step_t *        const ux_approval_tx_data_warning_flow [] = {
+  &ux_approval_tx_1_step,
+  &ux_approval_tx_data_warning_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
   &ux_approval_tx_4_step,
@@ -2948,6 +3103,19 @@ UX_FLOW_DEF_VALID(
 
 const ux_flow_step_t *        const ux_approval_exchange_create_flow [] = {
   &ux_approval_exchange_create_1_step,
+  &ux_approval_exchange_create_2_step,
+  &ux_approval_exchange_create_3_step,
+  &ux_approval_exchange_create_4_step,
+  &ux_approval_exchange_create_5_step,
+  &ux_approval_exchange_create_6_step,
+  &ux_approval_exchange_create_7_step,
+  &ux_approval_exchange_create_8_step,
+  FLOW_END_STEP,
+};
+
+const ux_flow_step_t *        const ux_approval_exchange_create_data_warning_flow [] = {
+  &ux_approval_exchange_create_1_step,
+  &ux_approval_tx_data_warning_step,
   &ux_approval_exchange_create_2_step,
   &ux_approval_exchange_create_3_step,
   &ux_approval_exchange_create_4_step,
@@ -3033,6 +3201,19 @@ const ux_flow_step_t *        const ux_approval_exchange_transaction_flow [] = {
   FLOW_END_STEP,
 };
 
+const ux_flow_step_t *        const ux_approval_exchange_transaction_data_warning_flow [] = {
+  &ux_approval_exchange_transaction_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_exchange_transaction_2_step,
+  &ux_approval_exchange_transaction_3_step,
+  &ux_approval_exchange_transaction_4_step,
+  &ux_approval_exchange_transaction_5_step,
+  &ux_approval_exchange_transaction_6_step,
+  &ux_approval_exchange_transaction_7_step,
+  &ux_approval_exchange_transaction_8_step,
+  FLOW_END_STEP,
+};
+
 
 // EXCHANGE WITHDRAW INJECT
 //////////////////////////////////////////////////////////////////////
@@ -3106,6 +3287,70 @@ const ux_flow_step_t *        const ux_approval_exchange_wi_flow [] = {
   &ux_approval_exchange_wi_6_step,
   &ux_approval_exchange_wi_7_step,
   &ux_approval_exchange_wi_8_step,
+  FLOW_END_STEP,
+};
+
+const ux_flow_step_t *        const ux_approval_exchange_wi_data_warning_flow [] = {
+  &ux_approval_exchange_wi_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_exchange_wi_2_step,
+  &ux_approval_exchange_wi_3_step,
+  &ux_approval_exchange_wi_4_step,
+  &ux_approval_exchange_wi_5_step,
+  &ux_approval_exchange_wi_6_step,
+  &ux_approval_exchange_wi_7_step,
+  &ux_approval_exchange_wi_8_step,
+  FLOW_END_STEP,
+};
+
+// ECDH Shared Secret
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_pgp_ecdh_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Approve",
+      "Shared Secret",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_pgp_ecdh_2_step,
+    bnnn_paging,
+    {
+      .title = "ECDH Address",
+      .text = fromAddress
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_pgp_ecdh_3_step,
+    bnnn_paging,
+    {
+      .title = "Shared With",
+      .text = toAddress,
+    });
+
+UX_FLOW_DEF_VALID(
+    ux_approval_pgp_ecdh_4_step,
+    pb,
+    io_seproxyhal_touch_ecdh_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_pgp_ecdh_5_step,
+    pb,
+    io_seproxyhal_touch_ecdh_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+const ux_flow_step_t *        const ux_approval_pgp_ecdh_flow [] = {
+  &ux_approval_pgp_ecdh_1_step,
+  &ux_approval_pgp_ecdh_2_step,
+  &ux_approval_pgp_ecdh_3_step,
+  &ux_approval_pgp_ecdh_4_step,
+  &ux_approval_pgp_ecdh_5_step,
   FLOW_END_STEP,
 };
 
@@ -3511,7 +3756,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
             #elif defined(TARGET_NANOX)
-                ux_flow_init(0, ux_approval_tx_flow, NULL);
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
+                    NULL);
             #endif // #if TARGET_ID
 
         break;
@@ -3532,7 +3779,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
             #elif defined(TARGET_NANOX)
-                ux_flow_init(0, ux_approval_exchange_create_flow, NULL);
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_create_data_warning_flow : ux_approval_exchange_create_flow),
+                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGEINJECTCONTRACT:
@@ -3552,7 +3801,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
             #elif defined(TARGET_NANOX)
-                ux_flow_init(0, ux_approval_exchange_wi_flow, NULL);
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_wi_data_warning_flow : ux_approval_exchange_wi_flow),
+                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGETRANSACTIONCONTRACT:
@@ -3573,7 +3824,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
             #elif defined(TARGET_NANOX)
-                ux_flow_init(0, ux_approval_exchange_transaction_flow, NULL);
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_transaction_data_warning_flow : ux_approval_exchange_transaction_flow),
+                    NULL);
             #endif // #if TARGET_ID
         break;
         default:
@@ -3590,7 +3843,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 4;
                 UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
             #elif defined(TARGET_NANOX)
-                ux_flow_init(0, ux_approval_st_flow, NULL);
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
+                    NULL);
             #endif // #if TARGET_ID
         break;
     }
@@ -3675,16 +3930,25 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                 publicKeyContext.address,&sha3);         
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                publicKeyContext.address58, &sha2);
+                                fromAddress, &sha2);
     
-    os_memmove((void *)toAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
+    //os_memmove((void *)fromAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
+    fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+
+    // Get address from PK
+    getAddressFromPublicKey(transactionContext.rawTx,
+                                publicKeyContext.address,&sha3);         
+    // Get Base58
+    getBase58FromAddres(publicKeyContext.address,
+                                toAddress, &sha2);
+    
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_approval_pgp_ecdh_blue, NULL);
     #elif defined(TARGET_NANOS)
         ux_step = 0;
-        ux_step_count = 2;
+        ux_step_count = 3;
         UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
     #elif defined(TARGET_NANOX)
         // reserve a display stack slot if none yet
