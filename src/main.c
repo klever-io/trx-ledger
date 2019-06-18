@@ -45,6 +45,7 @@ uint32_t set_result_get_publicKey(void);
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
 #define INS_GET_APP_CONFIGURATION 0x06  // Get Configuration
+#define INS_SIGN_PERSONAL_MESSAGE 0x08
 #define INS_GET_ECDH_SECRET 0x0A
 #define P1_CONFIRM 0x01
 #define P1_NON_CONFIRM 0x00
@@ -83,6 +84,8 @@ volatile char fullHash[HASH_SIZE*2+1];
 volatile char fullAmount2[50];
 volatile char exchangeContractDetail[50];
 
+static const char const SIGN_MAGIC[] = "\x19TRON Signed Message:\n";
+
 bagl_element_t tmp_element;
 
 
@@ -94,6 +97,8 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_tx_cancel(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e);
+unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e);
+unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e);
 
 void ui_idle(void);
 #ifdef TARGET_NANOX
@@ -878,6 +883,7 @@ typedef enum {
     APPROVAL_EXCHANGE_CREATE,
     APPROVAL_EXCHANGE_TRANSACTION,
     APPROVAL_EXCHANGE_WITHDRAW_INJECT,
+    APPROVAL_SIGN_PERSONAL_MESSAGE,
 } ui_approval_blue_state_t;
 ui_approval_blue_state_t G_ui_approval_blue_state;
 // pointer to value to be displayed
@@ -934,6 +940,16 @@ const char *const ui_approval_blue_details_name[][7] = {
         "FROM",
         "CONFIRM TRANSACTION",
         "Exchange MX Details",
+    },
+    /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
+    {
+        "HASH",
+        "Sign with",
+        NULL,
+        NULL,
+        NULL,
+        "SIGN MESSAGE",
+        "Message signature",
     },
 };
 
@@ -1523,6 +1539,18 @@ void ui_approval_exchange_create_blue_init(void) {
     ui_approval_blue_init();
 }
 
+void ui_approval_message_sign_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_signMessage_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_signMessage_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)fromAddress;
+    
+    ui_approval_blue_init();
+}
+
 #endif // #if defined(TARGET_BLUE)
 
 // PGP ECDH
@@ -1808,6 +1836,63 @@ unsigned int ui_approval_pgp_ecdh_prepro(const bagl_element_t *element) {
         return display;
     }
     return 1;
+}
+
+const bagl_element_t ui_approval_signMessage_nanos[] = {
+  // type                               userid    x    y   w    h  str rad fill      fg        bg      fid iid  txt   touchparams...       ]
+  {{BAGL_RECTANGLE                      , 0x00,   0,   0, 128,  32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
+
+  {{BAGL_ICON                           , 0x00,   3,  12,   7,   7, 0, 0, 0        , 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_CROSS  }, NULL, 0, 0, 0, NULL, NULL, NULL },
+  {{BAGL_ICON                           , 0x00, 117,  13,   8,   6, 0, 0, 0        , 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_CHECK  }, NULL, 0, 0, 0, NULL, NULL, NULL },
+
+  {{BAGL_LABELINE                       , 0x01,   0,  12, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Sign the", 0, 0, 0, NULL, NULL, NULL },
+  {{BAGL_LABELINE                       , 0x01,   0,  26, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "message", 0, 0, 0, NULL, NULL, NULL },
+
+  {{BAGL_LABELINE                       , 0x02,   0,  12, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Message hash", 0, 0, 0, NULL, NULL, NULL },
+  {{BAGL_LABELINE                       , 0x02,   0,  26, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, (char *)fullContract, 0, 0, 0, NULL, NULL, NULL },
+
+  {{BAGL_LABELINE                       , 0x03,   0,  12, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Sign with", 0, 0, 0, NULL, NULL, NULL },
+  {{BAGL_LABELINE                       , 0x03,  23,  26, 82, 12, 0x80 | 10, 0, 0  , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26}, (char *)fromAddress, 0, 0, 0, NULL, NULL, NULL},
+
+};
+
+unsigned int
+ui_approval_signMessage_nanos_button(unsigned int button_mask, unsigned int button_mask_counter);
+
+unsigned int ui_approval_signMessage_prepro(const bagl_element_t *element) {
+    if (element->component.userid > 0) {
+        unsigned int display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 1:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 2:
+                UX_CALLBACK_SET_INTERVAL(3000);
+                break;
+            case 3:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+        return display;
+    }
+    return 1;
+}
+
+unsigned int ui_approval_signMessage_nanos_button(unsigned int button_mask, unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_signMessage_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_signMessage_ok(NULL);
+        break;
+    }
+    }
+    return 0;
 }
 
 #endif // #if defined(TARGET_NANOS)
@@ -3354,6 +3439,58 @@ const ux_flow_step_t *        const ux_approval_pgp_ecdh_flow [] = {
   FLOW_END_STEP,
 };
 
+// Sign personal message
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_sign_flow_1_step,
+    pnn,
+    {
+      &C_icon_certificate,
+      "Sign",
+      "message",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_sign_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Message hash",
+      .text = fullContract,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_sign_flow_3_step,
+    bnnn_paging,
+    {
+      .title = "Sign with",
+      .text = fromAddress,
+    });
+UX_FLOW_DEF_VALID(
+    ux_sign_flow_4_step,
+    pbb,
+    io_seproxyhal_touch_signMessage_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Sign",
+      "message",
+    });
+UX_FLOW_DEF_VALID(
+    ux_sign_flow_5_step,
+    pbb,
+    io_seproxyhal_touch_signMessage_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Cancel",
+      "signature",
+    });
+
+const ux_flow_step_t * const ux_sign_flow [] = {
+  &ux_sign_flow_1_step,
+  &ux_sign_flow_2_step,
+  &ux_sign_flow_3_step,
+  &ux_sign_flow_4_step,
+  &ux_sign_flow_5_step,
+  FLOW_END_STEP,
+};
+
 #endif // #if defined(TARGET_NANOX)
 
 void ui_idle(void) {
@@ -3399,6 +3536,33 @@ unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e) {
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
 
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    // Display back the original UX
+    ui_idle();
+    return 0; // do not redraw the widget
+}
+
+unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
+    uint32_t tx = 0;
+
+    signTransaction(&transactionContext);
+    // send to output buffer
+    os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
+    tx=transactionContext.signatureLength;
+    G_io_apdu_buffer[tx++] = 0x90;
+    G_io_apdu_buffer[tx++] = 0x00;
+
+    // Send back the response, do not restart the event loop
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+    // Display back the original UX
+    ui_idle();
+    return 0; // do not redraw the widget
+}
+
+unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e) {
+    G_io_apdu_buffer[0] = 0x69;
+    G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
     // Display back the original UX
@@ -3712,11 +3876,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     cx_hash((cx_hash_t *)txContext.sha2, CX_LAST, workBuffer,
             0, transactionContext.hash, 32);
 
-    PRINTF("HASH: ");
-    for (int i=0;i<32;i++)
-        PRINTF("%02x",*(transactionContext.hash+i));
-    PRINTF("\n\n");
-
     getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
             fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
 
@@ -3932,7 +4091,6 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     getBase58FromAddres(publicKeyContext.address,
                                 fromAddress, &sha2);
     
-    //os_memmove((void *)fromAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     // Get address from PK
@@ -3959,6 +4117,113 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     #endif
     *flags |= IO_ASYNCH_REPLY;
 
+}
+
+void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
+  UNUSED(tx);
+  uint32_t i;
+  uint8_t hashMessage[32];
+  uint8_t privateKeyData[32];
+  cx_ecfp_private_key_t privateKey;
+
+    if (dataLength>MAX_RAW_TX){
+        PRINTF("RawTX buffer overflow\n");
+        THROW(0x6A80);
+    }
+
+    if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
+        transactionContext.pathLength = workBuffer[0];
+        if ((transactionContext.pathLength < 0x01) ||
+            (transactionContext.pathLength > MAX_BIP32_PATH)) {
+            PRINTF("Invalid path\n");
+            THROW(0x6a80);
+        }
+        workBuffer++;
+        dataLength--;
+        for (i = 0; i < transactionContext.pathLength; i++) {
+            transactionContext.bip32Path[i] =
+                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
+                (workBuffer[2] << 8) | (workBuffer[3]);
+            workBuffer += 4;
+            dataLength -= 4;
+        }
+        // Message Length
+        transactionContext.rawTxLength = U4BE(workBuffer, 0);
+        workBuffer += 4;
+        dataLength -= 4;
+
+        // Initialize message header + length
+        cx_keccak_init(&sha3, 256);
+        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL,32);
+        
+        char tmp[11];
+        snprintf((char *)tmp, 11,"%d",transactionContext.rawTxLength);
+        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
+        cx_sha256_init(&sha2);
+
+    } else if (p1 != P1_MORE) {
+        THROW(0x6B00);
+    }
+
+    if (p2 != 0) {
+        THROW(0x6B00);
+    }
+    if (dataLength > transactionContext.rawTxLength) {
+        THROW(0x6A80);
+    }
+
+    cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL,32);
+    cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL,32);
+    transactionContext.rawTxLength -= dataLength;
+    if (transactionContext.rawTxLength == 0) {
+        cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, transactionContext.hash,32);
+        cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer, 0, hashMessage,32);
+
+        #define HASH_LENGTH 4
+        array_hexstr(fullContract, hashMessage, HASH_LENGTH / 2);
+        fullContract[HASH_LENGTH / 2 * 2] = '.';
+        fullContract[HASH_LENGTH / 2 * 2 + 1] = '.';
+        fullContract[HASH_LENGTH / 2 * 2 + 2] = '.';
+        array_hexstr(fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
+
+        // Get private key
+        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
+                transactionContext.pathLength, privateKeyData, NULL);
+
+        cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+        cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
+                            &privateKey, 1);
+
+        // Clear tmp buffer data
+        os_memset(&privateKey, 0, sizeof(privateKey));
+        os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+        // Get address from PK
+        getAddressFromKey(&publicKeyContext.publicKey,
+                                    publicKeyContext.address,&sha3);         
+        // Get Base58
+        getBase58FromAddres(publicKeyContext.address,
+                                    fromAddress, &sha2);
+        
+        fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+
+        #if defined(TARGET_BLUE)
+            G_ui_approval_blue_state = APPROVAL_SIGN_PERSONAL_MESSAGE;
+            ui_approval_message_sign_blue_init();
+        #elif defined(TARGET_NANOS)
+            ux_step = 0;
+            ux_step_count = 3;
+            UX_DISPLAY(ui_approval_signMessage_nanos,
+                ui_approval_signMessage_prepro);
+        #elif defined(TARGET_NANOX)
+            ux_flow_init(0, ux_sign_flow, NULL);
+        #endif
+
+        *flags |= IO_ASYNCH_REPLY;
+
+    } else {
+        THROW(0x9000);
+    }
 }
 
 // Check ADPU and process the assigned task
@@ -4002,6 +4267,14 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                            G_io_apdu_buffer[OFFSET_P2],
                            G_io_apdu_buffer + OFFSET_CDATA,
                            G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                break;
+            
+            case INS_SIGN_PERSONAL_MESSAGE:
+                handleSignPersonalMessage(
+                    G_io_apdu_buffer[OFFSET_P1],
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC], flags, tx);
                 break;
 
             default:

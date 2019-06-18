@@ -23,3 +23,9 @@ def validate(transaction, signature, public_key):
     publicKey = PublicKey(bytes.fromhex(public_key))
     return keys.ecdsa_verify(txID,s,publicKey), txID.hex()
 
+def validateHASH(txID, signature, public_key):
+    s = Signature(signature_bytes=signature)
+    keys = KeyAPI('eth_keys.backends.NativeECCBackend')
+    publicKey = PublicKey(bytes.fromhex(public_key))
+    return keys.ecdsa_verify(txID,s,publicKey)
+
