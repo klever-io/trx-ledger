@@ -28,6 +28,7 @@ tokenDefinition_t* getKnownToken(txContent_t *context) {
     for (i=0; i<NUM_TOKENS_TRC20; i++) {
         currentToken = (tokenDefinition_t *)PIC(&TOKENS_TRC20[i]);
         if (os_memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) == 0) {
+            PRINTF("Selected token %d\n",i);
             return currentToken;
         }
     }
@@ -437,6 +438,7 @@ uint8_t parseVariant(txContext_t *context, uint8_t *data,
         } 
         b128+=7;
     }
+    PRINTF("Error parsing variant...\n");
     THROW(0x6a80);
 }
 
@@ -506,7 +508,7 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
         TRY {
 
             if (context->getNext>0){
-                // TODO: only if data avaliable
+                // only for long  data field
                 if (context->getNext>length){
                     context->getNext=context->getNext-length;
                     return USTREAM_PROCESSING;
@@ -763,12 +765,13 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         if (tmpNumber!=TRC20_DATA_FIELD_SIZE) THROW(0x6a80);
                                         // data fit buffer, process data
                                         // get selector
+                                        PRINTF("Selector: %02x%02x%02x%02x\n",
+                                                buffer[offset],buffer[offset+1],buffer[offset+2],buffer[offset+3]);
                                         if (os_memcmp(&buffer[offset], SELECTOR[0], 4) == 0) content->TRC20Method = 1; // check if transfer(address, uint256) function
                                         else if (os_memcmp(&buffer[offset], SELECTOR[1], 4) == 0) content->TRC20Method = 2; // check if approve(address, uint256) function
                                         else {
-                                            PRINTF("Selector: %02x%02x%02x%02x\n",
-                                                buffer[offset],buffer[offset+1],buffer[offset+2],buffer[offset+3]);
                                             // NOT ALLOWED
+                                            PRINTF("Not ALLOWED\n");
                                             THROW(0x6a80);
                                         }
                                         // TO Address

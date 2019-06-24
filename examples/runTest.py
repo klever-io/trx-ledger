@@ -36,7 +36,7 @@ def apduMessage(INS, P1, P2, PATH, MESSAGE):
 def ledgerSign(PATH, tx, tokenSignature=[]):
     raw_tx = tx.raw_data.SerializeToString().hex()
     # Sign in chunks
-    chunkList = list(chunks(raw_tx,400))
+    chunkList = list(chunks(raw_tx,420))
     if len(tokenSignature)>0:
         chunkList.extend(tokenSignature)
 

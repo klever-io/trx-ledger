@@ -76,12 +76,10 @@ volatile uint8_t contractDetails;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
-volatile char fullAmount[50];
 volatile char fullContract[MAX_TOKEN_LENGTH];
 volatile char TRC20Action[8];
 volatile char TRC20ActionSendAllow[8];
 volatile char fullHash[HASH_SIZE*2+1];
-volatile char fullAmount2[50];
 volatile char exchangeContractDetail[50];
 
 static const char const SIGN_MAGIC[] = "\x19TRON Signed Message:\n";
@@ -1472,7 +1470,7 @@ void ui_approval_transaction_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
-    ui_approval_blue_values[0] = (const char*)fullAmount;
+    ui_approval_blue_values[0] = (const char*)G_io_apdu_buffer;
     ui_approval_blue_values[1] = (const char*)fullContract;
     ui_approval_blue_values[2] = (const char*)toAddress;
     ui_approval_blue_values[3] = (const char*)fromAddress;
@@ -1503,7 +1501,7 @@ void ui_approval_exchange_withdraw_inject_blue_init(void) {
     ui_approval_blue_values[0] = (const char*)exchangeContractDetail;
     ui_approval_blue_values[1] = (const char*)toAddress;
     ui_approval_blue_values[2] = (const char*)fullContract;
-    ui_approval_blue_values[3] = (const char*)fullAmount;
+    ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer;
     ui_approval_blue_values[4] = (const char*)fromAddress;
     
     ui_approval_blue_init();
@@ -1517,8 +1515,8 @@ void ui_approval_exchange_transaction_blue_init(void) {
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
     ui_approval_blue_values[0] = (const char*)toAddress;
     ui_approval_blue_values[1] = (const char*)fullContract;
-    ui_approval_blue_values[2] = (const char*)fullAmount;
-    ui_approval_blue_values[3] = (const char*)fullAmount2;
+    ui_approval_blue_values[2] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer+100;
     ui_approval_blue_values[4] = (const char*)fromAddress;
     
     ui_approval_blue_init();
@@ -1531,9 +1529,9 @@ void ui_approval_exchange_create_blue_init(void) {
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
     ui_approval_blue_values[0] = (const char*)fullContract;
-    ui_approval_blue_values[1] = (const char*)fullAmount;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
     ui_approval_blue_values[2] = (const char*)toAddress;
-    ui_approval_blue_values[3] = (const char*)fullAmount2;
+    ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer+100;
     ui_approval_blue_values[4] = (const char*)fromAddress;
     
     ui_approval_blue_init();
@@ -2144,7 +2142,7 @@ const bagl_element_t ui_approval_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount,
+     (char *)G_io_apdu_buffer,
      0,
      0,
      0,
@@ -2343,7 +2341,7 @@ const bagl_element_t ui_approval_exchange_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount,
+     (char *)G_io_apdu_buffer,
      0,
      0,
      0,
@@ -2381,7 +2379,7 @@ const bagl_element_t ui_approval_exchange_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount2,
+     (char *)G_io_apdu_buffer+100,
      0,
      0,
      0,
@@ -2558,7 +2556,7 @@ const bagl_element_t ui_approval_exchange_withdraw_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount,
+     (char *)G_io_apdu_buffer,
      0,
      0,
      0,
@@ -2734,7 +2732,7 @@ const bagl_element_t ui_approval_exchange_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount,
+     (char *)G_io_apdu_buffer,
      0,
      0,
      0,
@@ -2753,7 +2751,7 @@ const bagl_element_t ui_approval_exchange_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)fullAmount2,
+     (char *)G_io_apdu_buffer+100,
      0,
      0,
      0,
@@ -3059,7 +3057,7 @@ UX_FLOW_DEF_NOCB(
     bnnn_paging,
     {
       .title = "Amount",
-      .text = fullAmount
+      .text = G_io_apdu_buffer
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_tx_3_step,
@@ -3145,7 +3143,7 @@ UX_FLOW_DEF_NOCB(
     bnnn_paging,
     {
       .title = "Amount 1",
-      .text = fullAmount,
+      .text = G_io_apdu_buffer,
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_exchange_create_4_step,
@@ -3159,7 +3157,7 @@ UX_FLOW_DEF_NOCB(
     bnnn_paging,
     {
       .title = "Amount 2",
-      .text = fullAmount2,
+      .text = G_io_apdu_buffer+100,
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_exchange_create_6_step,
@@ -3240,14 +3238,14 @@ UX_FLOW_DEF_NOCB(
     bnnn_paging,
     {
       .title = "Amount",
-      .text = fullAmount,
+      .text = G_io_apdu_buffer,
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_exchange_transaction_5_step,
     bnnn_paging,
     {
       .title = "Expected",
-      .text = fullAmount2,
+      .text = G_io_apdu_buffer+100,
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_exchange_transaction_6_step,
@@ -3336,7 +3334,7 @@ UX_FLOW_DEF_NOCB(
     bnnn_paging,
     {
       .title = "Amount",
-      .text = fullAmount,
+      .text = G_io_apdu_buffer,
     });
 UX_FLOW_DEF_NOCB(
     ux_approval_exchange_wi_6_step,
@@ -3887,8 +3885,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             os_memmove((void *)TRC20ActionSendAllow, "Send To\0", 8); 
             if (txContent.contractType==TRIGGERSMARTCONTRACT){
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
-                tostring256(&uint256, 10, (char *)fullAmount2, sizeof(fullAmount2));   
-                if (!adjustDecimals((char *)fullAmount2, strlen((const char *)fullAmount2), (char *)fullAmount, sizeof(fullAmount), txContent.decimals[0]))
+                tostring256(&uint256, 10, (char *)G_io_apdu_buffer+100, 100);   
+                if (!adjustDecimals((char *)G_io_apdu_buffer+100, strlen((const char *)G_io_apdu_buffer+100), (char *)G_io_apdu_buffer, 100, txContent.decimals[0]))
                     THROW(0x6B00);
                 
                 if (txContent.TRC20Method==1)
@@ -3898,7 +3896,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     os_memmove((void *)TRC20Action, "Approve\0", 8);
                 }else THROW(0x6B00);
             }else
-                print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
+                print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddres(txContent.destination,
                                         (void *)toAddress, &sha2);
@@ -3925,8 +3923,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             os_memmove((void *)toAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
+            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)G_io_apdu_buffer+100,100, (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
             
@@ -3948,7 +3946,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
@@ -3970,8 +3968,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
 
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
-            print_amount(txContent.amount,(void *)fullAmount,sizeof(fullAmount), txContent.decimals[0]);
-            print_amount(txContent.amount2,(void *)fullAmount2,sizeof(fullAmount2), txContent.decimals[1]);
+            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, txContent.decimals[0]);
+            print_amount(txContent.amount2,(void *)G_io_apdu_buffer+100,100, txContent.decimals[1]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
 
