@@ -72,12 +72,13 @@ txContext_t txContext;
 cx_sha3_t sha3;
 cx_sha256_t sha2;
 volatile uint8_t dataAllowed;
-volatile uint8_t contractDetails;
+volatile uint8_t customContract;
+volatile uint8_t customContractField;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
 volatile char fullContract[MAX_TOKEN_LENGTH];
-volatile char TRC20Action[8];
+volatile char TRC20Action[9];
 volatile char TRC20ActionSendAllow[8];
 volatile char fullHash[HASH_SIZE*2+1];
 volatile char exchangeContractDetail[50];
@@ -248,7 +249,7 @@ unsigned int ui_idle_blue_button(unsigned int button_mask,
 const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_settings[];
 const ux_menu_entry_t menu_settings_data[];
-const ux_menu_entry_t menu_settings_details[];
+const ux_menu_entry_t menu_settings_custom[];
 
 // change the setting
 void menu_settings_data_change(unsigned int enabled) {
@@ -258,9 +259,9 @@ void menu_settings_data_change(unsigned int enabled) {
   UX_MENU_DISPLAY(0, menu_settings, NULL);
 }
 
-void menu_settings_details_change(unsigned int enabled) {
-  contractDetails = enabled;
-  nvm_write((void *)&N_storage.contractDetails, (void*)&contractDetails, sizeof(uint8_t));
+void menu_settings_custom_change(unsigned int enabled) {
+  customContract = enabled;
+  nvm_write((void *)&N_storage.customContract, (void*)&customContract, sizeof(uint8_t));
   // go back to the menu entry
   UX_MENU_DISPLAY(0, menu_settings, NULL);
 }
@@ -271,9 +272,9 @@ void menu_settings_data_init(unsigned int ignored) {
   UX_MENU_DISPLAY(N_storage.dataAllowed?1:0, menu_settings_data, NULL);
 }
 
-void menu_settings_details_init(unsigned int ignored) {
+void menu_settings_custom_init(unsigned int ignored) {
   UNUSED(ignored);
-  UX_MENU_DISPLAY(N_storage.contractDetails?1:0, menu_settings_details, NULL);
+  UX_MENU_DISPLAY(N_storage.customContract?1:0, menu_settings_custom, NULL);
 }
 
 const ux_menu_entry_t menu_settings_data[] = {
@@ -282,16 +283,16 @@ const ux_menu_entry_t menu_settings_data[] = {
   UX_MENU_END
 };
 
-const ux_menu_entry_t menu_settings_details[] = {
-  {NULL, menu_settings_details_change, 0, NULL, "No", NULL, 0, 0},
-  {NULL, menu_settings_details_change, 1, NULL, "Yes", NULL, 0, 0},
+const ux_menu_entry_t menu_settings_custom[] = {
+  {NULL, menu_settings_custom_change, 0, NULL, "No", NULL, 0, 0},
+  {NULL, menu_settings_custom_change, 1, NULL, "Yes", NULL, 0, 0},
   UX_MENU_END
 };
 
 // Menu Settings
 const ux_menu_entry_t menu_settings[] = {
     {NULL, menu_settings_data_init, 0, NULL, "Allow data", NULL, 0, 0},
-    {NULL, menu_settings_details_init, 0, NULL, "Contract Details", NULL, 0, 0},
+    {NULL, menu_settings_custom_init, 0, NULL, "Custom Contracts", NULL, 0, 0},
     {menu_main, NULL, 0, &C_icon_back, "Back", NULL, 61, 40},
     UX_MENU_END};
 
@@ -325,10 +326,11 @@ const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
   return 0;
 }
 
-const bagl_element_t * ui_settings_blue_toggle_details(const bagl_element_t * e) {
+const bagl_element_t * ui_settings_blue_toggle_custom(const bagl_element_t * e) {
   // swap setting and request redraw of settings elements
-  uint8_t setting = N_storage.contractDetails?0:1;
-  nvm_write((void*)&N_storage.contractDetails, (void*)&setting, sizeof(uint8_t));
+  uint8_t setting = N_storage.customContract?0:1;
+  customContract = setting;
+  nvm_write((void*)&N_storage.customContract, (void*)&setting, sizeof(uint8_t));
 
   // only refresh settings mutable drawn elements
   UX_REDISPLAY_IDX(7);
@@ -396,9 +398,9 @@ const bagl_element_t ui_settings_blue[] = {
 
     {{BAGL_RECTANGLE, 0x00, 30, 146, 260, 1, 1, 0, 0, 0xEEEEEE, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
     {{BAGL_LABELINE, 0x00, 30, 174, 160, 30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX, 0}, "Allow contracts", 0, 0, 0, NULL, NULL, NULL},
-    {{BAGL_LABELINE, 0x00, 30, 195, 260, 30, 0, 0, BAGL_FILL, 0x999999, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_8_11PX, 0}, "Allow unverified contracts", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x00, 30, 195, 260, 30, 0, 0, BAGL_FILL, 0x999999, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_8_11PX, 0}, "Allow custom contracts", 0, 0, 0, NULL, NULL, NULL},
 
-    {{BAGL_NONE | BAGL_FLAG_TOUCHABLE, 0x00, 0, 147, 320, 68, 0, 0, BAGL_FILL, 0xFFFFFF, 0x000000, 0, 0}, NULL, 0, 0xEEEEEE, 0x000000, ui_settings_blue_toggle_details, ui_settings_out_over, ui_settings_out_over},
+    {{BAGL_NONE | BAGL_FLAG_TOUCHABLE, 0x00, 0, 147, 320, 68, 0, 0, BAGL_FILL, 0xFFFFFF, 0x000000, 0, 0}, NULL, 0, 0xEEEEEE, 0x000000, ui_settings_blue_toggle_custom, ui_settings_out_over, ui_settings_out_over},
 
     {{BAGL_ICON, 0x02, 258, 167, 32, 18, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
     {{BAGL_ICON                           , 0x01, 258,  98,  32,  18, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, 0, 0   }, NULL, 0, 0, 0, NULL, NULL, NULL},
@@ -425,7 +427,7 @@ const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
                 break;
             case 0x02:
                 // swap icon content
-                if (N_storage.contractDetails) {
+                if (N_storage.customContract) {
                     tmp_element.text = &C_icon_toggle_set;
                 }
                 else {
@@ -882,6 +884,7 @@ typedef enum {
     APPROVAL_EXCHANGE_TRANSACTION,
     APPROVAL_EXCHANGE_WITHDRAW_INJECT,
     APPROVAL_SIGN_PERSONAL_MESSAGE,
+    APPROVAL_CUSTOM_CONTRACT,
 } ui_approval_blue_state_t;
 ui_approval_blue_state_t G_ui_approval_blue_state;
 // pointer to value to be displayed
@@ -893,7 +896,7 @@ const char *const ui_approval_blue_details_name[][7] = {
     {
         "AMOUNT",
         "TOKEN",
-        TRC20ActionSendAllow,
+        (const char *)TRC20ActionSendAllow,
         "FROM",
         NULL,
         "CONFIRM TRANSFER",
@@ -948,6 +951,16 @@ const char *const ui_approval_blue_details_name[][7] = {
         NULL,
         "SIGN MESSAGE",
         "Message signature",
+    },
+    /*APPROVAL_CUSTOM_CONTRACT*/
+    {
+        "SELECTOR",
+        "CONTRACT",
+        "TOKEN",
+        "AMOUNT",
+        "FROM",
+        "CONFIRM TRANSACTION",
+        "Custom Contract",
     },
 };
 
@@ -1329,9 +1342,13 @@ const bagl_element_t ui_approval_blue[] = {
 
     // EXTRA DATA field
     {{BAGL_RECTANGLE, 0x90, 30, 364, 260, 1, 1, 0, 0, 0xEEEEEE, COLOR_BG_1, 0, 0}, NULL, 0, 0, 0, NULL, NULL, NULL},
-    {{BAGL_LABELINE, 0x90, 30, 392, 120, 30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX, 0}, "CONTRACT DATA", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x90, 30, 392, 120, 30, 0, 0, BAGL_FILL, 0x000000, COLOR_BG_1, BAGL_FONT_OPEN_SANS_SEMIBOLD_8_11PX, 0}, "EXTRA DATA", 0, 0, 0, NULL, NULL, NULL},
     {{BAGL_LABELINE, 0x90, 133, 392, 140, 30, 0, 0, BAGL_FILL, 0x666666, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX | BAGL_FONT_ALIGNMENT_RIGHT, 0}, "Present", 0, 0, 0, NULL, NULL, NULL},
     {{BAGL_ICON, 0x90, 278, 382, 12, 12, 0, 0, BAGL_FILL, 0, COLOR_BG_1, 0, 0}, &C_icon_warning, 0, 0, 0, NULL, NULL, NULL},
+
+    // Custom Contract
+    {{BAGL_LABELINE, 0xA0, 133, 172, 140, 30, 0, 0, BAGL_FILL, 0x666666, COLOR_BG_1, BAGL_FONT_OPEN_SANS_REGULAR_10_13PX | BAGL_FONT_ALIGNMENT_RIGHT, 0}, "Unverified", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_ICON, 0xA0, 278, 162, 12, 12, 0, 0, BAGL_FILL, 0, COLOR_BG_1, 0, 0}, &C_icon_warning, 0, 0, 0, NULL, NULL, NULL},
 
     {{BAGL_RECTANGLE | BAGL_FLAG_TOUCHABLE, 0x00, 40, 414, 115, 36, 0, 18,
       BAGL_FILL, 0xCCCCCC, COLOR_BG_1,
@@ -1450,6 +1467,9 @@ const bagl_element_t *ui_approval_blue_prepro(const bagl_element_t *element) {
                        : NULL;
         case 0x90:
             return (txContent.dataBytes>0);
+        
+        case 0xA0:
+            return (customContractField&0x01);
         }
     }
     return element;
@@ -1545,6 +1565,21 @@ void ui_approval_message_sign_blue_init(void) {
         (bagl_element_callback_t)io_seproxyhal_touch_signMessage_cancel;
     ui_approval_blue_values[0] = (const char*)fullContract;
     ui_approval_blue_values[1] = (const char*)fromAddress;
+    
+    ui_approval_blue_init();
+}
+
+void ui_approval_custom_contract_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)TRC20Action;
+    ui_approval_blue_values[1] = (const char*)fullContract;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[4] = (const char*)fromAddress;
     
     ui_approval_blue_init();
 }
@@ -2824,13 +2859,235 @@ unsigned int ui_approval_exchange_transaction_nanos_button(unsigned int button_m
     return 0;
 }
 
+
+
+// Show transactions details for Custom Contracts
+const bagl_element_t ui_approval_custom_contract_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  21,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_TRANSACTION_BADGE  }, NULL, 0, 0,
+    // 0, NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Confirm",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "transaction",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0}, "WARNING", 0, 0, 0, NULL, NULL, NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0, 0, 0, 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0}, "Custom Contract", 0, 0, 0, NULL, NULL, NULL},
+    
+    {{BAGL_LABELINE, 0x03,  0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Contract Address",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 12, 28, 104, 12, 0x00 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)fullContract,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Custom Selector",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)TRC20Action,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+
+     {{BAGL_LABELINE, 0x05, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Token ID",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)toAddress,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+
+    {{BAGL_LABELINE, 0x06, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Call Amount",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x06, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)G_io_apdu_buffer,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+
+    {{BAGL_LABELINE, 0x07, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Send From",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x07, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)fromAddress,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+  
+};
+
+/*
+ ux_step 0: confirm
+         1: amount
+         2: address
+*/
+unsigned int ui_approval_custom_contract_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 2:
+                if (txContent.dataBytes>0) {
+                    UX_CALLBACK_SET_INTERVAL(3000);
+                }
+                else {
+                    display = 0;
+                    ux_step++; // display the next step
+                }
+                break;
+            case 0x03:
+            case 0x04:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            case 0x05:
+            case 0x06:
+                if (customContractField&(1<<element->component.userid)){
+                    UX_CALLBACK_SET_INTERVAL(3000);
+                }
+                else {
+                    display = 0;
+                    ux_step++; // display the next step
+                }
+                break;
+            case 0x07:
+            UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_custom_contract_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
 #endif // #if defined(TARGET_NANOS)
 
 #if defined(TARGET_NANOX)
 
 void display_settings(void);
 void switch_settings_contract_data();
-void switch_settings_display_data();
+void switch_settings_custom_contracts();
 
 //////////////////////////////////////////////////////////////////////
 UX_FLOW_DEF_NOCB(
@@ -2888,9 +3145,9 @@ UX_FLOW_DEF_VALID(
 UX_FLOW_DEF_VALID(
     ux_settings_flow_2_step,
     bnnn,
-    switch_settings_display_data(),
+    switch_settings_custom_contracts(),
     {
-      "Unverified contracts",
+      "Custom contracts",
       "Allow unverified",
       "contracts",
       addressSummary + 20
@@ -2914,7 +3171,7 @@ const ux_flow_step_t *        const ux_settings_flow [] = {
 
 void display_settings() {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 20, (N_storage.contractDetails ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 20, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
   ux_flow_init(0, ux_settings_flow, NULL);
 }
 
@@ -2925,9 +3182,10 @@ void switch_settings_contract_data() {
   display_settings();
 }
 
-void switch_settings_display_data() {
-  uint8_t value = (N_storage.contractDetails ? 0 : 1);
-  nvm_write((void*)&N_storage.contractDetails, (void*)&value, sizeof(uint8_t));
+void switch_settings_custom_contracts() {
+  uint8_t value = (N_storage.customContract ? 0 : 1);
+  customContract = value;
+  nvm_write((void*)&N_storage.customContract, (void*)&value, sizeof(uint8_t));
   display_settings();
 }
 
@@ -3489,6 +3747,106 @@ const ux_flow_step_t * const ux_sign_flow [] = {
   FLOW_END_STEP,
 };
 
+
+// CUSTOM CONTRACT
+//////////////////////////////////////////////////////////////////////
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Custom",
+      "Contract",
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_2_step,
+    bnnn_paging,
+    {
+      .title = "Contract",
+      .text = fullContract
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_3_step,
+    bnnn_paging,
+    {
+      .title = "Selector",
+      .text = TRC20Action,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_4_step,
+    bnnn_paging,
+    {
+      .title = "Token",
+      .text = toAddress,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_5_step,
+    bnnn_paging,
+    {
+      .title = "Call Amount",
+      .text = G_io_apdu_buffer,
+    });
+UX_FLOW_DEF_NOCB(
+    ux_approval_custom_contract_6_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress,
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_custom_contract_7_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_FLOW_DEF_VALID(
+    ux_approval_custom_contract_8_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+UX_FLOW_DEF_NOCB(ux_approval_custom_contract_warning_step,
+    pnn,
+    {
+      &C_icon_warning,
+      "This contract",
+      "is not verified",
+    });
+
+const ux_flow_step_t *        const ux_approval_custom_contract_flow[] = {
+  &ux_approval_custom_contract_1_step,
+  &ux_approval_custom_contract_warning_step,
+  &ux_approval_custom_contract_2_step,
+  &ux_approval_custom_contract_3_step,
+  &ux_approval_custom_contract_4_step,
+  &ux_approval_custom_contract_5_step,
+  &ux_approval_custom_contract_6_step,
+  &ux_approval_custom_contract_7_step,
+  &ux_approval_custom_contract_8_step,
+  FLOW_END_STEP,
+};
+
+const ux_flow_step_t *        const ux_approval_custom_contract_data_warning_flow[] = {
+  &ux_approval_custom_contract_1_step,
+  &ux_approval_custom_contract_warning_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_custom_contract_2_step,
+  &ux_approval_custom_contract_3_step,
+  &ux_approval_custom_contract_4_step,
+  &ux_approval_custom_contract_5_step,
+  &ux_approval_custom_contract_6_step,
+  &ux_approval_custom_contract_7_step,
+  &ux_approval_custom_contract_8_step,
+  FLOW_END_STEP,
+};
+
+
 #endif // #if defined(TARGET_NANOX)
 
 void ui_idle(void) {
@@ -3699,8 +4057,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     // Add requested BIP path to tmp array
     for (i = 0; i < bip32PathLength; i++) {
-        bip32Path[i] = (dataBuffer[0] << 24) | (dataBuffer[1] << 16) |
-                       (dataBuffer[2] << 8) | (dataBuffer[3]);
+        bip32Path[i] = U4BE(dataBuffer,0);
         dataBuffer += 4;
     }
     
@@ -3780,14 +4137,13 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         workBuffer++;
         dataLength--;
         for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] =
-                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
-                (workBuffer[2] << 8) | (workBuffer[3]);
+            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
             workBuffer += 4;
             dataLength -= 4;
         }
 
         initTx(&txContext, &sha2, &txContent);
+        customContractField = 0;
         txContent.publicKeyContext = &publicKeyContext;
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
@@ -3884,22 +4240,64 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             
             os_memmove((void *)TRC20ActionSendAllow, "Send To\0", 8); 
             if (txContent.contractType==TRIGGERSMARTCONTRACT){
-                convertUint256BE(txContent.TRC20Amount, 32, &uint256);
-                tostring256(&uint256, 10, (char *)G_io_apdu_buffer+100, 100);   
-                if (!adjustDecimals((char *)G_io_apdu_buffer+100, strlen((const char *)G_io_apdu_buffer+100), (char *)G_io_apdu_buffer, 100, txContent.decimals[0]))
-                    THROW(0x6B00);
-                
                 if (txContent.TRC20Method==1)
                     os_memmove((void *)TRC20Action, "Asset\0", 6);
                 else if (txContent.TRC20Method==2){
                     os_memmove((void *)TRC20ActionSendAllow, "Allow\0", 8);
                     os_memmove((void *)TRC20Action, "Approve\0", 8);
-                }else THROW(0x6B00);
+                }else {
+                    if (!customContract) THROW(0x6B00);
+                    customContractField = 1;
+
+                    getBase58FromAddres(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
+                    fullContract[BASE58CHECK_ADDRESS_SIZE]='\0';
+                    snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
+                    G_io_apdu_buffer[0]='\0';
+                    G_io_apdu_buffer[100]='\0';
+                    toAddress[0]='\0';
+                    if (txContent.amount>0 && txContent.amount2>0) THROW(0x6A80);
+                    // call has value
+                    if (txContent.amount>0) {
+                        os_memmove((void *)toAddress, "TRX\0", 4);
+                        print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, SUN_DIG);
+                        customContractField |= (1<<0x05);
+                        customContractField |= (1<<0x06);
+                    }else if (txContent.amount2>0) {
+                        os_memmove((void *)toAddress, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
+                        print_amount(txContent.amount2,(void *)G_io_apdu_buffer,100, 0);
+                        customContractField |= (1<<0x05);
+                        customContractField |= (1<<0x06);
+                    }else{
+                        os_memmove((void *)toAddress, "-\0", 2);
+                        os_memmove((void *)G_io_apdu_buffer, "0\0", 2);
+                    }
+        
+                    // approve custom contract
+                    #if defined(TARGET_BLUE)
+                        G_ui_approval_blue_state = APPROVAL_CUSTOM_CONTRACT;
+                        ui_approval_custom_contract_blue_init();
+                    #elif defined(TARGET_NANOS)
+                        ux_step = 0;
+                        ux_step_count = 7;
+                        UX_DISPLAY(ui_approval_custom_contract_nanos,(bagl_element_callback_t) ui_approval_custom_contract_prepro);
+                    #elif defined(TARGET_NANOX)
+                        ux_flow_init(0,
+                            ((txContent.dataBytes>0)? ux_approval_custom_contract_data_warning_flow : ux_approval_custom_contract_flow),
+                            NULL);
+                    #endif // #if TARGET_ID
+
+                    break;
+                }
+
+                convertUint256BE(txContent.TRC20Amount, 32, &uint256);
+                tostring256(&uint256, 10, (char *)G_io_apdu_buffer+100, 100);   
+                if (!adjustDecimals((char *)G_io_apdu_buffer+100, strlen((const char *)G_io_apdu_buffer+100), (char *)G_io_apdu_buffer, 100, txContent.decimals[0]))
+                    THROW(0x6B00);
             }else
                 print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddres(txContent.destination,
-                                        (void *)toAddress, &sha2);
+                                        (uint8_t *)toAddress, &sha2);
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
 
             // get token name if any
@@ -4024,7 +4422,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     //Add info to buffer
     G_io_apdu_buffer[0] = 0x00;
     G_io_apdu_buffer[0] |= (N_storage.dataAllowed<<0);
-    G_io_apdu_buffer[0] |= (N_storage.contractDetails<<1);
+    G_io_apdu_buffer[0] |= (N_storage.customContract<<1);
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -4056,9 +4454,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     dataLength--;
 
     for (i = 0; i < transactionContext.pathLength; i++) {
-        transactionContext.bip32Path[i] =
-            (workBuffer[0] << 24) | (workBuffer[1] << 16) |
-            (workBuffer[2] << 8) | (workBuffer[3]);
+        transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
         workBuffer += 4;
         dataLength -= 4;
     }
@@ -4087,7 +4483,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                 publicKeyContext.address,&sha3);         
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                fromAddress, &sha2);
+                                (uint8_t *)fromAddress, &sha2);
     
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -4096,7 +4492,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                 publicKeyContext.address,&sha3);         
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                toAddress, &sha2);
+                                (uint8_t *)toAddress, &sha2);
     
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -4139,9 +4535,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         workBuffer++;
         dataLength--;
         for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] =
-                (workBuffer[0] << 24) | (workBuffer[1] << 16) |
-                (workBuffer[2] << 8) | (workBuffer[3]);
+            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
             workBuffer += 4;
             dataLength -= 4;
         }
@@ -4178,11 +4572,11 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer, 0, hashMessage,32);
 
         #define HASH_LENGTH 4
-        array_hexstr(fullContract, hashMessage, HASH_LENGTH / 2);
+        array_hexstr((char *)fullContract, hashMessage, HASH_LENGTH / 2);
         fullContract[HASH_LENGTH / 2 * 2] = '.';
         fullContract[HASH_LENGTH / 2 * 2 + 1] = '.';
         fullContract[HASH_LENGTH / 2 * 2 + 2] = '.';
-        array_hexstr(fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
+        array_hexstr((char *)fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
 
         // Get private key
         os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
@@ -4201,7 +4595,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
                                     publicKeyContext.address,&sha3);         
         // Get Base58
         getBase58FromAddres(publicKeyContext.address,
-                                    fromAddress, &sha2);
+                                    (uint8_t *)fromAddress, &sha2);
         
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -4212,7 +4606,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
             ux_step = 0;
             ux_step_count = 3;
             UX_DISPLAY(ui_approval_signMessage_nanos,
-                ui_approval_signMessage_prepro);
+                (bagl_element_callback_t) ui_approval_signMessage_prepro);
         #elif defined(TARGET_NANOX)
             ux_flow_init(0, ux_sign_flow, NULL);
         #endif
@@ -4472,14 +4866,13 @@ __attribute__((section(".boot"))) int main(void) {
                 if (N_storage.initialized != 0x01) {
                   internalStorage_t storage;
                   storage.dataAllowed = 0x00;
-                  storage.contractDetails = 0x00;
+                  storage.customContract = 0x00;
                   storage.initialized = 0x01;
                   nvm_write((void*)&N_storage, (void*)&storage, sizeof(internalStorage_t));
                 }
                 dataAllowed = N_storage.dataAllowed;
-                contractDetails = N_storage.contractDetails;
+                customContract = N_storage.customContract;
                 
-
                 USB_power(1);
                 ui_idle();
 

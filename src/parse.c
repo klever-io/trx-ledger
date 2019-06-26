@@ -750,11 +750,12 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         count += 1;
                                         break;
                                     case 4: //data
-                                        PRINTF("SM\n");
+                                        PRINTF("Parsing SmartContract DATA\n");
                                         if (type!=2) THROW(0x6a80);
                                         count = parseVariant(context, buffer, &offset, 
                                                     length, &tmpNumber);
-                                        PRINTF("COUNT: %d, length: %d\n",count,(uint32_t)tmpNumber);
+                                        PRINTF("COUNT: %d, contract length: %d\n",count,(uint32_t)tmpNumber);
+                                        // check if data is complete, if not add to queue buffer
                                         if (tmpNumber>255 || (tmpNumber+offset)>length) {
                                             if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
                                                 count =0;
@@ -762,18 +763,29 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                                 break;
                                             }else THROW(0x6a80);
                                         }
-                                        if (tmpNumber!=TRC20_DATA_FIELD_SIZE) THROW(0x6a80);
                                         // data fit buffer, process data
                                         // get selector
-                                        PRINTF("Selector: %02x%02x%02x%02x\n",
-                                                buffer[offset],buffer[offset+1],buffer[offset+2],buffer[offset+3]);
+                                        PRINTF("Selector: %08x\n",U4BE(buffer, offset));
                                         if (os_memcmp(&buffer[offset], SELECTOR[0], 4) == 0) content->TRC20Method = 1; // check if transfer(address, uint256) function
                                         else if (os_memcmp(&buffer[offset], SELECTOR[1], 4) == 0) content->TRC20Method = 2; // check if approve(address, uint256) function
                                         else {
-                                            // NOT ALLOWED
-                                            PRINTF("Not ALLOWED\n");
-                                            THROW(0x6a80);
+                                            if (!customContract) {
+                                                // NOT ALLOWED
+                                                PRINTF("Custom contracts NOT ALLOWED\n");
+                                                THROW(0x6a80);
+                                            }
+                                            PRINTF("Processing custom contract\n");
+                                            // check if length is divided by 32bytes
+                                            if ( (tmpNumber-4)%32 !=0 ) THROW(0x6a80);
+                                            content->TRC20Method=0;
+                                            // if custom contracts allowed
+                                            content->customSelector = U4BE(buffer, offset);
+                                            offset += (uint8_t)(tmpNumber&0xFF);
+                                            count += (uint8_t)(tmpNumber&0xFF)+1;
+                                            break;
                                         }
+                                        // check if DATA field size matchs TRC20 Transfer/Approve
+                                        if (tmpNumber!=TRC20_DATA_FIELD_SIZE) THROW(0x6a80);
                                         // TO Address
                                         os_memmove(content->destination, buffer+offset+15, ADDRESS_SIZE);
                                         //set MainNet PREFIX
@@ -799,13 +811,14 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         break;
                                     case 6: //token_id
                                         if (type!=0) THROW(0x6a80);
-                                        // get amount
+                                        // get token id
                                         count = parseVariant(context, buffer, &offset, 
                                                         length, &tmpNumber);
                                         count += 1;
+                                        snprintf((char *)content->tokenNames[0], MAX_TOKEN_LENGTH,
+                                                "%d",(uint32_t)tmpNumber);                                                
+                                        content->tokenNamesLength[0] = strlen((const char *)content->tokenNames[0]);                                        
                                         break;
-
-
                                     default:
                                         // INVALID
                                         THROW(0x6a80);

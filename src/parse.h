@@ -112,6 +112,7 @@ typedef struct txContent_t {
     uint8_t tokenNamesLength[2];
     uint8_t resource;
     uint8_t TRC20Method;
+    uint32_t customSelector;
     contractType_e contractType;
     uint64_t dataBytes;
     publicKeyContext_t *publicKeyContext;
