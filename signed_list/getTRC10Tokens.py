@@ -10,9 +10,9 @@ import os
 def urlopen_with_retry(toread, start):
      for i in range(5):
         try:
-           time.sleep(0.3) 
-           #return urllib.request.urlopen("https://apilist.tronscan.org/api/token?sort=-name&limit={}&start={}&totalAll=1".format(toread, start))
-           return urllib.request.urlopen("https://api.trxplorer.io/v2/tokens?type=0&limit={}&start={}".format(toread, start))
+            time.sleep(0.3) 
+            #return urllib.request.urlopen("https://apilist.tronscan.org/api/token?sort=-name&limit={}&start={}&totalAll=1".format(toread, start))
+            return urllib.request.urlopen("https://api.trxplorer.io/v2/tokens?type=0&limit={}&start={}".format(toread, start))
         except Exception:
             continue
     

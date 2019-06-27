@@ -1,4 +1,5 @@
-import urllib.request, json
+from urllib.request import Request, urlopen
+import json
 from tronapi import Tron
 from binascii import unhexlify
 import codecs
@@ -15,9 +16,12 @@ def conv(string):
 def urlopen_with_retry(toread, start):
      for i in range(5):
         try:
-           time.sleep(0.3) 
-           return urllib.request.urlopen("https://apilist.tronscan.org/api/token_trc20?sort=issue_time&limit={}&start={}".format(toread, start))
-        except Exception:
+            time.sleep(0.3) 
+            url = "https://apilist.tronscan.org/api/token_trc20?sort=issue_time&limit={}&start={}".format(toread, start)
+            req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            return urlopen(req).read()
+        except Exception as e:
+            print(e)
             continue
 
 ItemsFields = 'trc20_tokens'
@@ -28,7 +32,7 @@ tron = Tron()
 totalToken = 0
 while (toread>0):
     url = urlopen_with_retry(toread,start)
-    data = json.loads(url.read().decode())
+    data = json.loads(url.decode())
 
     for T in data[ItemsFields]:
         address = tron.address.to_hex(T['contract_address'])
