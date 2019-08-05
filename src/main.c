@@ -3090,7 +3090,7 @@ void switch_settings_contract_data();
 void switch_settings_custom_contracts();
 
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_idle_flow_1_step,
     pnn,
     {
@@ -3098,14 +3098,14 @@ UX_FLOW_DEF_NOCB(
       "Application",
       "is ready",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_idle_flow_2_step,
     bn,
     {
       "Version",
       APPVERSION,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_idle_flow_3_step,
     pb,
     display_settings(),
@@ -3114,7 +3114,7 @@ UX_FLOW_DEF_VALID(
       "Settings",
     });
 
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_idle_flow_4_step,
     pb,
     os_sched_exit(-1),
@@ -3122,16 +3122,16 @@ UX_FLOW_DEF_VALID(
       &C_icon_dashboard_x,
       "Quit",
     });
-const ux_flow_step_t *        const ux_idle_flow [] = {
+
+UX_DEF(ux_idle_flow,
   &ux_idle_flow_1_step,
   &ux_idle_flow_2_step,
   &ux_idle_flow_3_step,
-  &ux_idle_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_idle_flow_4_step
+);
 
 
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_settings_flow_1_step,
     bnnn,
     switch_settings_contract_data(),
@@ -3142,7 +3142,7 @@ UX_FLOW_DEF_VALID(
       addressSummary,
     });
 
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_settings_flow_2_step,
     bnnn,
     switch_settings_custom_contracts(),
@@ -3153,7 +3153,7 @@ UX_FLOW_DEF_VALID(
       addressSummary + 20
     });
 
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_settings_flow_3_step,
     pb,
     ui_idle(),
@@ -3162,12 +3162,11 @@ UX_FLOW_DEF_VALID(
       "Back",
     });
 
-const ux_flow_step_t *        const ux_settings_flow [] = {
+UX_DEF(ux_settings_flow,
   &ux_settings_flow_1_step,
   &ux_settings_flow_2_step,
-  &ux_settings_flow_3_step,
-  FLOW_END_STEP,
-};
+  &ux_settings_flow_3_step
+);
 
 void display_settings() {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
@@ -3191,7 +3190,7 @@ void switch_settings_custom_contracts() {
 
 
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_display_public_flow_1_step,
     pnn,
     {
@@ -3199,14 +3198,14 @@ UX_FLOW_DEF_NOCB(
       "Verify",
       "address",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_display_public_flow_2_step,
     bnnn_paging,
     {
       .title = "Address",
       .text = toAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_display_public_flow_3_step,
     pb,
     io_seproxyhal_touch_address_ok(NULL),
@@ -3214,7 +3213,7 @@ UX_FLOW_DEF_VALID(
       &C_icon_validate_14,
       "Approve",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_display_public_flow_4_step,
     pb,
     io_seproxyhal_touch_address_cancel(NULL),
@@ -3223,7 +3222,7 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-UX_FLOW_DEF_NOCB(ux_approval_tx_data_warning_step,
+UX_STEP_NOCB(ux_approval_tx_data_warning_step,
     pnn,
     {
       &C_icon_warning,
@@ -3231,17 +3230,16 @@ UX_FLOW_DEF_NOCB(ux_approval_tx_data_warning_step,
       "Present",
     });
 
-const ux_flow_step_t *        const ux_display_public_flow [] = {
+UX_DEF(ux_display_public_flow,
   &ux_display_public_flow_1_step,
   &ux_display_public_flow_2_step,
   &ux_display_public_flow_3_step,
-  &ux_display_public_flow_4_step,
-  FLOW_END_STEP,
-};
+  &ux_display_public_flow_4_step
+);
 
 // Simple Transaction:
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_st_flow_1_step,
     pnn,
     {
@@ -3249,21 +3247,21 @@ UX_FLOW_DEF_NOCB(
       "Verify",
       fullContract
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_st_flow_2_step,
     bnnn_paging,
     {
       .title = "Hash",
       .text = fullHash
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_st_flow_3_step,
     bnnn_paging,
     {
       .title = "From Address",
       .text = fromAddress
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_st_flow_4_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3272,7 +3270,7 @@ UX_FLOW_DEF_VALID(
       "Approve",
       "and send",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_st_flow_5_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3281,28 +3279,26 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_st_flow [] = {
+UX_DEF(ux_approval_st_flow,
   &ux_approval_st_flow_1_step,
   &ux_approval_st_flow_2_step,
   &ux_approval_st_flow_3_step,
   &ux_approval_st_flow_4_step,
-  &ux_approval_st_flow_5_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_st_flow_5_step
+);
 
-const ux_flow_step_t *        const ux_approval_st_data_warning_flow [] = {
+UX_DEF(ux_approval_st_data_warning_flow,
   &ux_approval_st_flow_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_st_flow_2_step,
   &ux_approval_st_flow_3_step,
   &ux_approval_st_flow_4_step,
-  &ux_approval_st_flow_5_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_st_flow_5_step
+);
 
 // TRANSFER
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_tx_1_step,
     pnn,
     {
@@ -3310,35 +3306,35 @@ UX_FLOW_DEF_NOCB(
       "Review",
       "transfer",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_tx_2_step,
     bnnn_paging,
     {
       .title = "Amount",
       .text = G_io_apdu_buffer
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_tx_3_step,
     bnnn_paging,
     {
       .title = "Token",
       .text = fullContract,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_tx_4_step,
     bnnn_paging,
     {
       .title = TRC20ActionSendAllow,
       .text = toAddress,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_tx_5_step,
     bnnn_paging,
     {
       .title = "From Address",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_tx_6_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3347,7 +3343,7 @@ UX_FLOW_DEF_VALID(
       "Accept",
       "and send",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_tx_7_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3356,18 +3352,17 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_tx_flow [] = {
+UX_DEF(ux_approval_tx_flow,
   &ux_approval_tx_1_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
   &ux_approval_tx_4_step,
   &ux_approval_tx_5_step,
   &ux_approval_tx_6_step,
-  &ux_approval_tx_7_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_tx_7_step
+);
 
-const ux_flow_step_t *        const ux_approval_tx_data_warning_flow [] = {
+UX_DEF(ux_approval_tx_data_warning_flow,
   &ux_approval_tx_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_tx_2_step,
@@ -3375,13 +3370,12 @@ const ux_flow_step_t *        const ux_approval_tx_data_warning_flow [] = {
   &ux_approval_tx_4_step,
   &ux_approval_tx_5_step,
   &ux_approval_tx_6_step,
-  &ux_approval_tx_7_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_tx_7_step
+);
 
 // EXCHANGE CREATE
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_1_step,
     pnn,
     {
@@ -3389,42 +3383,42 @@ UX_FLOW_DEF_NOCB(
       "Review",
       "exchange",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_2_step,
     bnnn_paging,
     {
       .title = "Token 1",
       .text = fullContract
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_3_step,
     bnnn_paging,
     {
       .title = "Amount 1",
       .text = G_io_apdu_buffer,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_4_step,
     bnnn_paging,
     {
       .title = "Token 2",
       .text = toAddress,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_5_step,
     bnnn_paging,
     {
       .title = "Amount 2",
       .text = G_io_apdu_buffer+100,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_create_6_step,
     bnnn_paging,
     {
       .title = "From Address",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_create_7_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3433,7 +3427,7 @@ UX_FLOW_DEF_VALID(
       "Accept",
       "and create",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_create_8_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3442,7 +3436,7 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_exchange_create_flow [] = {
+UX_DEF(ux_approval_exchange_create_flow,
   &ux_approval_exchange_create_1_step,
   &ux_approval_exchange_create_2_step,
   &ux_approval_exchange_create_3_step,
@@ -3450,11 +3444,10 @@ const ux_flow_step_t *        const ux_approval_exchange_create_flow [] = {
   &ux_approval_exchange_create_5_step,
   &ux_approval_exchange_create_6_step,
   &ux_approval_exchange_create_7_step,
-  &ux_approval_exchange_create_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_create_8_step
+);
 
-const ux_flow_step_t *        const ux_approval_exchange_create_data_warning_flow [] = {
+UX_DEF(ux_approval_exchange_create_data_warning_flow,
   &ux_approval_exchange_create_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_exchange_create_2_step,
@@ -3463,13 +3456,12 @@ const ux_flow_step_t *        const ux_approval_exchange_create_data_warning_flo
   &ux_approval_exchange_create_5_step,
   &ux_approval_exchange_create_6_step,
   &ux_approval_exchange_create_7_step,
-  &ux_approval_exchange_create_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_create_8_step
+);
 
 // EXCHANGE TRANSACTION
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_1_step,
     pnn,
     {
@@ -3477,42 +3469,42 @@ UX_FLOW_DEF_NOCB(
       "Review",
       "transaction",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_2_step,
     bnnn_paging,
     {
       .title = "Exchange ID",
       .text = toAddress
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_3_step,
     bnnn_paging,
     {
       .title = "Token pair",
       .text = fullContract,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_4_step,
     bnnn_paging,
     {
       .title = "Amount",
       .text = G_io_apdu_buffer,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_5_step,
     bnnn_paging,
     {
       .title = "Expected",
       .text = G_io_apdu_buffer+100,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_transaction_6_step,
     bnnn_paging,
     {
       .title = "From Address",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_transaction_7_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3521,7 +3513,7 @@ UX_FLOW_DEF_VALID(
       "Accept",
       "and send",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_transaction_8_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3530,7 +3522,7 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_exchange_transaction_flow [] = {
+UX_DEF(ux_approval_exchange_transaction_flow,
   &ux_approval_exchange_transaction_1_step,
   &ux_approval_exchange_transaction_2_step,
   &ux_approval_exchange_transaction_3_step,
@@ -3538,11 +3530,10 @@ const ux_flow_step_t *        const ux_approval_exchange_transaction_flow [] = {
   &ux_approval_exchange_transaction_5_step,
   &ux_approval_exchange_transaction_6_step,
   &ux_approval_exchange_transaction_7_step,
-  &ux_approval_exchange_transaction_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_transaction_8_step
+);
 
-const ux_flow_step_t *        const ux_approval_exchange_transaction_data_warning_flow [] = {
+UX_DEF(ux_approval_exchange_transaction_data_warning_flow,
   &ux_approval_exchange_transaction_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_exchange_transaction_2_step,
@@ -3551,14 +3542,13 @@ const ux_flow_step_t *        const ux_approval_exchange_transaction_data_warnin
   &ux_approval_exchange_transaction_5_step,
   &ux_approval_exchange_transaction_6_step,
   &ux_approval_exchange_transaction_7_step,
-  &ux_approval_exchange_transaction_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_transaction_8_step
+);
 
 
 // EXCHANGE WITHDRAW INJECT
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_1_step,
     pnn,
     {
@@ -3566,42 +3556,42 @@ UX_FLOW_DEF_NOCB(
       "Review",
       "transaction",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_2_step,
     bnnn_paging,
     {
       .title = "Action",
       .text = exchangeContractDetail
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_3_step,
     bnnn_paging,
     {
       .title = "Excahnge ID",
       .text = toAddress,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_4_step,
     bnnn_paging,
     {
       .title = "Token name",
       .text = fullContract,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_5_step,
     bnnn_paging,
     {
       .title = "Amount",
       .text = G_io_apdu_buffer,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_exchange_wi_6_step,
     bnnn_paging,
     {
       .title = "From ADDRESS",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_wi_7_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3610,7 +3600,7 @@ UX_FLOW_DEF_VALID(
       "Accept",
       "and send",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_exchange_wi_8_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3619,7 +3609,7 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_exchange_wi_flow [] = {
+UX_DEF(ux_approval_exchange_wi_flow,
   &ux_approval_exchange_wi_1_step,
   &ux_approval_exchange_wi_2_step,
   &ux_approval_exchange_wi_3_step,
@@ -3627,11 +3617,10 @@ const ux_flow_step_t *        const ux_approval_exchange_wi_flow [] = {
   &ux_approval_exchange_wi_5_step,
   &ux_approval_exchange_wi_6_step,
   &ux_approval_exchange_wi_7_step,
-  &ux_approval_exchange_wi_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_wi_8_step
+);
 
-const ux_flow_step_t *        const ux_approval_exchange_wi_data_warning_flow [] = {
+UX_DEF(ux_approval_exchange_wi_data_warning_flow,
   &ux_approval_exchange_wi_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_exchange_wi_2_step,
@@ -3640,13 +3629,12 @@ const ux_flow_step_t *        const ux_approval_exchange_wi_data_warning_flow []
   &ux_approval_exchange_wi_5_step,
   &ux_approval_exchange_wi_6_step,
   &ux_approval_exchange_wi_7_step,
-  &ux_approval_exchange_wi_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_exchange_wi_8_step
+);
 
 // ECDH Shared Secret
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_pgp_ecdh_1_step,
     pnn,
     {
@@ -3654,14 +3642,14 @@ UX_FLOW_DEF_NOCB(
       "Approve",
       "Shared Secret",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_pgp_ecdh_2_step,
     bnnn_paging,
     {
       .title = "ECDH Address",
       .text = fromAddress
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_pgp_ecdh_3_step,
     bnnn_paging,
     {
@@ -3669,7 +3657,7 @@ UX_FLOW_DEF_NOCB(
       .text = toAddress,
     });
 
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_pgp_ecdh_4_step,
     pb,
     io_seproxyhal_touch_ecdh_ok(NULL),
@@ -3677,7 +3665,7 @@ UX_FLOW_DEF_VALID(
       &C_icon_validate_14,
       "Accept",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_pgp_ecdh_5_step,
     pb,
     io_seproxyhal_touch_ecdh_cancel(NULL),
@@ -3686,18 +3674,17 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-const ux_flow_step_t *        const ux_approval_pgp_ecdh_flow [] = {
+UX_DEF(ux_approval_pgp_ecdh_flow,
   &ux_approval_pgp_ecdh_1_step,
   &ux_approval_pgp_ecdh_2_step,
   &ux_approval_pgp_ecdh_3_step,
   &ux_approval_pgp_ecdh_4_step,
-  &ux_approval_pgp_ecdh_5_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_pgp_ecdh_5_step
+);
 
 // Sign personal message
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_sign_flow_1_step,
     pnn,
     {
@@ -3705,21 +3692,21 @@ UX_FLOW_DEF_NOCB(
       "Sign",
       "message",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_sign_flow_2_step,
     bnnn_paging,
     {
       .title = "Message hash",
       .text = fullContract,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_sign_flow_3_step,
     bnnn_paging,
     {
       .title = "Sign with",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_sign_flow_4_step,
     pbb,
     io_seproxyhal_touch_signMessage_ok(NULL),
@@ -3728,7 +3715,7 @@ UX_FLOW_DEF_VALID(
       "Sign",
       "message",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_sign_flow_5_step,
     pbb,
     io_seproxyhal_touch_signMessage_cancel(NULL),
@@ -3738,19 +3725,18 @@ UX_FLOW_DEF_VALID(
       "signature",
     });
 
-const ux_flow_step_t * const ux_sign_flow [] = {
+UX_DEF(ux_sign_flow,
   &ux_sign_flow_1_step,
   &ux_sign_flow_2_step,
   &ux_sign_flow_3_step,
   &ux_sign_flow_4_step,
-  &ux_sign_flow_5_step,
-  FLOW_END_STEP,
-};
+  &ux_sign_flow_5_step
+);
 
 
 // CUSTOM CONTRACT
 //////////////////////////////////////////////////////////////////////
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_1_step,
     pnn,
     {
@@ -3758,42 +3744,42 @@ UX_FLOW_DEF_NOCB(
       "Custom",
       "Contract",
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_2_step,
     bnnn_paging,
     {
       .title = "Contract",
       .text = fullContract
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_3_step,
     bnnn_paging,
     {
       .title = "Selector",
       .text = TRC20Action,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_4_step,
     bnnn_paging,
     {
       .title = "Token",
       .text = toAddress,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_5_step,
     bnnn_paging,
     {
       .title = "Call Amount",
       .text = G_io_apdu_buffer,
     });
-UX_FLOW_DEF_NOCB(
+UX_STEP_NOCB(
     ux_approval_custom_contract_6_step,
     bnnn_paging,
     {
       .title = "From Address",
       .text = fromAddress,
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_custom_contract_7_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
@@ -3802,7 +3788,7 @@ UX_FLOW_DEF_VALID(
       "Accept",
       "and send",
     });
-UX_FLOW_DEF_VALID(
+UX_STEP_VALID(
     ux_approval_custom_contract_8_step,
     pb,
     io_seproxyhal_touch_tx_cancel(NULL),
@@ -3811,7 +3797,7 @@ UX_FLOW_DEF_VALID(
       "Reject",
     });
 
-UX_FLOW_DEF_NOCB(ux_approval_custom_contract_warning_step,
+UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     pnn,
     {
       &C_icon_warning,
@@ -3819,7 +3805,7 @@ UX_FLOW_DEF_NOCB(ux_approval_custom_contract_warning_step,
       "is not verified",
     });
 
-const ux_flow_step_t *        const ux_approval_custom_contract_flow[] = {
+UX_DEF(ux_approval_custom_contract_flow,
   &ux_approval_custom_contract_1_step,
   &ux_approval_custom_contract_warning_step,
   &ux_approval_custom_contract_2_step,
@@ -3828,11 +3814,10 @@ const ux_flow_step_t *        const ux_approval_custom_contract_flow[] = {
   &ux_approval_custom_contract_5_step,
   &ux_approval_custom_contract_6_step,
   &ux_approval_custom_contract_7_step,
-  &ux_approval_custom_contract_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_custom_contract_8_step
+);
 
-const ux_flow_step_t *        const ux_approval_custom_contract_data_warning_flow[] = {
+UX_DEF(ux_approval_custom_contract_data_warning_flow,
   &ux_approval_custom_contract_1_step,
   &ux_approval_custom_contract_warning_step,
   &ux_approval_tx_data_warning_step,
@@ -3842,9 +3827,8 @@ const ux_flow_step_t *        const ux_approval_custom_contract_data_warning_flo
   &ux_approval_custom_contract_5_step,
   &ux_approval_custom_contract_6_step,
   &ux_approval_custom_contract_7_step,
-  &ux_approval_custom_contract_8_step,
-  FLOW_END_STEP,
-};
+  &ux_approval_custom_contract_8_step
+);
 
 
 #endif // #if defined(TARGET_NANOX)
