@@ -71,15 +71,18 @@ void signTransaction(transactionContext_t *transactionContext) {
     unsigned int info = 0;
 
     // Get Private key from BIP32 path
+    io_seproxyhal_io_heartbeat();
     os_perso_derive_node_bip32(
         CX_CURVE_256K1, transactionContext->bip32Path,
         transactionContext->pathLength, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     // Sign transaction hash
+    io_seproxyhal_io_heartbeat();
     cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       transactionContext->hash, sizeof(transactionContext->hash),
                       signature, sizeof(signature), &info);
+    io_seproxyhal_io_heartbeat();
     os_memset(&privateKey, 0, sizeof(privateKey));
     // recover signature
     rLength = signature[3];
