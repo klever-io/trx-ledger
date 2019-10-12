@@ -100,16 +100,16 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e);
 
 void ui_idle(void);
-#ifdef TARGET_NANOX
+#ifdef HAVE_UX_FLOW
 #include "ux.h"
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
-#else // TARGET_NANOX
+#else // HAVE_UX_FLOW
 ux_state_t ux;
 // display stepped screens
 unsigned int ux_step;
 unsigned int ux_step_count;
-#endif // TARGET_NANOX
+#endif // HAVE_UX_FLOW
 
 const bagl_element_t *ui_menu_item_out_over(const bagl_element_t *e) {
     // the selection rectangle is after the none|touchable
@@ -244,7 +244,7 @@ unsigned int ui_idle_blue_button(unsigned int button_mask,
 }
 #endif // #if TARGET_BLUE
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_settings[];
@@ -310,7 +310,7 @@ const ux_menu_entry_t menu_main[] = {
     {NULL, os_sched_exit, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
     UX_MENU_END};
 
-#endif // #if TARGET_NANOS
+#endif // #if TARGET_NANOS && !defined(HAVE_UX_FLOW)
 
 #if defined(TARGET_BLUE)
 const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
@@ -559,7 +559,7 @@ unsigned int ui_address_blue_button(unsigned int button_mask,
 }
 #endif // #if defined(TARGET_BLUE)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 const bagl_element_t ui_address_nanos[] = {
     // type                               userid    x    y   w    h  str rad
     // fill      fg        bg      fid iid  txt   touchparams...       ]
@@ -655,7 +655,7 @@ unsigned int ui_address_prepro(const bagl_element_t *element) {
 
 unsigned int ui_address_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter);
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 #if defined(TARGET_BLUE)
 // reuse addressSummary for each line content
@@ -1740,7 +1740,7 @@ static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
 
 #endif // #if defined(TARGET_BLUE)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 unsigned int ui_approval_pgp_ecdh_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter) {
     switch (button_mask) {
@@ -1928,9 +1928,9 @@ unsigned int ui_approval_signMessage_nanos_button(unsigned int button_mask, unsi
     return 0;
 }
 
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 const bagl_element_t ui_approval_simple_nanos[] = {
     // type                               userid    x    y   w    h  str rad
     // fill      fg        bg      fid iid  txt   touchparams...       ]
@@ -2066,10 +2066,10 @@ unsigned int ui_approval_simple_prepro(const bagl_element_t *element) {
 
 unsigned int ui_approval_simple_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter);
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 // Show transactions details for approval
 const bagl_element_t ui_approval_nanos[] = {
     // type                               userid    x    y   w    h  str rad
@@ -3081,9 +3081,9 @@ unsigned int ui_approval_custom_contract_nanos_button(unsigned int button_mask,
     return 0;
 }
 
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
-#if defined(TARGET_NANOX)
+#if defined(HAVE_UX_FLOW)
 
 void display_settings(void);
 void switch_settings_contract_data();
@@ -3131,6 +3131,28 @@ UX_DEF(ux_idle_flow,
 );
 
 
+#if defined(TARGET_NANOS)
+
+UX_STEP_VALID(
+    ux_settings_flow_1_step,
+    bnnn_paging,
+    switch_settings_contract_data(),
+    {
+      .title = "Transactions data",
+      .text = addressSummary,
+    });
+
+UX_STEP_VALID(
+    ux_settings_flow_2_step,
+    bnnn_paging,
+    switch_settings_custom_contracts(),
+    {
+      .title = "Custom contracts",
+      .text = addressSummary + 20
+    });
+
+#else
+
 UX_STEP_VALID(
     ux_settings_flow_1_step,
     bnnn,
@@ -3152,6 +3174,8 @@ UX_STEP_VALID(
       "contracts",
       addressSummary + 20
     });
+
+#endif
 
 UX_STEP_VALID(
     ux_settings_flow_3_step,
@@ -3831,19 +3855,19 @@ UX_DEF(ux_approval_custom_contract_data_warning_flow,
 );
 
 
-#endif // #if defined(TARGET_NANOX)
+#endif // #if defined(HAVE_UX_FLOW)
 
 void ui_idle(void) {
 #if defined(TARGET_BLUE)
     UX_DISPLAY(ui_idle_blue, NULL);
-#elif defined(TARGET_NANOS)
-    UX_MENU_DISPLAY(0, menu_main, NULL);
-#elif defined(TARGET_NANOX)
+#elif defined(HAVE_UX_FLOW)
     // reserve a display stack slot if none yet
     if(G_ux.stack_count == 0) {
         ux_stack_push();
     }
     ux_flow_init(0, ux_idle_flow, NULL);
+#elif defined(TARGET_NANOS)
+    UX_MENU_DISPLAY(0, menu_main, NULL);
 #endif // #if TARGET_ID
 }
 
@@ -4077,12 +4101,12 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     // prepare for a UI based reply
 #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_address_blue, ui_address_blue_prepro);
+#elif defined(HAVE_UX_FLOW)
+        ux_flow_init(0, ux_display_public_flow, NULL);
 #elif defined(TARGET_NANOS)
         ux_step = 0;
         ux_step_count = 2;
         UX_DISPLAY(ui_address_nanos, (bagl_element_callback_t) ui_address_prepro);
-#elif defined(TARGET_NANOX)
-        ux_flow_init(0, ux_display_public_flow, NULL);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
@@ -4260,14 +4284,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     #if defined(TARGET_BLUE)
                         G_ui_approval_blue_state = APPROVAL_CUSTOM_CONTRACT;
                         ui_approval_custom_contract_blue_init();
+                    #elif defined(HAVE_UX_FLOW)
+                        ux_flow_init(0,
+                            ((txContent.dataBytes>0)? ux_approval_custom_contract_data_warning_flow : ux_approval_custom_contract_flow),
+                            NULL);
                     #elif defined(TARGET_NANOS)
                         ux_step = 0;
                         ux_step_count = 7;
                         UX_DISPLAY(ui_approval_custom_contract_nanos,(bagl_element_callback_t) ui_approval_custom_contract_prepro);
-                    #elif defined(TARGET_NANOX)
-                        ux_flow_init(0,
-                            ((txContent.dataBytes>0)? ux_approval_custom_contract_data_warning_flow : ux_approval_custom_contract_flow),
-                            NULL);
                     #endif // #if TARGET_ID
 
                     break;
@@ -4290,14 +4314,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSFER;
                 ui_approval_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
-                    NULL);
             #endif // #if TARGET_ID
 
         break;
@@ -4313,14 +4337,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_CREATE;
                 ui_approval_exchange_create_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_create_data_warning_flow : ux_approval_exchange_create_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_create_data_warning_flow : ux_approval_exchange_create_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGEINJECTCONTRACT:
@@ -4335,14 +4359,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
                 ui_approval_exchange_withdraw_inject_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_wi_data_warning_flow : ux_approval_exchange_wi_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_wi_data_warning_flow : ux_approval_exchange_wi_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGETRANSACTIONCONTRACT:
@@ -4358,14 +4382,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_TRANSACTION;
                 ui_approval_exchange_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_transaction_data_warning_flow : ux_approval_exchange_transaction_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_transaction_data_warning_flow : ux_approval_exchange_transaction_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         default:
@@ -4377,14 +4401,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
                 ui_approval_simple_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
                 UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
     }
@@ -4482,16 +4506,16 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_approval_pgp_ecdh_blue, NULL);
-    #elif defined(TARGET_NANOS)
-        ux_step = 0;
-        ux_step_count = 3;
-        UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
-    #elif defined(TARGET_NANOX)
+    #elif defined(HAVE_UX_FLOW)
         // reserve a display stack slot if none yet
         if(G_ux.stack_count == 0) {
             ux_stack_push();
         }
         ux_flow_init(0, ux_approval_pgp_ecdh_flow, NULL);
+    #elif defined(TARGET_NANOS)
+        ux_step = 0;
+        ux_step_count = 3;
+        UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
     #endif
     *flags |= IO_ASYNCH_REPLY;
 
@@ -4586,13 +4610,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         #if defined(TARGET_BLUE)
             G_ui_approval_blue_state = APPROVAL_SIGN_PERSONAL_MESSAGE;
             ui_approval_message_sign_blue_init();
+        #elif defined(HAVE_UX_FLOW)
+            ux_flow_init(0, ux_sign_flow, NULL);
         #elif defined(TARGET_NANOS)
             ux_step = 0;
             ux_step_count = 3;
             UX_DISPLAY(ui_approval_signMessage_nanos,
                 (bagl_element_callback_t) ui_approval_signMessage_prepro);
-        #elif defined(TARGET_NANOX)
-            ux_flow_init(0, ux_sign_flow, NULL);
         #endif
 
         *flags |= IO_ASYNCH_REPLY;
@@ -4791,7 +4815,7 @@ unsigned char io_event(unsigned char channel) {
     case SEPROXYHAL_TAG_TICKER_EVENT:
         UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer,
         {
-          #ifndef TARGET_NANOX
+          #ifndef HAVE_UX_FLOW
           if (UX_ALLOWED) {
             if (ux_step_count) {
               // prepare next screen
@@ -4800,7 +4824,7 @@ unsigned char io_event(unsigned char channel) {
               UX_REDISPLAY();
             }
           }
-          #endif // TARGET_NANOX
+          #endif // HAVE_UX_FLOW
         });
         break;
     }

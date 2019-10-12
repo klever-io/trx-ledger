@@ -78,6 +78,10 @@ else
 DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
 
+ifeq ($(TARGET_NAME),TARGET_NANOS)
+DEFINES   += HAVE_UX_FLOW
+endif
+
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
@@ -127,6 +131,9 @@ APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+SDK_SOURCE_PATH  += lib_ux
+endif
+ifeq ($(TARGET_NAME),TARGET_NANOS)
 SDK_SOURCE_PATH  += lib_ux
 endif
 # U2F
