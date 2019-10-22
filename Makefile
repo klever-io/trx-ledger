@@ -129,6 +129,18 @@ ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
 SDK_SOURCE_PATH  += lib_ux
 endif
+
+# If the SDK supports Flow for Nano S, build for it
+
+ifeq ($(TARGET_NAME),TARGET_NANOS)
+
+	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux)" ""
+		SDK_SOURCE_PATH  += lib_ux
+		DEFINES		       += HAVE_UX_FLOW		
+	endif
+
+endif
+
 # U2F
 DEFINES   += U2F_PROXY_MAGIC=\"TRX\"
 DEFINES   += HAVE_IO_U2F HAVE_U2F
