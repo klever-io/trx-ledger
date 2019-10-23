@@ -1,7 +1,7 @@
 base58==1.0.3
 crypto==1.4.1
 cryptography==2.6.1
-ecdsa==0.13
+ecdsa==0.13.3
 grpcio==1.21.1
 grpcio-tools==1.21.1
 ledgerblue==0.1.23
