@@ -115,6 +115,7 @@ typedef struct txContent_t {
     uint32_t customSelector;
     contractType_e contractType;
     uint64_t dataBytes;
+    uint8_t permission_id;
     publicKeyContext_t *publicKeyContext;
 } txContent_t;
 

@@ -74,7 +74,7 @@ cx_sha256_t sha2;
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
 volatile uint8_t customContractField;
-volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1];
+volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID 
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
 volatile char fullContract[MAX_TOKEN_LENGTH];
@@ -4214,8 +4214,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     cx_hash((cx_hash_t *)txContext.sha2, CX_LAST, workBuffer,
             0, transactionContext.hash, 32);
 
-    getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
-            fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
+    if (txContent.permission_id>0){
+        snprintf(fromAddress, 5, "P%d - ",txContent.permission_id);
+        getBase58FromAddres(txContent.account, (void *)(fromAddress+4), &sha2);
+        fromAddress[BASE58CHECK_ADDRESS_SIZE+5]='\0';
+    } else {
+        getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
+        fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+    }
 
     switch (txContent.contractType){
         case TRANSFERCONTRACT: // TRX Transfer

@@ -648,6 +648,15 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                 offset += (uint8_t)(tmpNumber&0xFF);
                                 count += (uint8_t)(tmpNumber&0xFF)+1;
                                 break;
+                            case 5: //Permission_id
+                                if (type!=0) THROW(0x6a80);
+                                // get id
+                                count = parseVariant(context, buffer, &offset, 
+                                            length, &tmpNumber);
+                                if (tmpNumber>9) THROW(0x6a80); // Valid only from 0 - 9
+                                content->permission_id = (uint8_t)(tmpNumber&0xFF);
+                                count += 1;
+                                break;
                         }
                         PRINTF("Stage end %d,%d,%d\n",context->stageQueue[0].total,context->stageQueue[0].count,count);
                         context->stageQueue[0].count += count;
