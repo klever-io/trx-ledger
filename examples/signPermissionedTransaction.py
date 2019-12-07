@@ -106,7 +106,7 @@ raw_tx, sign1 = ledgerSign(parse_bip32_path("44'/195'/0'/0/0"),tx.transaction)
 tx.transaction.signature.extend([bytes(sign1[0:65])])
 r = stub.BroadcastTransaction(tx.transaction)
 
-if result==true:
+if r.result == True:
 	print("Success")
 else:
 	print("Fail")

@@ -109,7 +109,7 @@ tx.transaction.signature.extend([bytes(sign2[0:65])])
 
 r = stub.BroadcastTransaction(tx.transaction)
 
-if r == True:
+if r.result == True:
 	print("Success")
 else:
 	print("Fail")
