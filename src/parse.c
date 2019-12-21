@@ -22,7 +22,7 @@
 #include "settings.h"
 
 tokenDefinition_t* getKnownToken(txContent_t *context) {
-    uint8_t i;
+    uint16_t i;
 
     tokenDefinition_t *currentToken = NULL;
     for (i=0; i<NUM_TOKENS_TRC20; i++) {
