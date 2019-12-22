@@ -942,6 +942,7 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         count = parseVariant(context, buffer, &offset, 
                                                         length, &content->amount2);
                                         count += 1;
+                                        content->numOfVotes = 0;
                                         break;
                                     default:
                                         // INVALID
@@ -960,18 +961,25 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         break;
                                     case 2: //votes
                                         if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                                length, &tmpNumber);
-                                        if (tmpNumber>255 || (tmpNumber+offset)>length) {
-                                            if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
-                                                count =0;
-                                                offset = length;
-                                                break;
-                                            }else THROW(0x6a80);
-                                        }else{
-                                            content->amount++;
-                                            count += (uint8_t)(tmpNumber&0xFF)+1;
-                                            offset += (uint8_t)(tmpNumber&0xFF);
+                                        count = parseVariant(context, buffer, &offset, length, NULL);
+
+                                        if (buffer[offset]!=0x0a) THROW(0x6a80);
+                                        offset++; count++;
+
+                                        count += parseAddress(context, buffer, &offset, length,
+                                                              content->voteAddresses[content->numOfVotes]); // vote_address
+                                        count += 2;
+
+                                        if (buffer[offset]!=0x10) THROW(0x6a80);
+
+                                        count += parseVariant(context, buffer, &offset, length,
+                                                              &content->voteCounts[content->numOfVotes]); // vote_count
+                                        offset++; count++;
+
+                                        content->numOfVotes += 1;
+
+                                        if (content->numOfVotes > 3) {
+                                            THROW(0x6a81); // too many votes
                                         }
                                         break;
                                     default:

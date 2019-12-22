@@ -4374,6 +4374,27 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     NULL);
             #endif // #if TARGET_ID
         break;
+        case VOTEWITNESSCONTRACT:
+            // vote for SR
+            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
+
+            // row transaction hash
+            array_hexstr((char *)fullHash, transactionContext.hash, 32);
+
+            // TODO: ui element
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+                ui_approval_simple_transaction_blue_init();
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 4;
+                UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
+            #elif defined(TARGET_NANOX)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
+                    NULL);
+            #endif // #if TARGET_ID
+        break;
         default:
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
