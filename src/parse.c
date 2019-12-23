@@ -942,7 +942,6 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         count = parseVariant(context, buffer, &offset, 
                                                         length, &content->amount2);
                                         count += 1;
-                                        content->numOfVotes = 0;
                                         break;
                                     default:
                                         // INVALID
