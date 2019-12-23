@@ -971,10 +971,10 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         count += 2;
 
                                         if (buffer[offset]!=0x10) THROW(0x6a80);
+                                        offset++; count++;
 
                                         count += parseVariant(context, buffer, &offset, length,
                                                               &content->voteCounts[content->numOfVotes]); // vote_count
-                                        offset++; count++;
 
                                         content->numOfVotes += 1;
 
