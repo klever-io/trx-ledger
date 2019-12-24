@@ -110,6 +110,9 @@ typedef struct txContent_t {
     uint8_t decimals[2];
     uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
     uint8_t tokenNamesLength[2];
+    uint8_t voteAddresses[5][ADDRESS_SIZE];
+    uint64_t voteCounts[5];
+    uint8_t numOfVotes;
     uint8_t resource;
     uint8_t TRC20Method;
     uint32_t customSelector;
