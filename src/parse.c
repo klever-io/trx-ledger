@@ -956,7 +956,6 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                                 content->account);
                                         if (count==0) break;
                                         count+=2;
-                                        content->amount=0;
                                         break;
                                     case 2: //votes
                                         if (type!=2) THROW(0x6a80);
@@ -977,7 +976,7 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
 
                                         content->numOfVotes += 1;
 
-                                        if (content->numOfVotes > 3) {
+                                        if (content->numOfVotes > 5) {
                                             THROW(0x6a81); // too many votes
                                         }
                                         break;
