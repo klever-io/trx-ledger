@@ -100,17 +100,17 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e);
 
 #define VOTE_ADDRESS 0
-#define VOTE_AMOUNT 11
-#define VOTE_ADDRESS_SIZE 14
+#define VOTE_ADDRESS_SIZE 15
+#define VOTE_AMOUNT VOTE_ADDRESS_SIZE
 #define VOTE_AMOUNT_SIZE 15
-#define VOTE_PACK VOTE_ADDRESS_SIZE+VOTE_AMOUNT_SIZE
-#define voteSlot(index, type) ( index*VOTE_PACK+type )
+#define VOTE_PACK (VOTE_ADDRESS_SIZE+VOTE_AMOUNT_SIZE)
+#define voteSlot(index, type) ( (index*VOTE_PACK)+type )
 
 void fillVoteAddressSlot(void *destination, const char * from, uint8_t index) {
-    os_memset(destination+(index*VOTE_PACK), 0, VOTE_PACK);
-    os_memmove(destination+(index*VOTE_PACK), from, 5);
-    os_memmove(destination+5+(index*VOTE_PACK), "...", 3);
-    os_memmove(destination+8+(index*VOTE_PACK), from+(BASE58CHECK_ADDRESS_SIZE-5), 5);
+    os_memset(destination+voteSlot(index, VOTE_ADDRESS), 0, VOTE_PACK);
+    os_memmove(destination+voteSlot(index, VOTE_ADDRESS), from, 5);
+    os_memmove(destination+5+voteSlot(index, VOTE_ADDRESS), "...", 3);
+    os_memmove(destination+8+voteSlot(index, VOTE_ADDRESS), from+(BASE58CHECK_ADDRESS_SIZE-5), 5);
     PRINTF("Vote Address: %d - %s\n", index, destination+(voteSlot(index, VOTE_ADDRESS)));
 }
 
@@ -2936,7 +2936,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     (char *)(G_io_apdu_buffer+voteSlot(0,VOTE_ADDRESS)),
+     (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_ADDRESS)),
      0,
      0,
      0,
@@ -2945,7 +2945,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)(G_io_apdu_buffer+voteSlot(0,VOTE_AMOUNT)),
+     (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_AMOUNT)),
      0,
      0,
      0,
@@ -2955,7 +2955,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     (char *)(G_io_apdu_buffer+voteSlot(1,VOTE_ADDRESS)),
+     (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_ADDRESS)),
      0,
      0,
      0,
@@ -2964,7 +2964,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)(G_io_apdu_buffer+voteSlot(1,VOTE_AMOUNT)),
+     (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_AMOUNT)),
      0,
      0,
      0,
@@ -2974,7 +2974,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     (char *)(G_io_apdu_buffer+voteSlot(2,VOTE_ADDRESS)),
+     (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_ADDRESS)),
      0,
      0,
      0,
@@ -2983,7 +2983,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)(G_io_apdu_buffer+voteSlot(2,VOTE_AMOUNT)),
+     (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_AMOUNT)),
      0,
      0,
      0,
@@ -2993,7 +2993,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x05, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     (char *)(G_io_apdu_buffer+voteSlot(3,VOTE_ADDRESS)),
+     (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_ADDRESS)),
      0,
      0,
      0,
@@ -3002,7 +3002,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)(G_io_apdu_buffer+voteSlot(3,VOTE_AMOUNT)),
+     (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_AMOUNT)),
      0,
      0,
      0,
@@ -3012,7 +3012,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 
      {{BAGL_LABELINE, 0x06, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
-     (char *)(G_io_apdu_buffer+voteSlot(4,VOTE_ADDRESS)),
+     (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_ADDRESS)),
      0,
      0,
      0,
@@ -3021,7 +3021,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
      NULL},
     {{BAGL_LABELINE, 0x06, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
       BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
-     (char *)(G_io_apdu_buffer+voteSlot(4,VOTE_AMOUNT)),
+     (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_AMOUNT)),
      0,
      0,
      0,
