@@ -1005,16 +1005,18 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         if (count==0) break;
                                         count+=2;
                                         break;
-                                    case 2: //frozen_balance
+                                    case 2: //freeze_balance
                                         if (type!=0) THROW(0x6a80);
                                         count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
+                                            length, &content->amount);
                                         count += 1;
                                         break;
                                     case 3: //frozen_duration
                                         if (type!=0) THROW(0x6a80);
                                         count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
+                                            length, &tmpNumber);
+                                        // Tron only accepts 3 days freezing
+                                        if (tmpNumber!=3) THROW(0x6a80);
                                         count += 1;
                                         break;
                                     case 10: //ResourceCode
