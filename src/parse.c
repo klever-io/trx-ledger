@@ -555,7 +555,7 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                                         length, NULL);
                                 break; //skip
                             case 10:
-                                // Check permissions Allo data
+                                // Check permissions Allow data
                                 if (!dataAllowed) THROW(0x6a80);
                                 // parse data
                                 if (type!=2) THROW(0x6a80);
@@ -959,8 +959,19 @@ uint16_t processTx(txContext_t *context, uint8_t *buffer,
                                         break;
                                     case 2: //votes
                                         if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, length, NULL);
+                                        count = parseVariant(context, buffer, &offset, 
+                                                                length, &tmpNumber);
 
+                                        PRINTF("COUNT: %d, votes length: %d\n",count,(uint32_t)tmpNumber);
+                                        // check if  pack is complete, if not add to queue buffer
+                                        if (tmpNumber>255 || (tmpNumber+offset)>length) {
+                                            if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
+                                                count =0;
+                                                offset = length;
+                                                break;
+                                            } else THROW(0x6a80);
+                                        }
+                                        // pack fit buffer, process data
                                         if (buffer[offset]!=0x0a) THROW(0x6a80);
                                         offset++; count++;
 
