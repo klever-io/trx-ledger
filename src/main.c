@@ -557,7 +557,7 @@ const bagl_element_t ui_address_blue[] = {
 
 unsigned int ui_address_blue_prepro(const bagl_element_t *element) {
     if (element->component.userid > 0) {
-        unsigned int length = strlen(toAddress);
+        unsigned int length = strlen((const char *)toAddress);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
             os_memset((void *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
             os_memmove((void *)addressSummary,
@@ -850,12 +850,12 @@ const bagl_element_t ui_details_blue[] = {
 
 unsigned int ui_details_blue_prepro(const bagl_element_t *element) {
     if (element->component.userid == 1) {
-        strcpy(addressSummary, (const char *)PIC(ui_details_title));
+        strcpy((char *)addressSummary, (const char *)PIC(ui_details_title));
     } else if (element->component.userid > 0) {
         unsigned int length = strlen(ui_details_content);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
-            os_memset((const char *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
-            os_memmove((const char *)addressSummary,
+            os_memset((void *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
+            os_memmove((void *)addressSummary,
                        (const char *) (ui_details_content + (element->component.userid & 0xF) *
                                                 MAX_CHAR_PER_LINE),
                        MIN(length - (element->component.userid & 0xF) *
@@ -876,8 +876,8 @@ unsigned int ui_details_blue_button(unsigned int button_mask,
 
 void ui_details_init(const char *title, const char *content,
                      callback_t back_callback) {
-    ui_details_title = title;
-    ui_details_content = content;
+    ui_details_title = (char *)title;
+    ui_details_content = (char *)content;
     ui_details_back_callback = back_callback;
     UX_DISPLAY(ui_details_blue, ui_details_blue_prepro);
 }
@@ -903,6 +903,8 @@ typedef enum {
     APPROVAL_EXCHANGE_CREATE,
     APPROVAL_EXCHANGE_TRANSACTION,
     APPROVAL_EXCHANGE_WITHDRAW_INJECT,
+    APPROVAL_WITNESSVOTE_TRANSACTION,
+    APPROVAL_FREEZEASSET_TRANSACTION,
     APPROVAL_SIGN_PERSONAL_MESSAGE,
     APPROVAL_CUSTOM_CONTRACT,
 } ui_approval_blue_state_t;
@@ -961,6 +963,26 @@ const char *const ui_approval_blue_details_name[][7] = {
         "FROM",
         "CONFIRM TRANSACTION",
         "Exchange MX Details",
+    },
+    /*APPROVAL_WITNESSVOTE_TRANSACTION*/
+    {
+        "TOTAL VOTES",
+        "DETAILS",
+        "FROM",
+        NULL,
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Witness Vote",
+    },
+    /*APPROVAL_FREEZE_TRANSACTION*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Freeze TRX",
     },
     /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
     {
@@ -1559,6 +1581,31 @@ void ui_approval_exchange_transaction_blue_init(void) {
     ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer+100;
     ui_approval_blue_values[4] = (const char*)fromAddress;
     
+    ui_approval_blue_init();
+}
+
+void ui_approval_witnessvote_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_freeze_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)fromAddress;
     ui_approval_blue_init();
 }
 
@@ -4758,16 +4805,38 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             // vote for SR
             PRINTF("Voting!!\n");
             PRINTF("Count: %d\n", txContent.numOfVotes);
+            os_memset((char *)G_io_apdu_buffer, 0, 200);
+            uint64_t totalVotes = 0;
             for (uint8_t i=0; i < txContent.numOfVotes; i++) {
                 getBase58FromAddres(txContent.voteAddresses[i], (uint8_t *)fullContract, &sha2);
+            #if defined(TARGET_BLUE)
+                fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
+                snprintf(
+                    (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
+                    toAddress,
+                    (unsigned int)txContent.voteCounts[i]
+                );
+                int lineLength = strlen((const char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)));
+                os_memset(
+                    (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)+lineLength)
+                    , 0x20, MAX_CHAR_PER_LINE - lineLength);
+                
+                totalVotes += txContent.voteCounts[i];
+            #else
                 fillVoteAddressSlot((void *)G_io_apdu_buffer, (const char *)fullContract, i);
                 fillVoteAmountSlot((void *)G_io_apdu_buffer, txContent.voteCounts[i], i);
+            #endif
             }
 
             // TODO: ui element BLUE/NANOX
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSACTION;
-                ui_approval_simple_transaction_blue_init();
+                snprintf(
+                    (char *)fullContract, sizeof(fullContract),"%d: %u",
+                    txContent.numOfVotes,
+                    (unsigned int)totalVotes
+                );
+                G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
+                ui_approval_witnessvote_transaction_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
@@ -4784,21 +4853,21 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             else os_memmove((void *)fullContract, "Energy\0", 7);
 
             print_amount(txContent.amount,(void *)G_io_apdu_buffer,0, SUN_DIG);
-            if (strlen(txContent.destination)>0) {
+            if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddres(txContent.destination,
                     (uint8_t *)toAddress, &sha2);
-                PRINTF("Freezing to %s", toAddress);
+                PRINTF("Freezing to own %s", toAddress);
             } else {
                 getBase58FromAddres(txContent.account,
                     (uint8_t *)toAddress, &sha2);
-                PRINTF("Freezing to2 %s", toAddress);
+                PRINTF("Freezing to %s", toAddress);
             }
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
             //TODO: screen for Blue/NanoX
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSFER;
-                ui_approval_transaction_blue_init();
+                G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
+                ui_approval_freeze_transaction_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
