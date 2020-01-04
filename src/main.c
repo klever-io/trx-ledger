@@ -974,6 +974,16 @@ const char *const ui_approval_blue_details_name[][7] = {
         "CONFIRM TRANSACTION",
         "Witness Vote",
     },
+    /*APPROVAL_FREEZE_TRANSACTION*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Freeze TRX",
+    },
     /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
     {
         "HASH",
@@ -1583,6 +1593,19 @@ void ui_approval_witnessvote_transaction_blue_init(void) {
     ui_approval_blue_values[0] = (const char*)fullContract;
     ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
     ui_approval_blue_values[2] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_freeze_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)fromAddress;
     ui_approval_blue_init();
 }
 
@@ -4833,18 +4856,18 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddres(txContent.destination,
                     (uint8_t *)toAddress, &sha2);
-                PRINTF("Freezing to %s", toAddress);
+                PRINTF("Freezing to own %s", toAddress);
             } else {
                 getBase58FromAddres(txContent.account,
                     (uint8_t *)toAddress, &sha2);
-                PRINTF("Freezing to2 %s", toAddress);
+                PRINTF("Freezing to %s", toAddress);
             }
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
             //TODO: screen for Blue/NanoX
             #if defined(TARGET_BLUE)
-                G_ui_approval_blue_state = APPROVAL_TRANSFER;
-                ui_approval_transaction_blue_init();
+                G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
+                ui_approval_freeze_transaction_blue_init();
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
