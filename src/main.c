@@ -3884,6 +3884,178 @@ UX_DEF(ux_approval_exchange_create_data_warning_flow,
   &ux_approval_exchange_create_8_step
 );
 
+// WITNESS VOTE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_vote_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "votes",
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_2_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_3_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_4_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_5_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_6_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_7_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress,
+    });
+UX_STEP_VALID(
+    ux_approval_vote_flow_8_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_STEP_VALID(
+    ux_approval_vote_flow_9_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+UX_DEF(ux_approval_vote_flow,
+  &ux_approval_vote_flow_1_step,
+  &ux_approval_vote_flow_2_step,
+  &ux_approval_vote_flow_3_step,
+  &ux_approval_vote_flow_4_step,
+  &ux_approval_vote_flow_5_step,
+  &ux_approval_vote_flow_6_step,
+  &ux_approval_vote_flow_7_step,
+  &ux_approval_vote_flow_8_step,
+  &ux_approval_vote_flow_9_step
+);
+
+UX_DEF(ux_approval_vote_data_warning_flow,
+  &ux_approval_vote_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_vote_flow_2_step,
+  &ux_approval_vote_flow_3_step,
+  &ux_approval_vote_flow_4_step,
+  &ux_approval_vote_flow_5_step,
+  &ux_approval_vote_flow_6_step,
+  &ux_approval_vote_flow_7_step,
+  &ux_approval_vote_flow_8_step,
+  &ux_approval_vote_flow_9_step
+);
+
+// FREEZE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "freeze",
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Gain",
+      .text = fullContract
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_3_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = G_io_apdu_buffer,
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_4_step,
+    bnnn_paging,
+    {
+      .title = "Freeze To",
+      .text = toAddress,
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_5_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress,
+    });
+UX_STEP_VALID(
+    ux_approval_freeze_flow_6_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_STEP_VALID(
+    ux_approval_freeze_flow_7_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+UX_DEF(ux_approval_freeze_flow,
+  &ux_approval_freeze_flow_1_step,
+  &ux_approval_freeze_flow_2_step,
+  &ux_approval_freeze_flow_3_step,
+  &ux_approval_freeze_flow_4_step,
+  &ux_approval_freeze_flow_5_step,
+  &ux_approval_freeze_flow_6_step,
+  &ux_approval_freeze_flow_7_step
+);
+
+UX_DEF(ux_approval_freeze_data_warning_flow,
+  &ux_approval_freeze_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_freeze_flow_2_step,
+  &ux_approval_freeze_flow_3_step,
+  &ux_approval_freeze_flow_4_step,
+  &ux_approval_freeze_flow_5_step,
+  &ux_approval_freeze_flow_6_step,
+  &ux_approval_freeze_flow_7_step
+);
+
 // EXCHANGE TRANSACTION
 //////////////////////////////////////////////////////////////////////
 UX_STEP_NOCB(
@@ -4843,7 +5015,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 UX_DISPLAY(ui_approval_votes_transaction_nanos,(bagl_element_callback_t) ui_approval_votes_transaction_prepro);
             #elif defined(TARGET_NANOX)
                 ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
+                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
                     NULL);
             #endif // #if TARGET_ID
         break;
@@ -4864,7 +5036,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             }
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
-            //TODO: screen for Blue/NanoX
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
                 ui_approval_freeze_transaction_blue_init();
@@ -4874,7 +5045,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 UX_DISPLAY(ui_approval_freeze_nanos,(bagl_element_callback_t) ui_approval_freeze_prepro);
             #elif defined(TARGET_NANOX)
                 ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
+                    ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
                     NULL);
             #endif // #if TARGET_ID
 
