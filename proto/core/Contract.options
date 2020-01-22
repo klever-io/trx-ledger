@@ -1,0 +1,29 @@
+# Address size is 21
+
+protocol.AccountUpdateContract.owner_address        max_size: 21
+
+protocol.TransferContract.owner_address             max_size: 21
+protocol.TransferContract.to_address                max_size: 21
+
+protocol.VoteWitnessContract.owner_address          max_size: 21
+protocol.VoteWitnessContract.votes                  max_count: 5  # Assume 5 votes max
+protocol.VoteWitnessContract.Vote.vote_address      max_size: 21
+
+protocol.FreezeBalanceContract.owner_address        max_size: 21
+protocol.FreezeBalanceContract.receiver_address     max_size: 21
+
+protocol.UnfreezeBalanceContract.owner_address      max_size: 21
+protocol.UnfreezeBalanceContract.receiver_address   max_size: 21
+
+protocol.WithdrawBalanceContract.owner_address      max_size: 21
+
+protocol.ProposalCreateContract.owner_address       max_size: 21
+protocol.ProposalCreateContract.parameters          max_count: 10
+
+protocol.ProposalApproveContract.owner_address      max_size: 21
+
+protocol.ProposalDeleteContract.owner_address       max_size: 21
+
+protocol.TriggerSmartContract.owner_address         max_size: 21
+protocol.TriggerSmartContract.contract_address      max_size: 21
+protocol.TriggerSmartContract.data                  max_size: 128
