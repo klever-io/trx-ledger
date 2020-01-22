@@ -4130,11 +4130,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     uint32_t i;
     uint256_t uint256;
 
-    if (dataLength>MAX_RAW_TX){
-        PRINTF("RawTX buffer overflow\n");
-        THROW(0x6A80);
-    }
-
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         transactionContext.pathLength = workBuffer[0];
         if ((transactionContext.pathLength < 0x01) ||
@@ -4219,7 +4214,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         txContext.queueBufferLength=0;
     }
     // process buffer
-    uint16_t txResult = processTx(&txContext, workBuffer, dataLength, &txContent);
+    uint16_t txResult = processTx(workBuffer, dataLength, &txContent);
     PRINTF("txResult: %04x\n", txResult);
     switch (txResult) {
         case USTREAM_PROCESSING:
@@ -4712,12 +4707,15 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     END_TRY;
 }
 
+#include "usbd_core.h"
 
 // App main loop
 void tron_main(void) {
     volatile unsigned int rx = 0;
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
+
+    USBD_Device.dev_state = USBD_STATE_CONFIGURED;
 
     // DESIGN NOTE: the bootloader ignores the way APDU are fetched. The only
     // goal is to retrieve APDU.

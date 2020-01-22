@@ -424,767 +424,295 @@ parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLengt
     cx_sha256_init(sha2); //init sha
 }
 
-uint8_t parseVariant(txContext_t *context, uint8_t *data, 
-    uint8_t *index, uint8_t dataLength, uint64_t *result){
-    uint8_t count = 0;
-    if (result!= NULL) *result = 0;
-    // find end of base128
-    for(int b128=0; (*index+count)<dataLength; count++){
-        if (result!= NULL)
-             *result += ((uint64_t)( data[*index+count] & PB_BASE128DATA) << b128) ;
-        if ((data[*index+count]&PB_BASE128) == 0){
-            *index+=(count+1);
-            return count+1;
-        } 
-        b128+=7;
-    }
-    PRINTF("Error parsing variant...\n");
-    THROW(0x6a80);
-}
+#include "../proto/core/Contract.pb.h"
+#include "../proto/core/Tron.pb.h"
+#include "pb_decode.h"
 
-bool addToQueue(txContext_t *context, uint8_t *buffer, uint8_t length){
-    if (length<=60 && context->queueBufferLength==0) {
-        os_memmove(context->queueBuffer,
-            buffer, length);
-        context->queueBufferLength = length;
-        return true;
-    }
+static bool copy_address(uint8_t *dest, pb_bytes_array_t *src) {
+  if (src->size != ADDRESS_SIZE) {
     return false;
+  }
+  memcpy(dest, src->bytes, ADDRESS_SIZE);
+  return true;
 }
 
-uint8_t parseTokenID(txContext_t *context, uint8_t *data, uint8_t *index,
-    uint8_t dataLength, uint8_t *out, uint8_t *outLength){
+#define COPY_ADDRESS(a, b) copy_address((a), (pb_bytes_array_t *)(b))
 
-        PRINTF("TokenID size: %02x\n",data[*index]);
-        *outLength=data[*index];
-        if (*outLength!=TOKENID_SIZE && *outLength!=1) THROW(0x6a80);
-        (*index)++;
-        if ((*index+*outLength)>dataLength ) {
-            if (addToQueue(context, data+(*index)-2, (dataLength-(*index)+2) )){
-                *index=dataLength;
-                return 0;
-            }else THROW(0x6a80);
-        }
-        if (*outLength==1){
-            if (data[*index]=='_'){
-                *outLength=3;
-                os_memmove(out,"TRX\0",4);
-                (*index) += 1;
-                return 1;
-            }else THROW(0x6a80);
-        }
-        os_memmove(out,data+(*index),*outLength);
-        out[*outLength]=0;
-        (*index) += (*outLength);
-        return *outLength;
-        
+#define INIT_STREAM(tx)                                                        \
+  pb_istream_from_buffer(tx->contract->parameter.value.bytes,                  \
+                         tx->contract->parameter.value.size)
+
+contract_t msg;
+
+static bool transfer_contract(txContent_t *content,
+                              const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_TransferContract_fields,
+                 &msg.transfer_contract)) {
+    return false;
+  }
+  content->amount = msg.transfer_contract.amount;
+
+  if (!COPY_ADDRESS(content->account, &msg.transfer_contract.owner_address)) {
+    return false;
+  }
+  if (!COPY_ADDRESS(content->destination, &msg.transfer_contract.to_address)) {
+    return false;
+  }
+
+  content->tokenNamesLength[0] = 4;
+  strcpy((char *)content->tokenNames[0], "TRX");
+  return true;
 }
 
-uint8_t parseAddress(txContext_t *context, uint8_t *data, uint8_t *index,
-    uint8_t dataLength, uint8_t *out){
+static bool vote_witness_contract(txContent_t *content,
+                                  const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_VoteWitnessContract_fields,
+                 &msg.vote_witness_contract)) {
+    return false;
+  }
 
-        if (data[*index]!=ADDRESS_SIZE) THROW(0x6a80);
-        (*index)++;
-        if ((*index+ADDRESS_SIZE)>dataLength ) {
-            if (addToQueue(context, data+(*index)-2, (dataLength-(*index)+2) )){
-                *index=dataLength;
-                return 0;
-            }else THROW(0x6a80);
-        }
-        os_memmove(out,data+(*index),ADDRESS_SIZE);
-        out[ADDRESS_SIZE]=0;
-        (*index) += (ADDRESS_SIZE);
-        return ADDRESS_SIZE;
+  content->amount = msg.vote_witness_contract.votes_count;
+  return COPY_ADDRESS(content->account,
+                      &msg.vote_witness_contract.owner_address);
 }
 
-uint16_t processTx(txContext_t *context, uint8_t *buffer,
-                         uint32_t length, txContent_t *content) {
-    uint8_t offset = 0;
-    uint16_t result;
+static bool
+freeze_balance_contract(txContent_t *content,
+                        const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_FreezeBalanceContract contract = {};
 
-    if (length==0) return USTREAM_FINISHED;
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_FreezeBalanceContract_fields, &contract)) {
+    return false;
+  }
+  if (!COPY_ADDRESS(content->account, &contract.owner_address)) {
+    return false;
+  }
 
-    BEGIN_TRY { 
-        TRY {
-
-            if (context->getNext>0){
-                // only for long  data field
-                if (context->getNext>length){
-                    context->getNext=context->getNext-length;
-                    return USTREAM_PROCESSING;
-                }
-                offset = (uint8_t)(context->getNext&0xFF);
-                context->getNext = 0;
-            }
-                    
-            while (offset != length) {
-                uint64_t tmpNumber = 0;
-                uint8_t count = 0;
-
-                if (offset > length) {
-                    PRINTF("ERROR offset > length [%d,%d]\n",offset, length);
-                    THROW(0x6a80);
-                }
-                uint8_t field = (buffer[offset]>>PB_FIELD_R);
-                uint8_t type = (buffer[offset]&PB_TYPE);
-                offset++;
-                
-                PRINTF("Stage: %d, Case: %d, Type: %d \n",context->stage, field, type);
-                switch(context->stage) {
-                    case 0:
-                        // raw transaction
-                        switch(field) {
-                            case 1: //ref_block_bytes
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                offset += (uint8_t)(tmpNumber&0xFF);
-                                break; //skip
-                            case 3: //ref_block_num
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, NULL);
-                                break; //skip
-                            case 4: //ref_block_hash
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                offset += (uint8_t)(tmpNumber&0xFF);
-                                break; //skip
-                            case 8: //expiration
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, NULL);
-                                break; //skip
-                            case 10:
-                                // Check permissions Allo data
-                                if (!dataAllowed) THROW(0x6a80);
-                                // parse data
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                content->dataBytes = tmpNumber;
-                                
-                                if (tmpNumber>255 || (tmpNumber+offset)>length) {
-                                    context->getNext = (uint32_t)(tmpNumber);
-                                    context->getNext += offset;
-                                    context->getNext -= length;
-                                    offset=length;
-                                }else{
-                                    offset += (uint8_t)(tmpNumber&0xFF);
-                                }
-                                break;
-                            case 11:
-                                // parse contract
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                context->stageQueue[0].total = (uint16_t)(tmpNumber&0xFFFF);
-                                context->stageQueue[0].count = 0;
-                                context->stage = 1; 
-                                break;
-                            case 12: // scripts
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                if (tmpNumber>255) THROW(0x6a80);    
-                                offset += (uint8_t)(tmpNumber&0xFF);
-                                break; //skip
-                            case 14: // timestamp
-                            case 18: // fee_limit
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, NULL);
-                                break; //skip
-                        }
-                    break;
-                    case 1:
-                        // Contract
-                        switch(field) {
-                            case 1: //ContractType
-                                if (type!=0) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                count++;
-                                content->contractType = (uint8_t)(tmpNumber&0xFF);
-                                PRINTF("Contract Type: %d\n",content->contractType);
-                                break;
-                            case 2: // parameter
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, NULL);
-                                // Get Payload type.googleapis
-                                if (buffer[offset]!=0x0A) THROW(0x6a80);
-                                offset++; count++;
-                                count += parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-
-                                if ((tmpNumber)>255) THROW(0x6a80);
-                                count += (uint8_t)(tmpNumber&0xFF);
-                                offset += (uint8_t)(tmpNumber&0xFF);
-                                if (offset>length) {
-                                    uint8_t pending = (offset-length);
-                                    if (!addToQueue(context,buffer+offset-count-1, count-pending+1)) THROW(0x6a80);
-                                    count = 0;
-                                    offset=length;
-                                    break;
-                                }
-                                // Contract Details
-                                // Check length
-                                if (buffer[offset]!=0x12) THROW(0x6a80); // 0x12 Field 2 type String
-                                offset++; count++; 
-                                count += parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                PRINTF("Contract Size: %d\n",(uint32_t)tmpNumber);
-                                context->stageQueue[1].total = (uint16_t)(tmpNumber&0xFFFF);
-                                context->stageQueue[1].count = 0;
-                                context->stage = 2; 
-                                count++;
-                                break;
-                                
-                            case 3: //provider
-                            case 4: //ContractName
-                                if (type!=2) THROW(0x6a80);
-                                count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                if ((offset+tmpNumber)>255) THROW(0x6a80);
-                                offset += (uint8_t)(tmpNumber&0xFF);
-                                count += (uint8_t)(tmpNumber&0xFF)+1;
-                                break;
-                        }
-                        PRINTF("Stage end %d,%d,%d\n",context->stageQueue[0].total,context->stageQueue[0].count,count);
-                        context->stageQueue[0].count += count;
-                        if (context->stageQueue[0].count>context->stageQueue[0].total) THROW(0x6a81);
-                        if (context->stageQueue[0].count==context->stageQueue[0].total){
-                            context->stage = 0;
-                        }
-                    break;
-                    case 2:
-                        // Contract
-                        switch (content->contractType){
-                            case TRANSFERCONTRACT: // Send TRX
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        // set TRX token name
-                                        content->tokenNamesLength[0]=4;
-                                        os_memmove(content->tokenNames[0],"TRX\0",content->tokenNamesLength[0]);
-                                        // get owner address
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //to_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->destination);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 3: //amount
-                                        if (type!=0) THROW(0x6a80);
-                                        // get amount
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case TRANSFERASSETCONTRACT:
-                                switch(field) {
-                                    case 1: // Token ID
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseTokenID(context, buffer, &offset, length, 
-                                                content->tokenNames[0], &content->tokenNamesLength[0]);
-                                        if (count==0) break;
-                                        content->tokenNamesLength[0]=TOKENID_SIZE;
-                                        count+=2;
-                                        break;
-                                    case 2: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 3: //to_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->destination);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 4: //amount
-                                        if (type!=0) THROW(0x6a80);
-                                        // get amount
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case TRIGGERSMARTCONTRACT:
-                            switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //contract_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->contractAddress);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 3: //call_value
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    case 4: //data
-                                        PRINTF("Parsing SmartContract DATA\n");
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                    length, &tmpNumber);
-                                        PRINTF("COUNT: %d, contract length: %d\n",count,(uint32_t)tmpNumber);
-                                        // check if data is complete, if not add to queue buffer
-                                        if (tmpNumber>255 || (tmpNumber+offset)>length) {
-                                            if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
-                                                count =0;
-                                                offset = length;
-                                                break;
-                                            }else THROW(0x6a80);
-                                        }
-                                        // data fit buffer, process data
-                                        // get selector
-                                        PRINTF("Selector: %08x\n",U4BE(buffer, offset));
-                                        if (os_memcmp(&buffer[offset], SELECTOR[0], 4) == 0) content->TRC20Method = 1; // check if transfer(address, uint256) function
-                                        else if (os_memcmp(&buffer[offset], SELECTOR[1], 4) == 0) content->TRC20Method = 2; // check if approve(address, uint256) function
-                                        else {
-                                            if (!customContract) {
-                                                // NOT ALLOWED
-                                                PRINTF("Custom contracts NOT ALLOWED\n");
-                                                THROW(0x6a80);
-                                            }
-                                            PRINTF("Processing custom contract\n");
-                                            // check if length is divided by 32bytes
-                                            if ( (tmpNumber-4)%32 !=0 ) THROW(0x6a80);
-                                            content->TRC20Method=0;
-                                            // if custom contracts allowed
-                                            content->customSelector = U4BE(buffer, offset);
-                                            offset += (uint8_t)(tmpNumber&0xFF);
-                                            count += (uint8_t)(tmpNumber&0xFF)+1;
-                                            break;
-                                        }
-                                        // check if DATA field size matchs TRC20 Transfer/Approve
-                                        if (tmpNumber!=TRC20_DATA_FIELD_SIZE) THROW(0x6a80);
-                                        // TO Address
-                                        os_memmove(content->destination, buffer+offset+15, ADDRESS_SIZE);
-                                        //set MainNet PREFIX
-                                        content->destination[0]=ADD_PRE_FIX_BYTE_MAINNET;
-                                        // Amount
-                                        os_memmove(content->TRC20Amount, buffer+offset+36, 32);
-                                        tokenDefinition_t* TRC20 = getKnownToken(content);
-                                        if (TRC20 == NULL) THROW(0x6a80);
-                                        content->decimals[0] = TRC20->decimals;
-                                        content->tokenNamesLength[0] = strlen((const char *)TRC20->ticker)+1;
-                                        os_memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
-
-                                        offset += (uint8_t)(tmpNumber&0xFF);
-                                        count += (uint8_t)(tmpNumber&0xFF)+1;
-                                        break;
-
-                                    case 5: //call_token_value
-                                        if (type!=0) THROW(0x6a80);
-                                        // get amount
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount2);
-                                        count += 1;
-                                        break;
-                                    case 6: //token_id
-                                        if (type!=0) THROW(0x6a80);
-                                        // get token id
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &tmpNumber);
-                                        count += 1;
-                                        snprintf((char *)content->tokenNames[0], MAX_TOKEN_LENGTH,
-                                                "%d",(uint32_t)tmpNumber);                                                
-                                        content->tokenNamesLength[0] = strlen((const char *)content->tokenNames[0]);                                        
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case EXCHANGECREATECONTRACT: 
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //First Token
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseTokenID(context, buffer, &offset, length, 
-                                                content->tokenNames[0], &content->tokenNamesLength[0]);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 3: //First Token Amount
-                                        if (type!=0) THROW(0x6a80);
-                                        // get amount
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    case 4: //First Token
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseTokenID(context, buffer, &offset, length, 
-                                                content->tokenNames[1], &content->tokenNamesLength[1]);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 5: //First Token Amount
-                                        if (type!=0) THROW(0x6a80);
-                                        // get amount
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount2);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case EXCHANGEINJECTCONTRACT:
-                            case EXCHANGEWITHDRAWCONTRACT:
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //Exchange id
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->exchangeID);
-                                        count += 1;
-                                        break;
-                                    case 3: //Token ID
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseTokenID(context, buffer, &offset, length, 
-                                                content->tokenNames[0], &content->tokenNamesLength[0]);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 4: //Token Amount
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case EXCHANGETRANSACTIONCONTRACT:
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //Exchange id
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->exchangeID);
-                                        count += 1;
-                                        break;
-                                    case 3: //Token ID
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseTokenID(context, buffer, &offset, length, 
-                                                content->tokenNames[0], &content->tokenNamesLength[0]);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 4: //Token Amount
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount);
-                                        count += 1;
-                                        break;
-                                    case 5: //Expected Amount
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                        length, &content->amount2);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case VOTEWITNESSCONTRACT: // Vote Witness
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        content->amount=0;
-                                        break;
-                                    case 2: //votes
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                                length, &tmpNumber);
-                                        if (tmpNumber>255 || (tmpNumber+offset)>length) {
-                                            if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
-                                                count =0;
-                                                offset = length;
-                                                break;
-                                            }else THROW(0x6a80);
-                                        }else{
-                                            content->amount++;
-                                            count += (uint8_t)(tmpNumber&0xFF)+1;
-                                            offset += (uint8_t)(tmpNumber&0xFF);
-                                        }
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case FREEZEBALANCECONTRACT: // Freeze Balance Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //frozen_balance
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
-                                        count += 1;
-                                        break;
-                                    case 3: //frozen_duration
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
-                                        count += 1;
-                                        break;
-                                    case 10: //ResourceCode
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, &tmpNumber);
-                                        if (tmpNumber>1) THROW(0x6a80);
-                                        content->resource=(uint8_t)(tmpNumber&0xFF);
-                                        count += 1;
-                                        break;
-                                    case 15: //receiver_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->destination);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case UNFREEZEBALANCECONTRACT: // Unfreeze Balance Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 10: //ResourceCode
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, &tmpNumber);
-                                        if (tmpNumber>1) THROW(0x6a80);
-                                        content->resource=(uint8_t)tmpNumber;
-                                        count += 1;
-                                        break;
-                                    case 15: //receiver_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case WITHDRAWBALANCECONTRACT: // Withdraw Balance Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case PROPOSALCREATECONTRACT: // Proposal Create Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //parameters
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                                length, &tmpNumber);
-                                        if (tmpNumber>255 || (tmpNumber+offset)>length) {
-                                            if (addToQueue(context, buffer+offset-count-1, length-offset+count+1 )){
-                                                count =0;
-                                                offset = length;
-                                                break;
-                                            }else THROW(0x6a80);
-                                        }else{
-                                            content->amount++;
-                                            count += (uint8_t)(tmpNumber&0xFF)+1;
-                                            offset += (uint8_t)(tmpNumber&0xFF);
-                                        }
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case PROPOSALAPPROVECONTRACT: // Proposal Approve Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //proposal id
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
-                                        count += 1;
-                                        break;
-                                    case 3: //approval
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, NULL);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case PROPOSALDELETECONTRACT: // Proposal Delete Contract
-                                switch(field) {
-                                    case 1: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    case 2: //Proposal id
-                                        if (type!=0) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                            length, &content->exchangeID);
-                                        count += 1;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            case ACCOUNTUPDATECONTRACT:
-                                switch(field) {
-                                    case 1: //account_name
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseVariant(context, buffer, &offset, 
-                                                    length, &tmpNumber);
-                                        offset += (uint8_t)(tmpNumber&0xFF);
-                                        count += (uint8_t)(tmpNumber&0xFF)+1;
-                                        break;
-                                    case 2: //owner_address
-                                        if (type!=2) THROW(0x6a80);
-                                        count = parseAddress(context, buffer, &offset, length, 
-                                                content->account);
-                                        if (count==0) break;
-                                        count+=2;
-                                        break;
-                                    default:
-                                        // INVALID
-                                        THROW(0x6a80);
-                                }
-                            break;
-                            default:
-                                // INVALID
-                                THROW(0x6a80);
-                        }
-                        PRINTF("Stage end %d,%d\n",context->stageQueue[1].count,count);
-                        context->stageQueue[1].count += count;
-                        if (context->stageQueue[1].count>context->stageQueue[1].total) THROW(0x6a81);
-                        if (context->stageQueue[1].count==context->stageQueue[1].total){
-                            context->stage = 1;
-                            context->stageQueue[0].count += context->stageQueue[1].total;
-                            PRINTF("Stage end0 %d,%d\n",context->stageQueue[0].count,context->stageQueue[0].total);
-                            if (context->stageQueue[0].count>context->stageQueue[0].total) THROW(0x6a81);
-                            if (context->stageQueue[0].count==context->stageQueue[0].total){
-                                context->stage = 0;
-                            }
-                        }
-                    break;
-                }
-            }
-            result = USTREAM_PROCESSING;
-        }
-        CATCH(EXCEPTION_IO_RESET) {
-            PRINTF("processTx IOERROR: %04x\n",EXCEPTION_IO_RESET);
-            return EXCEPTION_IO_RESET;
-        }
-        CATCH_OTHER(e) {
-            PRINTF("processTx ERROR %04x\n",e);
-            return e;
-        }
-        FINALLY {
-        }
+  if (contract.receiver_address.size != 0) {
+    if (!COPY_ADDRESS(content->destination, &contract.receiver_address)) {
+      return false;
     }
-    END_TRY;
-    
-    PRINTF("processTx RESULT: %04x\n",result);
-    return result;
+  }
+  content->resource = contract.resource;
+  return true;
+}
+
+static bool
+unfreeze_balance_contract(txContent_t *content,
+                          const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_UnfreezeBalanceContract contract = {};
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_UnfreezeBalanceContract_fields, &contract)) {
+    return false;
+  }
+  content->resource = contract.resource;
+
+  if (!COPY_ADDRESS(content->account, &contract.owner_address)) {
+    return false;
+  }
+  return COPY_ADDRESS(content->destination, &contract.receiver_address);
+}
+
+static bool
+withdraw_balance_contract(txContent_t *content,
+                          const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_WithdrawBalanceContract contract = {};
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_WithdrawBalanceContract_fields, &contract)) {
+    return false;
+  }
+  return COPY_ADDRESS(content->account, &contract.owner_address);
+}
+
+static bool
+proposal_create_contract(txContent_t *content,
+                         const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ProposalCreateContract_fields,
+                 &msg.proposal_create_contract)) {
+    return false;
+  }
+
+  content->amount = msg.proposal_create_contract.parameters_count;
+  return COPY_ADDRESS(content->account,
+                      &msg.proposal_create_contract.owner_address);
+}
+
+static bool
+proposal_approve_contract(txContent_t *content,
+                          const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_ProposalApproveContract contract = {};
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ProposalApproveContract_fields, &contract)) {
+    return false;
+  }
+
+  return COPY_ADDRESS(content->account, &contract.owner_address);
+}
+
+static bool
+proposal_delete_contract(txContent_t *content,
+                         const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_ProposalDeleteContract contract = {};
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ProposalDeleteContract_fields, &contract)) {
+    return false;
+  }
+
+  content->exchangeID = contract.proposal_id;
+  return COPY_ADDRESS(content->account, &contract.owner_address);
+}
+
+static bool
+account_update_contract(txContent_t *content,
+                        const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+  protocol_AccountUpdateContract contract = {};
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_AccountUpdateContract_fields, &contract)) {
+    return false;
+  }
+  return COPY_ADDRESS(content->account, &contract.owner_address);
+}
+
+static bool
+trigger_smart_contract(txContent_t *content,
+                       const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_TriggerSmartContract_fields,
+                 &msg.trigger_smart_contract)) {
+    return false;
+  }
+
+  if (!COPY_ADDRESS(content->account,
+                    &msg.trigger_smart_contract.owner_address) ||
+      !COPY_ADDRESS(content->contractAddress,
+                    &msg.trigger_smart_contract.contract_address)) {
+    return false;
+  }
+  content->amount = msg.trigger_smart_contract.call_value;
+
+  // Parse smart contract
+  if (msg.trigger_smart_contract.data.size < 4) {
+    return false;
+  }
+
+  if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0) {
+    content->TRC20Method = 1; // check if transfer(address, uint256) function
+  } else if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
+             0) {
+    content->TRC20Method = 2; // check if approve(address, uint256) function
+  } else {
+    // Processing custom contracts
+    // TODO: add switch to disable support for custom contracts
+    if ((msg.trigger_smart_contract.data.size - 4) % 32 != 0) {
+      return false;
+    }
+    content->TRC20Method = 0;
+    content->customSelector = U4BE(msg.trigger_smart_contract.data.bytes, 0);
+    return true;
+  }
+
+  // check if DATA field size matchs TRC20 Transfer/Approve
+  if (msg.trigger_smart_contract.data.size != TRC20_DATA_FIELD_SIZE) {
+    return false;
+  }
+  // TO Address
+  memcpy(content->destination, msg.trigger_smart_contract.data.bytes + 15,
+         ADDRESS_SIZE);
+  // set MainNet PREFIX
+  content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
+  // Amount
+  memmove(content->TRC20Amount, msg.trigger_smart_contract.data.bytes + 36, 32);
+  tokenDefinition_t *TRC20 = getKnownToken(content);
+  if (TRC20 == NULL) {
+    return false;
+  }
+  content->decimals[0] = TRC20->decimals;
+  content->tokenNamesLength[0] = strlen((const char *)TRC20->ticker) + 1;
+  memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
+  return true;
+}
+
+protocol_Transaction_raw transaction;
+
+bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
+  bool ret;
+
+  memset(&transaction, 0, sizeof(transaction));
+  pb_istream_t stream = pb_istream_from_buffer(buffer, length);
+
+  if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
+    return false;
+  }
+
+  // Contract must have a parameter
+  if (!transaction.contract->has_parameter) {
+    return false;
+  }
+
+  content->contractType = (contractType_e)transaction.contract->type;
+
+  /* Transaction data */
+  if (transaction.data.size != 0) {
+    // TODO
+    // if (!dataAllowed)
+    //   THROW(0x6a80);
+    content->dataBytes = transaction.data.size;
+  }
+
+  switch (transaction.contract->type) {
+  case protocol_Transaction_Contract_ContractType_TransferContract:
+    ret = transfer_contract(content, &transaction);
+    break;
+
+  case protocol_Transaction_Contract_ContractType_VoteWitnessContract: {
+    ret = vote_witness_contract(content, &transaction);
+    break;
+  }
+  case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
+    ret = freeze_balance_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_UnfreezeBalanceContract:
+    ret = unfreeze_balance_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_WithdrawBalanceContract:
+    ret = withdraw_balance_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalCreateContract:
+    ret = proposal_create_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalApproveContract:
+    ret = proposal_approve_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalDeleteContract:
+    ret = proposal_delete_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
+    ret = account_update_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
+    ret = trigger_smart_contract(content, &transaction);
+    break;
+  default:
+    return false;
+  }
+  return ret;
 }

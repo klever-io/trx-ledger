@@ -25,11 +25,11 @@ APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LO
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-APPVERSION = $(file < VERSION)
+# APPVERSION = "1.0.0"  # $(file < VERSION)
 
-APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
-APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
-APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
+APPVERSION_M=1 # $(call splitVersion, $(APPVERSION), 1)
+APPVERSION_N=0 # $(call splitVersion, $(APPVERSION), 2)
+APPVERSION_P=0 # $(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
@@ -111,13 +111,15 @@ endif
 CC       := $(CLANGPATH)clang
 
 #CFLAGS   += -O0
-CFLAGS   += -O3 -Os -Isrc/include
+CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb-0.4.0-windows-x86 -Iproto
 
 AS     := $(GCCPATH)arm-none-eabi-gcc
 
 LD       := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS  += -O3 -Os
 LDLIBS   += -lm -lgcc -lc
+
+SCRIPT_LD := script.ld
 
 # import rules to compile glyphs(/pone)
 include $(BOLOS_SDK)/Makefile.glyphs

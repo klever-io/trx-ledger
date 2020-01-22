@@ -18,8 +18,10 @@
 
 #define SUN_DIG 6
 #define ADD_PRE_FIX_BYTE_MAINNET 0x41
-#define MAX_RAW_TX 240
-#define MAX_RAW_SIGNATURE 200
+// #define MAX_RAW_TX 240
+#define MAX_RAW_TX 65
+// #define MAX_RAW_SIGNATURE 200
+#define MAX_RAW_SIGNATURE 65
 #define MAX_TOKEN_LENGTH 67
 
 #define PB_TYPE 0x07
@@ -28,6 +30,14 @@
 #define PB_BASE128 0x80
 #define PB_BASE128DATA 0x7F
 
+#include "../proto/core/Contract.pb.h"
+
+typedef union {
+  protocol_TransferContract transfer_contract;
+  protocol_TriggerSmartContract trigger_smart_contract;
+  protocol_VoteWitnessContract vote_witness_contract;
+  protocol_ProposalCreateContract proposal_create_contract;
+} contract_t;
 
 typedef enum parserStatus_e {
     USTREAM_PROCESSING,
@@ -76,10 +86,6 @@ typedef struct txContext_t {
     bool initialized;
     uint8_t queueBuffer[60];
     uint8_t queueBufferLength;
-    uint32_t getNext;
-    // 
-    uint8_t stage;
-    stage_t stageQueue[3];
 } txContext_t;
 
 typedef struct publicKeyContext_t {
@@ -133,7 +139,6 @@ bool adjustDecimals(char *src, uint32_t srcLength, char *target,
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content);
 
-uint16_t processTx(txContext_t *context, uint8_t *buffer,
-                         uint32_t length, txContent_t *content);
+bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content);
 
 #endif

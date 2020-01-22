@@ -82,6 +82,7 @@ void signTransaction(transactionContext_t *transactionContext) {
     cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
                       transactionContext->hash, sizeof(transactionContext->hash),
                       signature, sizeof(signature), &info);
+
     io_seproxyhal_io_heartbeat();
     os_memset(&privateKey, 0, sizeof(privateKey));
     // recover signature
