@@ -81,5 +81,8 @@ PB_BIND(protocol_ExchangeCreateContract, protocol_ExchangeCreateContract, AUTO)
 PB_BIND(protocol_ExchangeInjectContract, protocol_ExchangeInjectContract, AUTO)
 
 
+PB_BIND(protocol_ExchangeWithdrawContract, protocol_ExchangeWithdrawContract, AUTO)
+
+
 
 

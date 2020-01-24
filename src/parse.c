@@ -690,14 +690,12 @@ exchange_inject_contract(txContent_t *content,
                  &msg.exchange_inject_contract)) {
     return false;
   }
-  PRINTF("COPY_ADDRESS\n");
   if (!COPY_ADDRESS(content->account,
                     &msg.exchange_inject_contract.owner_address)) {
     return false;
   }
   content->exchangeID = msg.exchange_inject_contract.exchange_id;
 
-  PRINTF("printTokenFromID\n");
   if (!printTokenFromID((char *)content->tokenNames[0],
                         msg.exchange_inject_contract.token_id.bytes,
                         msg.exchange_inject_contract.token_id.size)) {
@@ -706,6 +704,33 @@ exchange_inject_contract(txContent_t *content,
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
   content->amount = msg.exchange_inject_contract.quant;
+  return true;
+}
+
+static bool
+exchange_withdraw_contract(txContent_t *content,
+                           const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ExchangeWithdrawContract_fields,
+                 &msg.exchange_withdraw_contract)) {
+    return false;
+  }
+  if (!COPY_ADDRESS(content->account,
+                    &msg.exchange_withdraw_contract.owner_address)) {
+    return false;
+  }
+  content->exchangeID = msg.exchange_withdraw_contract.exchange_id;
+
+  if (!printTokenFromID((char *)content->tokenNames[0],
+                        msg.exchange_withdraw_contract.token_id.bytes,
+                        msg.exchange_withdraw_contract.token_id.size)) {
+    return false;
+  }
+  content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
+
+  content->amount = msg.exchange_withdraw_contract.quant;
   return true;
 }
 
@@ -782,6 +807,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
     break;
   case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
     ret = exchange_inject_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
+    ret = exchange_withdraw_contract(content, &transaction);
     break;
   default:
     return USTREAM_FAULT;

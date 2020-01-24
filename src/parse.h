@@ -40,6 +40,7 @@ typedef union {
   protocol_ProposalCreateContract proposal_create_contract;
   protocol_ExchangeCreateContract exchange_create_contract;
   protocol_ExchangeInjectContract exchange_inject_contract;
+  protocol_ExchangeWithdrawContract exchange_withdraw_contract;
 } contract_t;
 
 typedef enum parserStatus_e {

@@ -96,6 +96,15 @@ typedef struct _protocol_ExchangeInjectContract {
     int64_t quant;
 } protocol_ExchangeInjectContract;
 
+typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeWithdrawContract_owner_address_t;
+typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeWithdrawContract_token_id_t;
+typedef struct _protocol_ExchangeWithdrawContract {
+    protocol_ExchangeWithdrawContract_owner_address_t owner_address;
+    int64_t exchange_id;
+    protocol_ExchangeWithdrawContract_token_id_t token_id;
+    int64_t quant;
+} protocol_ExchangeWithdrawContract;
+
 typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_receiver_address_t;
 typedef struct _protocol_FreezeBalanceContract {
@@ -243,6 +252,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_TriggerSmartContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
 #define protocol_ExchangeCreateContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
 #define protocol_ExchangeInjectContract_init_default {{0, {0}}, 0, {0, {0}}, 0}
+#define protocol_ExchangeWithdrawContract_init_default {{0, {0}}, 0, {0, {0}}, 0}
 #define protocol_AccountCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0, {0}}}
 #define protocol_TransferContract_init_zero      {{0, {0}}, {0, {0}}, 0}
@@ -268,6 +278,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_TriggerSmartContract_init_zero  {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
 #define protocol_ExchangeCreateContract_init_zero {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
 #define protocol_ExchangeInjectContract_init_zero {{0, {0}}, 0, {0, {0}}, 0}
+#define protocol_ExchangeWithdrawContract_init_zero {{0, {0}}, 0, {0, {0}}, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_DeployContract_owner_address_tag 1
@@ -309,6 +320,10 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ExchangeInjectContract_exchange_id_tag 2
 #define protocol_ExchangeInjectContract_token_id_tag 3
 #define protocol_ExchangeInjectContract_quant_tag 4
+#define protocol_ExchangeWithdrawContract_owner_address_tag 1
+#define protocol_ExchangeWithdrawContract_exchange_id_tag 2
+#define protocol_ExchangeWithdrawContract_token_id_tag 3
+#define protocol_ExchangeWithdrawContract_quant_tag 4
 #define protocol_FreezeBalanceContract_owner_address_tag 1
 #define protocol_FreezeBalanceContract_frozen_balance_tag 2
 #define protocol_FreezeBalanceContract_frozen_duration_tag 3
@@ -551,6 +566,14 @@ X(a, STATIC,   SINGULAR, INT64,    quant,             4)
 #define protocol_ExchangeInjectContract_CALLBACK NULL
 #define protocol_ExchangeInjectContract_DEFAULT NULL
 
+#define protocol_ExchangeWithdrawContract_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, INT64,    exchange_id,       2) \
+X(a, STATIC,   SINGULAR, BYTES,    token_id,          3) \
+X(a, STATIC,   SINGULAR, INT64,    quant,             4)
+#define protocol_ExchangeWithdrawContract_CALLBACK NULL
+#define protocol_ExchangeWithdrawContract_DEFAULT NULL
+
 extern const pb_msgdesc_t protocol_AccountCreateContract_msg;
 extern const pb_msgdesc_t protocol_AccountUpdateContract_msg;
 extern const pb_msgdesc_t protocol_TransferContract_msg;
@@ -576,6 +599,7 @@ extern const pb_msgdesc_t protocol_ProposalDeleteContract_msg;
 extern const pb_msgdesc_t protocol_TriggerSmartContract_msg;
 extern const pb_msgdesc_t protocol_ExchangeCreateContract_msg;
 extern const pb_msgdesc_t protocol_ExchangeInjectContract_msg;
+extern const pb_msgdesc_t protocol_ExchangeWithdrawContract_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define protocol_AccountCreateContract_fields &protocol_AccountCreateContract_msg
@@ -603,6 +627,7 @@ extern const pb_msgdesc_t protocol_ExchangeInjectContract_msg;
 #define protocol_TriggerSmartContract_fields &protocol_TriggerSmartContract_msg
 #define protocol_ExchangeCreateContract_fields &protocol_ExchangeCreateContract_msg
 #define protocol_ExchangeInjectContract_fields &protocol_ExchangeInjectContract_msg
+#define protocol_ExchangeWithdrawContract_fields &protocol_ExchangeWithdrawContract_msg
 
 /* Maximum encoded size of messages (where known) */
 /* protocol_AccountCreateContract_size depends on runtime parameters */
@@ -630,6 +655,7 @@ extern const pb_msgdesc_t protocol_ExchangeInjectContract_msg;
 #define protocol_TriggerSmartContract_size       210
 #define protocol_ExchangeCreateContract_size     65
 #define protocol_ExchangeInjectContract_size     55
+#define protocol_ExchangeWithdrawContract_size   55
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -38,3 +38,6 @@ protocol.ExchangeCreateContract.second_token_id     max_size: 8
 
 protocol.ExchangeInjectContract.owner_address       max_size: 21
 protocol.ExchangeInjectContract.token_id            max_size: 8
+
+protocol.ExchangeWithdrawContract.owner_address     max_size: 21
+protocol.ExchangeWithdrawContract.token_id          max_size: 8
