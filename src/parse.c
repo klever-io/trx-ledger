@@ -734,6 +734,34 @@ exchange_withdraw_contract(txContent_t *content,
   return true;
 }
 
+static bool
+exchange_transaction_contract(txContent_t *content,
+                           const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ExchangeTransactionContract_fields,
+                 &msg.exchange_transaction_contract)) {
+    return false;
+  }
+  if (!COPY_ADDRESS(content->account,
+                    &msg.exchange_transaction_contract.owner_address)) {
+    return false;
+  }
+  content->exchangeID = msg.exchange_transaction_contract.exchange_id;
+
+  if (!printTokenFromID((char *)content->tokenNames[0],
+                        msg.exchange_transaction_contract.token_id.bytes,
+                        msg.exchange_transaction_contract.token_id.size)) {
+    return false;
+  }
+  content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
+
+  content->amount = msg.exchange_transaction_contract.quant;
+  content->amount2 = msg.exchange_transaction_contract.expected;
+  return true;
+}
+
 protocol_Transaction_raw transaction;
 
 parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
@@ -810,6 +838,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
     break;
   case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
     ret = exchange_withdraw_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
+    ret = exchange_transaction_contract(content, &transaction);
     break;
   default:
     return USTREAM_FAULT;

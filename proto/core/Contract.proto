@@ -194,3 +194,11 @@ message ExchangeWithdrawContract {
     bytes token_id = 3;
     int64 quant = 4;
 }
+
+message ExchangeTransactionContract {
+    bytes owner_address = 1;
+    int64 exchange_id = 2;
+    bytes token_id = 3;
+    int64 quant = 4;
+    int64 expected = 5;
+}

@@ -41,3 +41,6 @@ protocol.ExchangeInjectContract.token_id            max_size: 8
 
 protocol.ExchangeWithdrawContract.owner_address     max_size: 21
 protocol.ExchangeWithdrawContract.token_id          max_size: 8
+
+protocol.ExchangeTransactionContract.owner_address  max_size: 21
+protocol.ExchangeTransactionContract.token_id       max_size: 8
