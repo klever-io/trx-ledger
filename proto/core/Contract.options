@@ -35,3 +35,6 @@ protocol.TriggerSmartContract.data                  max_size: 128
 protocol.ExchangeCreateContract.owner_address       max_size: 21
 protocol.ExchangeCreateContract.first_token_id      max_size: 8
 protocol.ExchangeCreateContract.second_token_id     max_size: 8
+
+protocol.ExchangeInjectContract.owner_address       max_size: 21
+protocol.ExchangeInjectContract.token_id            max_size: 8

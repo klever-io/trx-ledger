@@ -302,18 +302,15 @@ static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
 
 static bool set_token_info(txContent_t *content, unsigned int token_index,
                            const char *name, const char *id, int precision) {
-  int ret;
-
   if (token_index >= 2) {
     return false;
   }
 
-  ret = snprintf((char *)content->tokenNames[token_index], MAX_TOKEN_LENGTH,
-                 "%s[%s]", name, id);
-  if (ret < 0) {
-    return false;
-  }
-  content->tokenNamesLength[token_index] = ret;
+  /* Ugly, but snprintf does not have a return value... */
+  snprintf((char *)content->tokenNames[token_index], MAX_TOKEN_LENGTH, "%s[%s]",
+           name, id);
+  content->tokenNamesLength[token_index] =
+      strlen((char *)content->tokenNames[token_index]);
   content->decimals[token_index] = precision;
   return true;
 }
@@ -335,17 +332,6 @@ bool parseExchange(const uint8_t *data,
     return false;
   }
 
-  /* Check provided signature. Strange serialization, it would have been
-   * easier to sign the whole protobuf data... */
-  snprintf(buffer, sizeof(buffer), "%llu%s%s%c%s%s%c", details.exchangeId,
-           details.token1Id, details.token1Name, details.token1Precision,
-           details.token2Id, details.token2Name, details.token2Precision);
-  if (!verifyExchangeID((uint8_t *)buffer, strlen(buffer),
-                        details.signature.bytes, details.signature.size,
-                        content->publicKeyContext)) {
-    return false;
-  }
-
   /* Replace token ID with Name[ID] */
   if (strlen(details.token1Id) != 1 && strlen(details.token1Id) != 7) {
     return false;
@@ -353,6 +339,31 @@ bool parseExchange(const uint8_t *data,
   if (strlen(details.token2Id) != 1 && strlen(details.token2Id) != 7) {
     return false;
   }
+
+  /* Check provided signature. Strange serialization, it would have been
+   * easier to sign the whole protobuf data...
+   *
+   * exchangeId is casted to int32_t as the custom snprintf implementation does
+   * not seem to support %lld. Moreover, two calls to snprintf are made as
+   * implementation does not return the number of written chars...
+   */
+  size_t msg_size;
+  snprintf(buffer, sizeof(buffer), "%d", (int32_t)details.exchangeId);
+  msg_size = strlen(buffer);
+
+  snprintf(buffer, sizeof(buffer), "%d%s%s%c%s%s%c",
+           (int32_t)details.exchangeId, details.token1Id, details.token1Name,
+           details.token1Precision, details.token2Id, details.token2Name,
+           details.token2Precision);
+  msg_size += strlen(details.token1Id) + strlen(details.token1Name) + 1;
+  msg_size += strlen(details.token2Id) + strlen(details.token2Name) + 1;
+
+  if (!verifyExchangeID((uint8_t *)buffer, msg_size,
+                        details.signature.bytes, details.signature.size,
+                        content->publicKeyContext)) {
+    return false;
+  }
+
   int first_token = 0, second_token = 0;
   if (strcmp((char *)content->tokenNames[0], details.token1Id) == 0) {
     first_token = 0;
@@ -641,17 +652,18 @@ exchange_create_contract(txContent_t *content,
   pb_istream_t stream;
 
   stream = INIT_STREAM(transaction);
-  if (!pb_decode(&stream, protocol_ExchangeCreateContract_fields, &msg.exchange_create_contract)) {
+  if (!pb_decode(&stream, protocol_ExchangeCreateContract_fields,
+                 &msg.exchange_create_contract)) {
     return false;
   }
 
-  if (!COPY_ADDRESS(content->account, &msg.exchange_create_contract.owner_address)) {
+  if (!COPY_ADDRESS(content->account,
+                    &msg.exchange_create_contract.owner_address)) {
     return false;
   }
   if (!printTokenFromID((char *)content->tokenNames[0],
                         msg.exchange_create_contract.first_token_id.bytes,
                         msg.exchange_create_contract.first_token_id.size)) {
-
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
@@ -662,9 +674,38 @@ exchange_create_contract(txContent_t *content,
     return false;
   }
   content->tokenNamesLength[1] = strlen((char *)content->tokenNames[1]);
-  
+
   content->amount = msg.exchange_create_contract.first_token_balance;
   content->amount2 = msg.exchange_create_contract.second_token_balance;
+  return true;
+}
+
+static bool
+exchange_inject_contract(txContent_t *content,
+                         const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ExchangeInjectContract_fields,
+                 &msg.exchange_inject_contract)) {
+    return false;
+  }
+  PRINTF("COPY_ADDRESS\n");
+  if (!COPY_ADDRESS(content->account,
+                    &msg.exchange_inject_contract.owner_address)) {
+    return false;
+  }
+  content->exchangeID = msg.exchange_inject_contract.exchange_id;
+
+  PRINTF("printTokenFromID\n");
+  if (!printTokenFromID((char *)content->tokenNames[0],
+                        msg.exchange_inject_contract.token_id.bytes,
+                        msg.exchange_inject_contract.token_id.size)) {
+    return false;
+  }
+  content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
+
+  content->amount = msg.exchange_inject_contract.quant;
   return true;
 }
 
@@ -672,6 +713,10 @@ protocol_Transaction_raw transaction;
 
 parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
   bool ret;
+
+  if (length == 0) {
+    return USTREAM_FINISHED;
+  }
 
   memset(&transaction, 0, sizeof(transaction));
   pb_istream_t stream = pb_istream_from_buffer(buffer, length);
@@ -734,6 +779,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
     break;
   case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
     ret = exchange_create_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
+    ret = exchange_inject_contract(content, &transaction);
     break;
   default:
     return USTREAM_FAULT;

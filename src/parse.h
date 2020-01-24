@@ -39,6 +39,7 @@ typedef union {
   protocol_VoteWitnessContract vote_witness_contract;
   protocol_ProposalCreateContract proposal_create_contract;
   protocol_ExchangeCreateContract exchange_create_contract;
+  protocol_ExchangeInjectContract exchange_inject_contract;
 } contract_t;
 
 typedef enum parserStatus_e {

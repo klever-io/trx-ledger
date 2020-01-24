@@ -78,5 +78,8 @@ PB_BIND(protocol_TriggerSmartContract, protocol_TriggerSmartContract, AUTO)
 PB_BIND(protocol_ExchangeCreateContract, protocol_ExchangeCreateContract, AUTO)
 
 
+PB_BIND(protocol_ExchangeInjectContract, protocol_ExchangeInjectContract, AUTO)
+
+
 
 
