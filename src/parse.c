@@ -212,6 +212,12 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
     uint8_t index = 0;
     uint8_t tokenNameValidation[33];
     uint8_t tokenNameValidationLength = 0;
+
+    PRINTF("parseTokenName: ");
+    for (int unsigned i = 0; i < dataLength; i++) {
+      PRINTF("%02X", data[i]);
+    }
+    PRINTF("\n");
     BEGIN_TRY {
         TRY {
             // Get Token Name
@@ -269,164 +275,110 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
     return result;
  }
 
+static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
+   if (size != TOKENID_SIZE && size != 1) {
+     return false;
+   }
+
+   if (size == 1) {
+     if (data[0] != '_') {
+       return false;
+     }
+     strcpy(out, "TRX");
+     return true;
+   }
+   strcpy(out, (char *)data);
+   return true;
+}
+
+#include "../proto/core/Contract.pb.h"
+#include "../proto/core/Tron.pb.h"
+#include "../proto/misc/TronApp.pb.h"
+#include "pb_decode.h"
+
+static bool set_token_info(txContent_t *content, unsigned int token_index,
+                           const char *name, const char *id, int precision) {
+  int ret;
+
+  if (token_index >= 2) {
+    return false;
+  }
+
+  ret = snprintf((char *)content->tokenNames[token_index], MAX_TOKEN_LENGTH,
+                 "%s[%s]", name, id);
+  if (ret < 0) {
+    return false;
+  }
+  content->tokenNamesLength[token_index] = ret;
+  content->decimals[token_index] = precision;
+  return true;
+}
+
 // Exchange Token ID + Name
 // CHECK SIGNATURE(EXCHANGEID+TOKEN1ID+NAME1+PRECISION1+TOKEN2ID+NAME2+PRECISION2)
 // Parse token Name and Signature
-parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
-    parserStatus_e result = USTREAM_FAULT;
-    uint8_t index = 0;
-    uint8_t tokenID[2][8];
-    uint8_t tokenNAME[2][33];
-    uint8_t tokenDecimals[2];
-    uint8_t buffer[90];
-    uint8_t len = 0;
-    BEGIN_TRY {
-        TRY {
-            
-            // Get Exchange ID
-            if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80);
-            // find end of base128
-            uint32_t ID = 0;
-            // find end of base128
-            for(int b128=0; index<dataLength; ++index){
-                ID += ((uint32_t)( data[index] & PB_BASE128DATA) << b128) ;
-                if ((data[index]&PB_BASE128) == 0) break;
-                b128+=7;
-            }
-            index++;if (index > dataLength) THROW(0x6a88);
-            if (content->exchangeID!= ID) THROW(0x6a80);
-            // Get Token ID 1
-            if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            if ((data[index] != 7) && (data[index] != 1) ) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
-            os_memmove(tokenID[0],data+index,data[index-1]);
-            len += data[index-1];
-            tokenID[0][data[index-1]] = '\0';
-            index+=data[index-1]; if (index>dataLength) THROW(0x6a80);
-            // Get Token 1 Name
-            if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            if (data[index] > 32) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
-            os_memmove(tokenNAME[0],data+index,data[index-1]);
-            len += data[index-1];
-            tokenNAME[0][data[index-1]]='\0';
-            index+=data[index-1]; if (index>dataLength) THROW(0x6a80);
-            // Get decimals 1
-            if ((data[index]>>PB_FIELD_R)!=4 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80);
-            // find end of base128
-            tokenDecimals[0] = 0;
-            // find end of base128
-            for(int b128=0; index<dataLength; ++index){
-                tokenDecimals[0] += ((uint8_t)( data[index] & PB_BASE128DATA) << b128) ;
-                if ((data[index]&PB_BASE128) == 0) break;
-                b128+=7;
-            }
-            index++;if (index > dataLength) THROW(0x6a88);
+bool parseExchange(const uint8_t *data,
+                    size_t length, txContent_t *content) {
+  ExchangeDetails details;
+  char buffer[90];
 
-            // Get Token ID 2
-            if ((data[index]>>PB_FIELD_R)!=5 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            if ((data[index] != 7) && (data[index] != 1) ) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
-            os_memmove(tokenID[1],data+index,data[index-1]);
-            len += data[index-1];
-            tokenID[1][data[index-1]] = '\0';
-            index+=data[index-1]; if (index>dataLength) THROW(0x6a80);
-            // Get Token 2 Name
-            if ((data[index]>>PB_FIELD_R)!=6 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            if (data[index] > 32) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
-            os_memmove(tokenNAME[1],data+index,data[index-1]);
-            len += data[index-1];
-            tokenNAME[1][data[index-1]]='\0';
-            index+=data[index-1]; if (index>dataLength) THROW(0x6a80);
-            // Get decimals 2
-            if ((data[index]>>PB_FIELD_R)!=7 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80);
-            // find end of base128
-            tokenDecimals[1] = 0;
-            // find end of base128
-            for(int b128=0; index<dataLength; ++index){
-                tokenDecimals[1] += ((uint8_t)( data[index] & PB_BASE128DATA) << b128) ;
-                if ((data[index]&PB_BASE128) == 0) break;
-                b128+=7;
-            }
-            index++;if (index > dataLength) THROW(0x6a88);
+  pb_istream_t stream = pb_istream_from_buffer(data, length);
+  if (!pb_decode(&stream, ExchangeDetails_fields, &details)) {
+    return false;
+  }
 
-            // Get Signature
-            if ((data[index]>>PB_FIELD_R)!=8 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
+  if (content->exchangeID != details.exchangeId) {
+    return false;
+  }
 
-            snprintf((char *)buffer, sizeof(buffer), "%d", ID);
-            len += strlen((const char *)buffer);
-            snprintf((char *)buffer, sizeof(buffer), "%d%s%s%c%s%s%c", ID,
-                        tokenID[0], tokenNAME[0], tokenDecimals[0],
-                        tokenID[1], tokenNAME[1], tokenDecimals[1]);
+  /* Check provided signature. Strange serialization, it would have been
+   * easier to sign the whole protobuf data... */
+  snprintf(buffer, sizeof(buffer), "%llu%s%s%c%s%s%c", details.exchangeId,
+           details.token1Id, details.token1Name, details.token1Precision,
+           details.token2Id, details.token2Name, details.token2Precision);
+  if (!verifyExchangeID((uint8_t *)buffer, strlen(buffer),
+                        details.signature.bytes, details.signature.size,
+                        content->publicKeyContext)) {
+    return false;
+  }
 
-            // Validate token ID + Name
-            int ret = verifyExchangeID((const unsigned char *)buffer, len + 2, 
-                            (uint8_t *)data+index, data[index-1], content->publicKeyContext);
-            if (ret!=1)
-                THROW(0x6a80);
-            
-            // UPDATE Token with Name[ID]
-            uint8_t firstToken = 0;
-            uint8_t secondToken = 0;
-            if (strcmp((const char *)content->tokenNames[0], (const char *)tokenID[0])==0){
-                firstToken = 0;
-                secondToken = 1;
-            }else if (strcmp((const char *)content->tokenNames[0], (const char *)tokenID[1])==0){
-                firstToken = 1;
-                secondToken = 0;
-            }else{
-                THROW(0x6a80);
-            }
-            
-            snprintf((char *)buffer, MAX_TOKEN_LENGTH,"%s[%s]",
-                tokenNAME[0], tokenID[0]);
-            os_memmove(content->tokenNames[firstToken], buffer, strlen((const char *)buffer)+1);
-            content->tokenNamesLength[firstToken] = strlen((const char *)buffer);
-            content->decimals[firstToken]=tokenDecimals[0];
+  /* Replace token ID with Name[ID] */
+  if (strlen(details.token1Id) != 1 && strlen(details.token1Id) != 7) {
+    return false;
+  }
+  if (strlen(details.token2Id) != 1 && strlen(details.token2Id) != 7) {
+    return false;
+  }
+  int first_token = 0, second_token = 0;
+  if (strcmp((char *)content->tokenNames[0], details.token1Id) == 0) {
+    first_token = 0;
+    second_token = 1;
+  } else if (strcmp((char *)content->tokenNames[0], details.token2Id) == 0) {
+    first_token = 1;
+    second_token = 0;
+  } else {
+    return false;
+  }
 
-            snprintf((char *)buffer, MAX_TOKEN_LENGTH,"%s[%s]",
-                tokenNAME[1], tokenID[1]);
-            os_memmove(content->tokenNames[secondToken], buffer, strlen((const char *)buffer)+1);
-            content->tokenNamesLength[secondToken] = strlen((const char *)buffer);
-            content->decimals[secondToken]=tokenDecimals[1];
-            PRINTF("Lenths: %d,%d\n",content->tokenNamesLength[firstToken] ,content->tokenNamesLength[secondToken]);
+  if (!set_token_info(content, first_token, details.token1Name,
+                      details.token1Id, details.token1Precision) ||
+      !set_token_info(content, second_token, details.token2Name,
+                      details.token2Id, details.token2Precision)) {
+    return false;
+  }
 
-            result = USTREAM_FINISHED;
-        }
-        CATCH(EXCEPTION_IO_RESET) {
-            result = EXCEPTION_IO_RESET;
-        }
-        CATCH_OTHER(e) {
-            result = USTREAM_FAULT;
-        }
-        FINALLY {
-        }
-    }
-    END_TRY;
-    return result;
- }
+  PRINTF("Lengths: %d,%d\n", content->tokenNamesLength[first_token],
+         content->tokenNamesLength[second_token]);
+  return true;
+}
 
- void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
+void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
     os_memset(context, 0, sizeof(txContext_t));
     os_memset(content, 0, sizeof(txContent_t));
     context->sha2 = sha2;
     context->initialized = true;
     cx_sha256_init(sha2); //init sha
 }
-
-#include "../proto/core/Contract.pb.h"
-#include "../proto/core/Tron.pb.h"
-#include "pb_decode.h"
 
 static bool copy_address(uint8_t *dest, pb_bytes_array_t *src) {
   if (src->size != ADDRESS_SIZE) {
@@ -464,6 +416,34 @@ static bool transfer_contract(txContent_t *content,
 
   content->tokenNamesLength[0] = 4;
   strcpy((char *)content->tokenNames[0], "TRX");
+  return true;
+}
+
+static bool transfer_asset_contract(txContent_t *content,
+                              const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_TransferAssetContract_fields,
+                 &msg.transfer_asset_contract)) {
+    return false;
+  }
+  content->amount = msg.transfer_asset_contract.amount;
+
+  if (!printTokenFromID((char *)content->tokenNames[0],
+                        msg.transfer_asset_contract.asset_name.bytes,
+                        msg.transfer_asset_contract.asset_name.size)) {
+    return false;
+  }
+  content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
+
+  if (!COPY_ADDRESS(content->account, &msg.transfer_asset_contract.owner_address)) {
+    return false;
+  }
+  if (!COPY_ADDRESS(content->destination, &msg.transfer_asset_contract.to_address)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -653,19 +633,19 @@ trigger_smart_contract(txContent_t *content,
 
 protocol_Transaction_raw transaction;
 
-bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
+parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
   bool ret;
 
   memset(&transaction, 0, sizeof(transaction));
   pb_istream_t stream = pb_istream_from_buffer(buffer, length);
 
   if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
-    return false;
+    return USTREAM_FAULT;
   }
 
   // Contract must have a parameter
   if (!transaction.contract->has_parameter) {
-    return false;
+    return USTREAM_FAULT;
   }
 
   content->contractType = (contractType_e)transaction.contract->type;
@@ -681,6 +661,10 @@ bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
   switch (transaction.contract->type) {
   case protocol_Transaction_Contract_ContractType_TransferContract:
     ret = transfer_contract(content, &transaction);
+    break;
+
+  case protocol_Transaction_Contract_ContractType_TransferAssetContract:
+    ret = transfer_asset_contract(content, &transaction);
     break;
 
   case protocol_Transaction_Contract_ContractType_VoteWitnessContract: {
@@ -712,7 +696,8 @@ bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
     ret = trigger_smart_contract(content, &transaction);
     break;
   default:
-    return false;
+    return USTREAM_FAULT;
   }
-  return ret;
+
+  return ret ? USTREAM_PROCESSING : USTREAM_FAULT;
 }

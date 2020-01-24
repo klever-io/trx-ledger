@@ -34,6 +34,7 @@
 
 typedef union {
   protocol_TransferContract transfer_contract;
+  protocol_TransferAssetContract transfer_asset_contract;
   protocol_TriggerSmartContract trigger_smart_contract;
   protocol_VoteWitnessContract vote_witness_contract;
   protocol_ProposalCreateContract proposal_create_contract;
@@ -128,7 +129,7 @@ bool setContractType(uint8_t type, void * out);
 bool setExchangeContractDetail(uint8_t type, void * out);
 
 parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
-parserStatus_e parseExchange(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
+bool parseExchange(const uint8_t *data, size_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
                                 uint32_t outlen, uint8_t sun);
@@ -139,6 +140,6 @@ bool adjustDecimals(char *src, uint32_t srcLength, char *target,
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content);
 
-bool processTx(uint8_t *buffer, uint32_t length, txContent_t *content);
+parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content);
 
 #endif

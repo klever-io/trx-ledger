@@ -111,10 +111,13 @@ typedef struct _protocol_ProposalDeleteContract {
     int64_t proposal_id;
 } protocol_ProposalDeleteContract;
 
+typedef PB_BYTES_ARRAY_T(16) protocol_TransferAssetContract_asset_name_t;
+typedef PB_BYTES_ARRAY_T(21) protocol_TransferAssetContract_owner_address_t;
+typedef PB_BYTES_ARRAY_T(21) protocol_TransferAssetContract_to_address_t;
 typedef struct _protocol_TransferAssetContract {
-    pb_callback_t asset_name;
-    pb_callback_t owner_address;
-    pb_callback_t to_address;
+    protocol_TransferAssetContract_asset_name_t asset_name;
+    protocol_TransferAssetContract_owner_address_t owner_address;
+    protocol_TransferAssetContract_to_address_t to_address;
     int64_t amount;
 } protocol_TransferAssetContract;
 
@@ -198,7 +201,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_AccountCreateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_default {{{NULL}, NULL}, {0, {0}}}
 #define protocol_TransferContract_init_default   {{0, {0}}, {0, {0}}, 0}
-#define protocol_TransferAssetContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define protocol_TransferAssetContract_init_default {{0, {0}}, {0, {0}}, {0, {0}}, 0}
 #define protocol_VoteAssetContract_init_default  {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
 #define protocol_VoteWitnessContract_init_default {{0, {0}}, 0, {protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default}, 0}
 #define protocol_VoteWitnessContract_Vote_init_default {{0, {0}}, 0}
@@ -221,7 +224,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_AccountCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0, {0}}}
 #define protocol_TransferContract_init_zero      {{0, {0}}, {0, {0}}, 0}
-#define protocol_TransferAssetContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define protocol_TransferAssetContract_init_zero {{0, {0}}, {0, {0}}, {0, {0}}, 0}
 #define protocol_VoteAssetContract_init_zero     {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
 #define protocol_VoteWitnessContract_init_zero   {{0, {0}}, 0, {protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero}, 0}
 #define protocol_VoteWitnessContract_Vote_init_zero {{0, {0}}, 0}
@@ -345,11 +348,11 @@ X(a, STATIC,   SINGULAR, INT64,    amount,            3)
 #define protocol_TransferContract_DEFAULT NULL
 
 #define protocol_TransferAssetContract_FIELDLIST(X, a) \
-X(a, CALLBACK, SINGULAR, BYTES,    asset_name,        1) \
-X(a, CALLBACK, SINGULAR, BYTES,    owner_address,     2) \
-X(a, CALLBACK, SINGULAR, BYTES,    to_address,        3) \
+X(a, STATIC,   SINGULAR, BYTES,    asset_name,        1) \
+X(a, STATIC,   SINGULAR, BYTES,    owner_address,     2) \
+X(a, STATIC,   SINGULAR, BYTES,    to_address,        3) \
 X(a, STATIC,   SINGULAR, INT64,    amount,            4)
-#define protocol_TransferAssetContract_CALLBACK pb_default_field_callback
+#define protocol_TransferAssetContract_CALLBACK NULL
 #define protocol_TransferAssetContract_DEFAULT NULL
 
 #define protocol_VoteAssetContract_FIELDLIST(X, a) \
@@ -551,7 +554,7 @@ extern const pb_msgdesc_t protocol_TriggerSmartContract_msg;
 /* protocol_AccountCreateContract_size depends on runtime parameters */
 /* protocol_AccountUpdateContract_size depends on runtime parameters */
 #define protocol_TransferContract_size           57
-/* protocol_TransferAssetContract_size depends on runtime parameters */
+#define protocol_TransferAssetContract_size      75
 /* protocol_VoteAssetContract_size depends on runtime parameters */
 #define protocol_VoteWitnessContract_size        205
 #define protocol_VoteWitnessContract_Vote_size   34

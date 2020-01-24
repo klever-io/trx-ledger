@@ -4179,7 +4179,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if (!(p1&0x08)) THROW(0x6A80);
                 PRINTF("Decoding Exchange\n");
                 // Decode Token name and validate signature
-                e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent);
+                e = parseExchange(workBuffer, dataLength, &txContent);
                 if ( e != USTREAM_FINISHED) {
                     PRINTF("Unexpected parser status\n");
                     THROW(0x6800 | (e & 0x7FF));
