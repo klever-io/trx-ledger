@@ -76,6 +76,17 @@ typedef struct _protocol_AssetIssueContract_FrozenSupply {
     int64_t frozen_days;
 } protocol_AssetIssueContract_FrozenSupply;
 
+typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeCreateContract_owner_address_t;
+typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeCreateContract_first_token_id_t;
+typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeCreateContract_second_token_id_t;
+typedef struct _protocol_ExchangeCreateContract {
+    protocol_ExchangeCreateContract_owner_address_t owner_address;
+    protocol_ExchangeCreateContract_first_token_id_t first_token_id;
+    int64_t first_token_balance;
+    protocol_ExchangeCreateContract_second_token_id_t second_token_id;
+    int64_t second_token_balance;
+} protocol_ExchangeCreateContract;
+
 typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_receiver_address_t;
 typedef struct _protocol_FreezeBalanceContract {
@@ -221,6 +232,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ProposalApproveContract_init_default {{0, {0}}, 0, 0}
 #define protocol_ProposalDeleteContract_init_default {{0, {0}}, 0}
 #define protocol_TriggerSmartContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
+#define protocol_ExchangeCreateContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
 #define protocol_AccountCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0, {0}}}
 #define protocol_TransferContract_init_zero      {{0, {0}}, {0, {0}}, 0}
@@ -244,6 +256,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ProposalApproveContract_init_zero {{0, {0}}, 0, 0}
 #define protocol_ProposalDeleteContract_init_zero {{0, {0}}, 0}
 #define protocol_TriggerSmartContract_init_zero  {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
+#define protocol_ExchangeCreateContract_init_zero {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_DeployContract_owner_address_tag 1
@@ -276,6 +289,11 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_AssetIssueContract_public_latest_free_net_time_tag 25
 #define protocol_AssetIssueContract_FrozenSupply_frozen_amount_tag 1
 #define protocol_AssetIssueContract_FrozenSupply_frozen_days_tag 2
+#define protocol_ExchangeCreateContract_owner_address_tag 1
+#define protocol_ExchangeCreateContract_first_token_id_tag 2
+#define protocol_ExchangeCreateContract_first_token_balance_tag 3
+#define protocol_ExchangeCreateContract_second_token_id_tag 4
+#define protocol_ExchangeCreateContract_second_token_balance_tag 5
 #define protocol_FreezeBalanceContract_owner_address_tag 1
 #define protocol_FreezeBalanceContract_frozen_balance_tag 2
 #define protocol_FreezeBalanceContract_frozen_duration_tag 3
@@ -501,6 +519,15 @@ X(a, STATIC,   SINGULAR, INT64,    token_id,          6)
 #define protocol_TriggerSmartContract_CALLBACK NULL
 #define protocol_TriggerSmartContract_DEFAULT NULL
 
+#define protocol_ExchangeCreateContract_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, BYTES,    first_token_id,    2) \
+X(a, STATIC,   SINGULAR, INT64,    first_token_balance,   3) \
+X(a, STATIC,   SINGULAR, BYTES,    second_token_id,   4) \
+X(a, STATIC,   SINGULAR, INT64,    second_token_balance,   5)
+#define protocol_ExchangeCreateContract_CALLBACK NULL
+#define protocol_ExchangeCreateContract_DEFAULT NULL
+
 extern const pb_msgdesc_t protocol_AccountCreateContract_msg;
 extern const pb_msgdesc_t protocol_AccountUpdateContract_msg;
 extern const pb_msgdesc_t protocol_TransferContract_msg;
@@ -524,6 +551,7 @@ extern const pb_msgdesc_t protocol_ProposalCreateContract_ParametersEntry_msg;
 extern const pb_msgdesc_t protocol_ProposalApproveContract_msg;
 extern const pb_msgdesc_t protocol_ProposalDeleteContract_msg;
 extern const pb_msgdesc_t protocol_TriggerSmartContract_msg;
+extern const pb_msgdesc_t protocol_ExchangeCreateContract_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define protocol_AccountCreateContract_fields &protocol_AccountCreateContract_msg
@@ -549,6 +577,7 @@ extern const pb_msgdesc_t protocol_TriggerSmartContract_msg;
 #define protocol_ProposalApproveContract_fields &protocol_ProposalApproveContract_msg
 #define protocol_ProposalDeleteContract_fields &protocol_ProposalDeleteContract_msg
 #define protocol_TriggerSmartContract_fields &protocol_TriggerSmartContract_msg
+#define protocol_ExchangeCreateContract_fields &protocol_ExchangeCreateContract_msg
 
 /* Maximum encoded size of messages (where known) */
 /* protocol_AccountCreateContract_size depends on runtime parameters */
@@ -574,6 +603,7 @@ extern const pb_msgdesc_t protocol_TriggerSmartContract_msg;
 #define protocol_ProposalApproveContract_size    36
 #define protocol_ProposalDeleteContract_size     34
 #define protocol_TriggerSmartContract_size       210
+#define protocol_ExchangeCreateContract_size     65
 
 #ifdef __cplusplus
 } /* extern "C" */

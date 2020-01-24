@@ -276,6 +276,10 @@ parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLeng
  }
 
 static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
+  for (unsigned int i = 0; i < 8; i++) {
+    PRINTF("%02x", data[i]);
+  }
+  PRINTF("\n");
    if (size != TOKENID_SIZE && size != 1) {
      return false;
    }
@@ -631,6 +635,39 @@ trigger_smart_contract(txContent_t *content,
   return true;
 }
 
+static bool
+exchange_create_contract(txContent_t *content,
+                         const protocol_Transaction_raw *transaction) {
+  pb_istream_t stream;
+
+  stream = INIT_STREAM(transaction);
+  if (!pb_decode(&stream, protocol_ExchangeCreateContract_fields, &msg.exchange_create_contract)) {
+    return false;
+  }
+
+  if (!COPY_ADDRESS(content->account, &msg.exchange_create_contract.owner_address)) {
+    return false;
+  }
+  if (!printTokenFromID((char *)content->tokenNames[0],
+                        msg.exchange_create_contract.first_token_id.bytes,
+                        msg.exchange_create_contract.first_token_id.size)) {
+
+    return false;
+  }
+  content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
+
+  if (!printTokenFromID((char *)content->tokenNames[1],
+                        msg.exchange_create_contract.second_token_id.bytes,
+                        msg.exchange_create_contract.second_token_id.size)) {
+    return false;
+  }
+  content->tokenNamesLength[1] = strlen((char *)content->tokenNames[1]);
+  
+  content->amount = msg.exchange_create_contract.first_token_balance;
+  content->amount2 = msg.exchange_create_contract.second_token_balance;
+  return true;
+}
+
 protocol_Transaction_raw transaction;
 
 parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
@@ -694,6 +731,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
     break;
   case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
     ret = trigger_smart_contract(content, &transaction);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
+    ret = exchange_create_contract(content, &transaction);
     break;
   default:
     return USTREAM_FAULT;

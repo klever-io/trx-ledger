@@ -75,5 +75,8 @@ PB_BIND(protocol_ProposalDeleteContract, protocol_ProposalDeleteContract, AUTO)
 PB_BIND(protocol_TriggerSmartContract, protocol_TriggerSmartContract, AUTO)
 
 
+PB_BIND(protocol_ExchangeCreateContract, protocol_ExchangeCreateContract, AUTO)
+
+
 
 
