@@ -99,9 +99,13 @@ typedef struct publicKeyContext_t {
     uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
 } publicKeyContext_t;
 
+typedef struct {
+  uint32_t indices[MAX_BIP32_PATH];
+  uint8_t length;
+} bip32_path_t;
+
 typedef struct transactionContext_t {
-    uint8_t pathLength;
-    uint32_t bip32Path[MAX_BIP32_PATH];
+    bip32_path_t bip32_path;
     uint8_t rawTx[MAX_RAW_TX];
     uint32_t rawTxLength;
     uint8_t hash[HASH_SIZE];

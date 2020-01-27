@@ -73,8 +73,8 @@ void signTransaction(transactionContext_t *transactionContext) {
     // Get Private key from BIP32 path
     io_seproxyhal_io_heartbeat();
     os_perso_derive_node_bip32(
-        CX_CURVE_256K1, transactionContext->bip32Path,
-        transactionContext->pathLength, privateKeyData, NULL);
+        CX_CURVE_256K1, transactionContext->bip32_path.indices,
+        transactionContext->bip32_path.length, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
     // Sign transaction hash

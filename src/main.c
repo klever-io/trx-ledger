@@ -18,6 +18,7 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
+#include <sys/types.h>
 #include "helpers.h"
 
 #include "os_io_seproxyhal.h"
@@ -1602,12 +1603,14 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
 
-    os_memmove(G_io_apdu_buffer, transactionContext.bip32Path, transactionContext.pathLength);
-    tx = transactionContext.pathLength;
+    /* FIXME: probably a bug here, need comments from developer */
+    memmove(G_io_apdu_buffer, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length);
+    tx = transactionContext.bip32_path.length;
 
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     
     tx = cx_ecdh(&privateKey, CX_ECDH_POINT,
@@ -4036,26 +4039,40 @@ uint32_t set_result_get_publicKey() {
     return tx;
 }
 
+off_t read_bip32_path(const uint8_t *buffer, size_t length,
+                      bip32_path_t *path) {
+  if (length < 1) {
+    return -1;
+  }
+  unsigned int path_length = *buffer++;
+
+  if (path_length < 1 || path_length > MAX_BIP32_PATH) {
+    PRINTF("Invalid path\n");
+    return -1;
+  }
+
+  if (length < 1 + 4 * path_length) {
+    return -1;
+  }
+  path->length = path_length;
+  for (unsigned int i = 0; i < path_length; i++) {
+    path->indices[i] = U4BE(buffer, 0);
+    buffer += 4;
+  }
+  return 1 + 4 * path_length;
+}
+
 // APDU public key
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         uint16_t dataLength, volatile unsigned int *flags,
                         volatile unsigned int *tx) {
-    //Clear Buffer                        
-    UNUSED(dataLength);
     // Get private key data
     uint8_t privateKeyData[33];
-    uint32_t bip32Path[MAX_BIP32_PATH];  
-    uint32_t i;
-    uint8_t bip32PathLength = *(dataBuffer++);
+    bip32_path_t bip32_path;
     cx_ecfp_private_key_t privateKey;
     
     uint8_t p2Chain = p2 & 0x3F;   
 
-
-    if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
-        THROW(0x6A80);
-    }
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) {
         THROW(0x6B00);
     }
@@ -4064,14 +4081,13 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
 
     // Add requested BIP path to tmp array
-    for (i = 0; i < bip32PathLength; i++) {
-        bip32Path[i] = U4BE(dataBuffer,0);
-        dataBuffer += 4;
+    if (read_bip32_path(dataBuffer, dataLength, &bip32_path) < 0) {
+        THROW(0x6A80);
     }
-    
+
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, bip32PathLength,
-                               privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path.indices,
+                               bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4127,23 +4143,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;
     uint256_t uint256;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
             THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
 
         initTx(&txContext, &sha2, &txContent);
         customContractField = 0;
@@ -4436,7 +4444,6 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;    
     uint8_t privateKeyData[32];
     cx_ecfp_private_key_t privateKey;
     
@@ -4444,20 +4451,12 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6B00);
     }
 
-    transactionContext.pathLength = workBuffer[0];
-    if ((transactionContext.pathLength < 0x01) ||
-        (transactionContext.pathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
+    off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+    if (ret < 0) {
         THROW(0x6a80);
     }
-    workBuffer++;
-    dataLength--;
-
-    for (i = 0; i < transactionContext.pathLength; i++) {
-        transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-        workBuffer += 4;
-        dataLength -= 4;
-    }
+    workBuffer += ret;
+    dataLength -= ret;
     if (dataLength != 65) {
         THROW(0x6700);
     }
@@ -4467,8 +4466,8 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     transactionContext.rawTxLength = dataLength;
 
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4515,7 +4514,6 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
 void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
   UNUSED(tx);
-  uint32_t i;
   uint8_t hashMessage[32];
   uint8_t privateKeyData[32];
   cx_ecfp_private_key_t privateKey;
@@ -4526,19 +4524,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     }
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
-            THROW(0x6a80);
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
+          THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
+
         // Message Length
         transactionContext.rawTxLength = U4BE(workBuffer, 0);
         workBuffer += 4;
@@ -4579,8 +4571,8 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         array_hexstr((char *)fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
 
         // Get private key
-        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-                transactionContext.pathLength, privateKeyData, NULL);
+        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+                transactionContext.bip32_path.length, privateKeyData, NULL);
 
         cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
         cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
