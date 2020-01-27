@@ -654,9 +654,8 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
 
   /* Transaction data */
   if (transaction.data.size != 0) {
-    // TODO
-    // if (!dataAllowed)
-    //   THROW(0x6a80);
+    if (!dataAllowed)
+      THROW(0x6a80);
     content->dataBytes = transaction.data.size;
   }
 
