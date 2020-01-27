@@ -4181,7 +4181,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 // Decode Token name and validate signature
                 if (!parseExchange(workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
+                    THROW(0x6802);
                 }
                 dataLength = 0;
                 break;

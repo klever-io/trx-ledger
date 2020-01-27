@@ -123,9 +123,9 @@ typedef struct _protocol_authority {
     pb_callback_t permission_name;
 } protocol_authority;
 
-typedef PB_BYTES_ARRAY_T(2) protocol_Transaction_raw_ref_block_bytes_t;
+typedef PB_BYTES_ARRAY_T(4) protocol_Transaction_raw_ref_block_bytes_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_Transaction_raw_ref_block_hash_t;
-typedef PB_BYTES_ARRAY_T(128) protocol_Transaction_raw_data_t;
+typedef PB_BYTES_ARRAY_T(256) protocol_Transaction_raw_data_t;
 typedef struct _protocol_Transaction_raw {
     protocol_Transaction_raw_ref_block_bytes_t ref_block_bytes;
     int64_t ref_block_num;

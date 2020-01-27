@@ -513,7 +513,11 @@ unfreeze_balance_contract(txContent_t *content,
   if (!COPY_ADDRESS(content->account, &contract.owner_address)) {
     return false;
   }
-  return COPY_ADDRESS(content->destination, &contract.receiver_address);
+
+  if (contract.receiver_address.size != 0) {
+    return COPY_ADDRESS(content->destination, &contract.receiver_address);
+  }
+  return true;
 }
 
 static bool
