@@ -24,12 +24,6 @@
 #define MAX_RAW_SIGNATURE 65
 #define MAX_TOKEN_LENGTH 67
 
-#define PB_TYPE 0x07
-#define PB_FIELD_R 0x03
-#define PB_VARIANT_MASK 0x80
-#define PB_BASE128 0x80
-#define PB_BASE128DATA 0x7F
-
 #include "../proto/core/Contract.pb.h"
 
 typedef union {

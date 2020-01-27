@@ -46,10 +46,9 @@ typedef struct _protocol_AccountCreateContract {
     protocol_AccountType type;
 } protocol_AccountCreateContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_AccountUpdateContract_owner_address_t;
 typedef struct _protocol_AccountUpdateContract {
     pb_callback_t account_name;
-    protocol_AccountUpdateContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
 } protocol_AccountUpdateContract;
 
 typedef struct _protocol_AssetIssueContract {
@@ -76,53 +75,47 @@ typedef struct _protocol_AssetIssueContract_FrozenSupply {
     int64_t frozen_days;
 } protocol_AssetIssueContract_FrozenSupply;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeCreateContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeCreateContract_first_token_id_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeCreateContract_second_token_id_t;
 typedef struct _protocol_ExchangeCreateContract {
-    protocol_ExchangeCreateContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     protocol_ExchangeCreateContract_first_token_id_t first_token_id;
     int64_t first_token_balance;
     protocol_ExchangeCreateContract_second_token_id_t second_token_id;
     int64_t second_token_balance;
 } protocol_ExchangeCreateContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeInjectContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeInjectContract_token_id_t;
 typedef struct _protocol_ExchangeInjectContract {
-    protocol_ExchangeInjectContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t exchange_id;
     protocol_ExchangeInjectContract_token_id_t token_id;
     int64_t quant;
 } protocol_ExchangeInjectContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeTransactionContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeTransactionContract_token_id_t;
 typedef struct _protocol_ExchangeTransactionContract {
-    protocol_ExchangeTransactionContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t exchange_id;
     protocol_ExchangeTransactionContract_token_id_t token_id;
     int64_t quant;
     int64_t expected;
 } protocol_ExchangeTransactionContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ExchangeWithdrawContract_owner_address_t;
 typedef PB_BYTES_ARRAY_T(8) protocol_ExchangeWithdrawContract_token_id_t;
 typedef struct _protocol_ExchangeWithdrawContract {
-    protocol_ExchangeWithdrawContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t exchange_id;
     protocol_ExchangeWithdrawContract_token_id_t token_id;
     int64_t quant;
 } protocol_ExchangeWithdrawContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_owner_address_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_FreezeBalanceContract_receiver_address_t;
 typedef struct _protocol_FreezeBalanceContract {
-    protocol_FreezeBalanceContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t frozen_balance;
     int64_t frozen_duration;
     protocol_ResourceCode resource;
-    protocol_FreezeBalanceContract_receiver_address_t receiver_address;
+    pb_byte_t receiver_address[21];
 } protocol_FreezeBalanceContract;
 
 typedef struct _protocol_ParticipateAssetIssueContract {
@@ -132,9 +125,8 @@ typedef struct _protocol_ParticipateAssetIssueContract {
     int64_t amount;
 } protocol_ParticipateAssetIssueContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ProposalApproveContract_owner_address_t;
 typedef struct _protocol_ProposalApproveContract {
-    protocol_ProposalApproveContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t proposal_id;
     bool is_add_approval;
 } protocol_ProposalApproveContract;
@@ -144,48 +136,39 @@ typedef struct _protocol_ProposalCreateContract_ParametersEntry {
     int64_t value;
 } protocol_ProposalCreateContract_ParametersEntry;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ProposalDeleteContract_owner_address_t;
 typedef struct _protocol_ProposalDeleteContract {
-    protocol_ProposalDeleteContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     int64_t proposal_id;
 } protocol_ProposalDeleteContract;
 
 typedef PB_BYTES_ARRAY_T(16) protocol_TransferAssetContract_asset_name_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_TransferAssetContract_owner_address_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_TransferAssetContract_to_address_t;
 typedef struct _protocol_TransferAssetContract {
     protocol_TransferAssetContract_asset_name_t asset_name;
-    protocol_TransferAssetContract_owner_address_t owner_address;
-    protocol_TransferAssetContract_to_address_t to_address;
+    pb_byte_t owner_address[21];
+    pb_byte_t to_address[21];
     int64_t amount;
 } protocol_TransferAssetContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_TransferContract_owner_address_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_TransferContract_to_address_t;
 typedef struct _protocol_TransferContract {
-    protocol_TransferContract_owner_address_t owner_address;
-    protocol_TransferContract_to_address_t to_address;
+    pb_byte_t owner_address[21];
+    pb_byte_t to_address[21];
     int64_t amount;
 } protocol_TransferContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_TriggerSmartContract_owner_address_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_TriggerSmartContract_contract_address_t;
 typedef PB_BYTES_ARRAY_T(128) protocol_TriggerSmartContract_data_t;
 typedef struct _protocol_TriggerSmartContract {
-    protocol_TriggerSmartContract_owner_address_t owner_address;
-    protocol_TriggerSmartContract_contract_address_t contract_address;
+    pb_byte_t owner_address[21];
+    pb_byte_t contract_address[21];
     int64_t call_value;
     protocol_TriggerSmartContract_data_t data;
     int64_t call_token_value;
     int64_t token_id;
 } protocol_TriggerSmartContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_UnfreezeBalanceContract_owner_address_t;
-typedef PB_BYTES_ARRAY_T(21) protocol_UnfreezeBalanceContract_receiver_address_t;
 typedef struct _protocol_UnfreezeBalanceContract {
-    protocol_UnfreezeBalanceContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     protocol_ResourceCode resource;
-    protocol_UnfreezeBalanceContract_receiver_address_t receiver_address;
+    pb_byte_t receiver_address[21];
 } protocol_UnfreezeBalanceContract;
 
 typedef struct _protocol_UpdateAssetContract {
@@ -203,27 +186,23 @@ typedef struct _protocol_VoteAssetContract {
     int32_t count;
 } protocol_VoteAssetContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_VoteWitnessContract_Vote_vote_address_t;
 typedef struct _protocol_VoteWitnessContract_Vote {
-    protocol_VoteWitnessContract_Vote_vote_address_t vote_address;
+    pb_byte_t vote_address[21];
     int64_t vote_count;
 } protocol_VoteWitnessContract_Vote;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_WithdrawBalanceContract_owner_address_t;
 typedef struct _protocol_WithdrawBalanceContract {
-    protocol_WithdrawBalanceContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
 } protocol_WithdrawBalanceContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_ProposalCreateContract_owner_address_t;
 typedef struct _protocol_ProposalCreateContract {
-    protocol_ProposalCreateContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     pb_size_t parameters_count;
     protocol_ProposalCreateContract_ParametersEntry parameters[10];
 } protocol_ProposalCreateContract;
 
-typedef PB_BYTES_ARRAY_T(21) protocol_VoteWitnessContract_owner_address_t;
 typedef struct _protocol_VoteWitnessContract {
-    protocol_VoteWitnessContract_owner_address_t owner_address;
+    pb_byte_t owner_address[21];
     pb_size_t votes_count;
     protocol_VoteWitnessContract_Vote votes[5];
     bool support;
@@ -238,59 +217,59 @@ typedef struct _protocol_VoteWitnessContract {
 
 /* Initializer values for message structs */
 #define protocol_AccountCreateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
-#define protocol_AccountUpdateContract_init_default {{{NULL}, NULL}, {0, {0}}}
-#define protocol_TransferContract_init_default   {{0, {0}}, {0, {0}}, 0}
-#define protocol_TransferAssetContract_init_default {{0, {0}}, {0, {0}}, {0, {0}}, 0}
+#define protocol_AccountUpdateContract_init_default {{{NULL}, NULL}, {0}}
+#define protocol_TransferContract_init_default   {{0}, {0}, 0}
+#define protocol_TransferAssetContract_init_default {{0, {0}}, {0}, {0}, 0}
 #define protocol_VoteAssetContract_init_default  {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_VoteWitnessContract_init_default {{0, {0}}, 0, {protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default}, 0}
-#define protocol_VoteWitnessContract_Vote_init_default {{0, {0}}, 0}
+#define protocol_VoteWitnessContract_init_default {{0}, 0, {protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default}, 0}
+#define protocol_VoteWitnessContract_Vote_init_default {{0}, 0}
 #define protocol_WitnessCreateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_WitnessUpdateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_AssetIssueContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0, 0, 0, 0, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, 0, 0, 0}
 #define protocol_AssetIssueContract_FrozenSupply_init_default {0, 0}
 #define protocol_ParticipateAssetIssueContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define protocol_DeployContract_init_default     {{{NULL}, NULL}, {{NULL}, NULL}}
-#define protocol_FreezeBalanceContract_init_default {{0, {0}}, 0, 0, _protocol_ResourceCode_MIN, {0, {0}}}
-#define protocol_UnfreezeBalanceContract_init_default {{0, {0}}, _protocol_ResourceCode_MIN, {0, {0}}}
+#define protocol_FreezeBalanceContract_init_default {{0}, 0, 0, _protocol_ResourceCode_MIN, {0}}
+#define protocol_UnfreezeBalanceContract_init_default {{0}, _protocol_ResourceCode_MIN, {0}}
 #define protocol_UnfreezeAssetContract_init_default {{{NULL}, NULL}}
-#define protocol_WithdrawBalanceContract_init_default {{0, {0}}}
+#define protocol_WithdrawBalanceContract_init_default {{0}}
 #define protocol_UpdateAssetContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_ProposalCreateContract_init_default {{0, {0}}, 0, {protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default}}
+#define protocol_ProposalCreateContract_init_default {{0}, 0, {protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default, protocol_ProposalCreateContract_ParametersEntry_init_default}}
 #define protocol_ProposalCreateContract_ParametersEntry_init_default {0, 0}
-#define protocol_ProposalApproveContract_init_default {{0, {0}}, 0, 0}
-#define protocol_ProposalDeleteContract_init_default {{0, {0}}, 0}
-#define protocol_TriggerSmartContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
-#define protocol_ExchangeCreateContract_init_default {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeInjectContract_init_default {{0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeWithdrawContract_init_default {{0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeTransactionContract_init_default {{0, {0}}, 0, {0, {0}}, 0, 0}
+#define protocol_ProposalApproveContract_init_default {{0}, 0, 0}
+#define protocol_ProposalDeleteContract_init_default {{0}, 0}
+#define protocol_TriggerSmartContract_init_default {{0}, {0}, 0, {0, {0}}, 0, 0}
+#define protocol_ExchangeCreateContract_init_default {{0}, {0, {0}}, 0, {0, {0}}, 0}
+#define protocol_ExchangeInjectContract_init_default {{0}, 0, {0, {0}}, 0}
+#define protocol_ExchangeWithdrawContract_init_default {{0}, 0, {0, {0}}, 0}
+#define protocol_ExchangeTransactionContract_init_default {{0}, 0, {0, {0}}, 0, 0}
 #define protocol_AccountCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
-#define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0, {0}}}
-#define protocol_TransferContract_init_zero      {{0, {0}}, {0, {0}}, 0}
-#define protocol_TransferAssetContract_init_zero {{0, {0}}, {0, {0}}, {0, {0}}, 0}
+#define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0}}
+#define protocol_TransferContract_init_zero      {{0}, {0}, 0}
+#define protocol_TransferAssetContract_init_zero {{0, {0}}, {0}, {0}, 0}
 #define protocol_VoteAssetContract_init_zero     {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_VoteWitnessContract_init_zero   {{0, {0}}, 0, {protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero}, 0}
-#define protocol_VoteWitnessContract_Vote_init_zero {{0, {0}}, 0}
+#define protocol_VoteWitnessContract_init_zero   {{0}, 0, {protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero}, 0}
+#define protocol_VoteWitnessContract_Vote_init_zero {{0}, 0}
 #define protocol_WitnessCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_WitnessUpdateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_AssetIssueContract_init_zero    {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0, 0, 0, 0, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, 0, 0, 0}
 #define protocol_AssetIssueContract_FrozenSupply_init_zero {0, 0}
 #define protocol_ParticipateAssetIssueContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define protocol_DeployContract_init_zero        {{{NULL}, NULL}, {{NULL}, NULL}}
-#define protocol_FreezeBalanceContract_init_zero {{0, {0}}, 0, 0, _protocol_ResourceCode_MIN, {0, {0}}}
-#define protocol_UnfreezeBalanceContract_init_zero {{0, {0}}, _protocol_ResourceCode_MIN, {0, {0}}}
+#define protocol_FreezeBalanceContract_init_zero {{0}, 0, 0, _protocol_ResourceCode_MIN, {0}}
+#define protocol_UnfreezeBalanceContract_init_zero {{0}, _protocol_ResourceCode_MIN, {0}}
 #define protocol_UnfreezeAssetContract_init_zero {{{NULL}, NULL}}
-#define protocol_WithdrawBalanceContract_init_zero {{0, {0}}}
+#define protocol_WithdrawBalanceContract_init_zero {{0}}
 #define protocol_UpdateAssetContract_init_zero   {{{NULL}, NULL}, {{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_ProposalCreateContract_init_zero {{0, {0}}, 0, {protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero}}
+#define protocol_ProposalCreateContract_init_zero {{0}, 0, {protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero, protocol_ProposalCreateContract_ParametersEntry_init_zero}}
 #define protocol_ProposalCreateContract_ParametersEntry_init_zero {0, 0}
-#define protocol_ProposalApproveContract_init_zero {{0, {0}}, 0, 0}
-#define protocol_ProposalDeleteContract_init_zero {{0, {0}}, 0}
-#define protocol_TriggerSmartContract_init_zero  {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0, 0}
-#define protocol_ExchangeCreateContract_init_zero {{0, {0}}, {0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeInjectContract_init_zero {{0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeWithdrawContract_init_zero {{0, {0}}, 0, {0, {0}}, 0}
-#define protocol_ExchangeTransactionContract_init_zero {{0, {0}}, 0, {0, {0}}, 0, 0}
+#define protocol_ProposalApproveContract_init_zero {{0}, 0, 0}
+#define protocol_ProposalDeleteContract_init_zero {{0}, 0}
+#define protocol_TriggerSmartContract_init_zero  {{0}, {0}, 0, {0, {0}}, 0, 0}
+#define protocol_ExchangeCreateContract_init_zero {{0}, {0, {0}}, 0, {0, {0}}, 0}
+#define protocol_ExchangeInjectContract_init_zero {{0}, 0, {0, {0}}, 0}
+#define protocol_ExchangeWithdrawContract_init_zero {{0}, 0, {0, {0}}, 0}
+#define protocol_ExchangeTransactionContract_init_zero {{0}, 0, {0, {0}}, 0, 0}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_DeployContract_owner_address_tag 1
@@ -401,21 +380,21 @@ X(a, STATIC,   SINGULAR, UENUM,    type,              3)
 
 #define protocol_AccountUpdateContract_FIELDLIST(X, a) \
 X(a, CALLBACK, SINGULAR, BYTES,    account_name,      1) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     2)
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     2)
 #define protocol_AccountUpdateContract_CALLBACK pb_default_field_callback
 #define protocol_AccountUpdateContract_DEFAULT NULL
 
 #define protocol_TransferContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
-X(a, STATIC,   SINGULAR, BYTES,    to_address,        2) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, to_address,        2) \
 X(a, STATIC,   SINGULAR, INT64,    amount,            3)
 #define protocol_TransferContract_CALLBACK NULL
 #define protocol_TransferContract_DEFAULT NULL
 
 #define protocol_TransferAssetContract_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, BYTES,    asset_name,        1) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     2) \
-X(a, STATIC,   SINGULAR, BYTES,    to_address,        3) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     2) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, to_address,        3) \
 X(a, STATIC,   SINGULAR, INT64,    amount,            4)
 #define protocol_TransferAssetContract_CALLBACK NULL
 #define protocol_TransferAssetContract_DEFAULT NULL
@@ -429,7 +408,7 @@ X(a, STATIC,   SINGULAR, INT32,    count,             5)
 #define protocol_VoteAssetContract_DEFAULT NULL
 
 #define protocol_VoteWitnessContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   REPEATED, MESSAGE,  votes,             2) \
 X(a, STATIC,   SINGULAR, BOOL,     support,           3)
 #define protocol_VoteWitnessContract_CALLBACK NULL
@@ -437,7 +416,7 @@ X(a, STATIC,   SINGULAR, BOOL,     support,           3)
 #define protocol_VoteWitnessContract_votes_MSGTYPE protocol_VoteWitnessContract_Vote
 
 #define protocol_VoteWitnessContract_Vote_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    vote_address,      1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, vote_address,      1) \
 X(a, STATIC,   SINGULAR, INT64,    vote_count,        2)
 #define protocol_VoteWitnessContract_Vote_CALLBACK NULL
 #define protocol_VoteWitnessContract_Vote_DEFAULT NULL
@@ -496,18 +475,18 @@ X(a, CALLBACK, SINGULAR, BYTES,    script,            2)
 #define protocol_DeployContract_DEFAULT NULL
 
 #define protocol_FreezeBalanceContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    frozen_balance,    2) \
 X(a, STATIC,   SINGULAR, INT64,    frozen_duration,   3) \
 X(a, STATIC,   SINGULAR, UENUM,    resource,         10) \
-X(a, STATIC,   SINGULAR, BYTES,    receiver_address,  15)
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, receiver_address,  15)
 #define protocol_FreezeBalanceContract_CALLBACK NULL
 #define protocol_FreezeBalanceContract_DEFAULT NULL
 
 #define protocol_UnfreezeBalanceContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, UENUM,    resource,         10) \
-X(a, STATIC,   SINGULAR, BYTES,    receiver_address,  15)
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, receiver_address,  15)
 #define protocol_UnfreezeBalanceContract_CALLBACK NULL
 #define protocol_UnfreezeBalanceContract_DEFAULT NULL
 
@@ -517,7 +496,7 @@ X(a, CALLBACK, SINGULAR, BYTES,    owner_address,     1)
 #define protocol_UnfreezeAssetContract_DEFAULT NULL
 
 #define protocol_WithdrawBalanceContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1)
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1)
 #define protocol_WithdrawBalanceContract_CALLBACK NULL
 #define protocol_WithdrawBalanceContract_DEFAULT NULL
 
@@ -531,7 +510,7 @@ X(a, STATIC,   SINGULAR, INT64,    new_public_limit,   5)
 #define protocol_UpdateAssetContract_DEFAULT NULL
 
 #define protocol_ProposalCreateContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   REPEATED, MESSAGE,  parameters,        2)
 #define protocol_ProposalCreateContract_CALLBACK NULL
 #define protocol_ProposalCreateContract_DEFAULT NULL
@@ -544,21 +523,21 @@ X(a, STATIC,   SINGULAR, INT64,    value,             2)
 #define protocol_ProposalCreateContract_ParametersEntry_DEFAULT NULL
 
 #define protocol_ProposalApproveContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    proposal_id,       2) \
 X(a, STATIC,   SINGULAR, BOOL,     is_add_approval,   3)
 #define protocol_ProposalApproveContract_CALLBACK NULL
 #define protocol_ProposalApproveContract_DEFAULT NULL
 
 #define protocol_ProposalDeleteContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    proposal_id,       2)
 #define protocol_ProposalDeleteContract_CALLBACK NULL
 #define protocol_ProposalDeleteContract_DEFAULT NULL
 
 #define protocol_TriggerSmartContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
-X(a, STATIC,   SINGULAR, BYTES,    contract_address,   2) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, contract_address,   2) \
 X(a, STATIC,   SINGULAR, INT64,    call_value,        3) \
 X(a, STATIC,   SINGULAR, BYTES,    data,              4) \
 X(a, STATIC,   SINGULAR, INT64,    call_token_value,   5) \
@@ -567,7 +546,7 @@ X(a, STATIC,   SINGULAR, INT64,    token_id,          6)
 #define protocol_TriggerSmartContract_DEFAULT NULL
 
 #define protocol_ExchangeCreateContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, BYTES,    first_token_id,    2) \
 X(a, STATIC,   SINGULAR, INT64,    first_token_balance,   3) \
 X(a, STATIC,   SINGULAR, BYTES,    second_token_id,   4) \
@@ -576,7 +555,7 @@ X(a, STATIC,   SINGULAR, INT64,    second_token_balance,   5)
 #define protocol_ExchangeCreateContract_DEFAULT NULL
 
 #define protocol_ExchangeInjectContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    exchange_id,       2) \
 X(a, STATIC,   SINGULAR, BYTES,    token_id,          3) \
 X(a, STATIC,   SINGULAR, INT64,    quant,             4)
@@ -584,7 +563,7 @@ X(a, STATIC,   SINGULAR, INT64,    quant,             4)
 #define protocol_ExchangeInjectContract_DEFAULT NULL
 
 #define protocol_ExchangeWithdrawContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    exchange_id,       2) \
 X(a, STATIC,   SINGULAR, BYTES,    token_id,          3) \
 X(a, STATIC,   SINGULAR, INT64,    quant,             4)
@@ -592,7 +571,7 @@ X(a, STATIC,   SINGULAR, INT64,    quant,             4)
 #define protocol_ExchangeWithdrawContract_DEFAULT NULL
 
 #define protocol_ExchangeTransactionContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, INT64,    exchange_id,       2) \
 X(a, STATIC,   SINGULAR, BYTES,    token_id,          3) \
 X(a, STATIC,   SINGULAR, INT64,    quant,             4) \
