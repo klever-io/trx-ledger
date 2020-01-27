@@ -132,12 +132,12 @@ typedef struct txContent_t {
 bool setContractType(uint8_t type, void * out);
 bool setExchangeContractDetail(uint8_t type, void * out);
 
-parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
+bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 bool parseExchange(const uint8_t *data, size_t dataLength, txContent_t *context);
 
 unsigned short print_amount(uint64_t amount, uint8_t *out,
                                 uint32_t outlen, uint8_t sun);
-bool adjustDecimals(char *src, uint32_t srcLength, char *target,
+bool adjustDecimals(const char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals);
 
 

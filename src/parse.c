@@ -16,10 +16,11 @@
 ********************************************************************************/
 
 #include "parse.h"
+#include <misc/TronApp.pb.h>
 #include <string.h>
 
-#include "tokens.h"
 #include "settings.h"
+#include "tokens.h"
 
 tokenDefinition_t* getKnownToken(txContent_t *context) {
     uint8_t i;
@@ -27,7 +28,7 @@ tokenDefinition_t* getKnownToken(txContent_t *context) {
     tokenDefinition_t *currentToken = NULL;
     for (i=0; i<NUM_TOKENS_TRC20; i++) {
         currentToken = (tokenDefinition_t *)PIC(&TOKENS_TRC20[i]);
-        if (os_memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) == 0) {
+        if (memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) == 0) {
             PRINTF("Selected token %d\n",i);
             return currentToken;
         }
@@ -35,7 +36,7 @@ tokenDefinition_t* getKnownToken(txContent_t *context) {
     return NULL;
 }
 
-bool adjustDecimals(char *src, uint32_t srcLength, char *target,
+bool adjustDecimals(const char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals) {
     uint32_t startOffset;
     uint32_t lastZeroOffset = 0;
@@ -130,150 +131,113 @@ unsigned short print_amount(uint64_t amount, uint8_t *out,
 bool setContractType(uint8_t type, void * out){
     switch (type){
         case ACCOUNTCREATECONTRACT:
-            os_memmove(out,"Account Create\0", 15);
+            strcpy(out, "Account Create");
             break;
         case VOTEASSETCONTRACT:
-            os_memmove(out,"Vote Asset\0", 11);
+            strcpy(out, "Vote Asset");
             break;
         case VOTEWITNESSCONTRACT:
-            os_memmove(out,"Vote Witness\0", 13);
+            strcpy(out,"Vote Witness");
             break;
         case WITNESSCREATECONTRACT:
-            os_memmove(out,"Witness Create\0", 15);
+            strcpy(out,"Witness Create");
             break;
         case ASSETISSUECONTRACT:
-            os_memmove(out,"Asset Issue\0", 13);
+            strcpy(out,"Asset Issue");
             break;
         case WITNESSUPDATECONTRACT:
-            os_memmove(out,"Witness Update\0", 15);
+            strcpy(out,"Witness Update");
             break; 
         case PARTICIPATEASSETISSUECONTRACT:
-            os_memmove(out,"Participate Asset\0", 18);
+            strcpy(out,"Participate Asset");
             break;
         case ACCOUNTUPDATECONTRACT:
-            os_memmove(out,"Account Update\0", 15);
+            strcpy(out,"Account Update");
             break;
         case FREEZEBALANCECONTRACT:
-            os_memmove(out,"Freeze Balance\0", 15);
+            strcpy(out,"Freeze Balance");
             break;
         case UNFREEZEBALANCECONTRACT:
-            os_memmove(out,"Unfreeze Balance\0", 17);
+            strcpy(out,"Unfreeze Balance");
             break;
         case WITHDRAWBALANCECONTRACT:
-            os_memmove(out,"Withdraw Balance\0", 17);
+            strcpy(out,"Withdraw Balance");
             break;
         case UNFREEZEASSETCONTRACT:
-            os_memmove(out,"Unfreeze Asset\0", 15);
+            strcpy(out,"Unfreeze Asset");
             break;
         case UPDATEASSETCONTRACT:
-            os_memmove(out,"Update Asset\0", 13);
+            strcpy(out,"Update Asset");
             break;
         case PROPOSALCREATECONTRACT:
-            os_memmove(out,"Proposal Create\0", 16);
+            strcpy(out,"Proposal Create");
             break;
         case PROPOSALAPPROVECONTRACT:
-            os_memmove(out,"Proposal Approve\0", 17);
+            strcpy(out,"Proposal Approve");
             break;
         case PROPOSALDELETECONTRACT:
-            os_memmove(out,"Proposal Delete\0", 16);
+            strcpy(out,"Proposal Delete");
             break;
         default: 
-        return false;
-    };
+            return false;
+    }
     return true;
 }
 
 bool setExchangeContractDetail(uint8_t type, void * out){
     switch (type){
         case EXCHANGECREATECONTRACT:
-            os_memmove((void *)out,"create\0", 7);
+            strcpy((void *)out,"create");
             break;
         case EXCHANGEINJECTCONTRACT:
-            os_memmove((void *)out,"inject\0", 7);
+            strcpy((void *)out,"inject");
             break;
         case EXCHANGEWITHDRAWCONTRACT:
-            os_memmove((void *)out,"withdraw\0", 9);
+            strcpy((void *)out,"withdraw");
             break;
         case EXCHANGETRANSACTIONCONTRACT:
-            os_memmove((void *)out,"transaction\0", 12);
+            strcpy((void *)out,"transaction");
             break;
         default: 
         return false;
-    };
+    }
     return true;
 }
 
 
+#include "../proto/core/Contract.pb.h"
+#include "../proto/core/Tron.pb.h"
+#include "../proto/misc/TronApp.pb.h"
+#include "pb_decode.h"
+
 // ALLOW SAME NAME TOKEN
 // CHECK SIGNATURE(ID+NAME+PRECISION)
 // Parse token Name and Signature
-parserStatus_e parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
-    parserStatus_e result = USTREAM_FAULT;
-    uint8_t index = 0;
-    uint8_t tokenNameValidation[33];
-    uint8_t tokenNameValidationLength = 0;
+bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
+  TokenDetails details = {};
 
-    PRINTF("parseTokenName: ");
-    for (int unsigned i = 0; i < dataLength; i++) {
-      PRINTF("%02X", data[i]);
-    }
-    PRINTF("\n");
-    BEGIN_TRY {
-        TRY {
-            // Get Token Name
-            if ((data[index]>>PB_FIELD_R)!=1 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            tokenNameValidationLength=data[index]; if (tokenNameValidationLength > 32) THROW(0x6a80); 
-            index++;if (index+tokenNameValidationLength > dataLength) THROW(0x6a80);
-            os_memmove(tokenNameValidation,data+index,tokenNameValidationLength);
-            tokenNameValidation[tokenNameValidationLength]='\0';
-            index+=tokenNameValidationLength; if (index>dataLength) THROW(0x6a80);
-            // Get decimals
-            if ((data[index]>>PB_FIELD_R)!=2 || (data[index]&PB_TYPE)!=0 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80);
-            // find end of base128
-            uint8_t decimals = 0;
-            // find end of base128
-            for(int b128=0; index<dataLength; ++index){
-                decimals += ((uint8_t)( data[index] & PB_BASE128DATA) << b128) ;
-                if ((data[index]&PB_BASE128) == 0) break;
-                b128+=7;
-            }
-            index++;if (index > dataLength) THROW(0x6a88);
-            // Get Signature
-            if ((data[index]>>PB_FIELD_R)!=3 || (data[index]&PB_TYPE)!=2 ) THROW(0x6a80);
-            index++;if (index>dataLength) THROW(0x6a80); 
-            index++;if (index+data[index-1] > dataLength) THROW(0x6a80);
-            // Validate token ID + Name
-            int ret = verifyTokenNameID((const char *)content->tokenNames[token_id],(const char *)tokenNameValidation,
-                        decimals,(uint8_t *)data+index, data[index-1], content->publicKeyContext);
-            if (ret!=1)
-                THROW(0x6a80);
-            
-            // UPDATE Token with Name[ID]
-            uint8_t tmp[MAX_TOKEN_LENGTH];
+  pb_istream_t stream = pb_istream_from_buffer(data, dataLength);
+  if (!pb_decode(&stream, TokenDetails_fields, &details)) {
+    return false;
+  }
 
-            snprintf((char *)tmp, MAX_TOKEN_LENGTH,"%s[%s]",
-                tokenNameValidation, content->tokenNames[token_id]);
-            content->tokenNamesLength[token_id] = strlen((const char *)tmp);
-            os_memmove(content->tokenNames[token_id], tmp, content->tokenNamesLength[token_id]+1);
-            content->decimals[token_id]=decimals;
-            
+  // Validate token ID + Name
+  if (verifyTokenNameID((const char *)content->tokenNames[token_id],
+                        details.name, details.precision,
+                        details.signature.bytes, details.signature.size,
+                        content->publicKeyContext) != 1) {
+    return false;
+  }
 
-            result = USTREAM_FINISHED;
-        }
-        CATCH(EXCEPTION_IO_RESET) {
-            result = EXCEPTION_IO_RESET;
-        }
-        CATCH_OTHER(e) {
-            result = USTREAM_FAULT;
-        }
-        FINALLY {
-        }
-    }
-    END_TRY;
-    return result;
- }
+  // UPDATE Token with Name[ID]
+  char tmp[MAX_TOKEN_LENGTH];
+  snprintf(tmp, MAX_TOKEN_LENGTH, "%s[%s]", details.name,
+           content->tokenNames[token_id]);
+  content->tokenNamesLength[token_id] = strlen((const char *)tmp);
+  strcpy((char *)content->tokenNames[token_id], tmp);
+  content->decimals[token_id] = details.precision;
+  return true;
+}
 
 static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
   for (unsigned int i = 0; i < 8; i++) {
@@ -294,11 +258,6 @@ static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
    strcpy(out, (char *)data);
    return true;
 }
-
-#include "../proto/core/Contract.pb.h"
-#include "../proto/core/Tron.pb.h"
-#include "../proto/misc/TronApp.pb.h"
-#include "pb_decode.h"
 
 static bool set_token_info(txContent_t *content, unsigned int token_index,
                            const char *name, const char *id, int precision) {
@@ -388,8 +347,8 @@ bool parseExchange(const uint8_t *data,
 }
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
-    os_memset(context, 0, sizeof(txContext_t));
-    os_memset(content, 0, sizeof(txContent_t));
+    memset(context, 0, sizeof(txContext_t));
+    memset(content, 0, sizeof(txContent_t));
     context->sha2 = sha2;
     context->initialized = true;
     cx_sha256_init(sha2); //init sha

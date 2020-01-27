@@ -26,10 +26,19 @@ typedef struct _ExchangeDetails {
     ExchangeDetails_signature_t signature;
 } ExchangeDetails;
 
+typedef PB_BYTES_ARRAY_T(72) TokenDetails_signature_t;
+typedef struct _TokenDetails {
+    char name[32];
+    uint32_t precision;
+    TokenDetails_signature_t signature;
+} TokenDetails;
+
 
 /* Initializer values for message structs */
 #define ExchangeDetails_init_default             {0, "", "", 0, "", "", 0, {0, {0}}}
+#define TokenDetails_init_default                {"", 0, {0, {0}}}
 #define ExchangeDetails_init_zero                {0, "", "", 0, "", "", 0, {0, {0}}}
+#define TokenDetails_init_zero                   {"", 0, {0, {0}}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define ExchangeDetails_exchangeId_tag           1
@@ -40,6 +49,9 @@ typedef struct _ExchangeDetails {
 #define ExchangeDetails_token2Name_tag           6
 #define ExchangeDetails_token2Precision_tag      7
 #define ExchangeDetails_signature_tag            8
+#define TokenDetails_name_tag                    1
+#define TokenDetails_precision_tag               2
+#define TokenDetails_signature_tag               3
 
 /* Struct field encoding specification for nanopb */
 #define ExchangeDetails_FIELDLIST(X, a) \
@@ -54,13 +66,23 @@ X(a, STATIC,   SINGULAR, BYTES,    signature,         8)
 #define ExchangeDetails_CALLBACK NULL
 #define ExchangeDetails_DEFAULT NULL
 
+#define TokenDetails_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, STRING,   name,              1) \
+X(a, STATIC,   SINGULAR, UINT32,   precision,         2) \
+X(a, STATIC,   SINGULAR, BYTES,    signature,         3)
+#define TokenDetails_CALLBACK NULL
+#define TokenDetails_DEFAULT NULL
+
 extern const pb_msgdesc_t ExchangeDetails_msg;
+extern const pb_msgdesc_t TokenDetails_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define ExchangeDetails_fields &ExchangeDetails_msg
+#define TokenDetails_fields &TokenDetails_msg
 
 /* Maximum encoded size of messages (where known) */
 #define ExchangeDetails_size                     181
+#define TokenDetails_size                        113
 
 #ifdef __cplusplus
 } /* extern "C" */

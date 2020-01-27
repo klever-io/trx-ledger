@@ -13,3 +13,9 @@ message ExchangeDetails {
 
     bytes signature = 8;
 }
+
+message TokenDetails {
+    string name = 1;
+    uint32 precision = 2;
+    bytes signature = 3;
+}

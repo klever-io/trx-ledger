@@ -4151,7 +4151,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
         PRINTF("Setting token name\nContract type: %d\n",txContent.contractType);
-        parserStatus_e e;
         switch (txContent.contractType){
             case TRANSFERASSETCONTRACT:
             case EXCHANGECREATECONTRACT:
@@ -4159,11 +4158,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if ((p1&0x07)>1)
                     THROW(0x6A80);
                 // Decode Token name and validate signature
-                e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
-                if (e != USTREAM_FINISHED) {
+                if (!parseTokenName((p1&0x07),workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
-                } 
+                    THROW(0x6802);
+                }
                 // if not last token name, return
                 if (!(p1&0x08)) THROW(0x9000);
                 dataLength = 0; 

@@ -9,4 +9,7 @@
 PB_BIND(ExchangeDetails, ExchangeDetails, AUTO)
 
 
+PB_BIND(TokenDetails, TokenDetails, AUTO)
+
+
 
