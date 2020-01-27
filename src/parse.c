@@ -406,39 +406,38 @@ static bool vote_witness_contract(txContent_t *content, pb_istream_t *stream) {
 
 static bool freeze_balance_contract(txContent_t *content,
                                     pb_istream_t *stream) {
-  protocol_FreezeBalanceContract contract = {};
-
-  if (!pb_decode(stream, protocol_FreezeBalanceContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_FreezeBalanceContract_fields,
+                 &msg.freeze_balance_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &contract.owner_address);
-  COPY_ADDRESS(content->destination, &contract.receiver_address);
-  content->resource = contract.resource;
+  COPY_ADDRESS(content->account, &msg.freeze_balance_contract.owner_address);
+  COPY_ADDRESS(content->destination,
+               &msg.freeze_balance_contract.receiver_address);
+  content->resource = msg.freeze_balance_contract.resource;
   return true;
 }
 
 static bool unfreeze_balance_contract(txContent_t *content,
                                       pb_istream_t *stream) {
-  protocol_UnfreezeBalanceContract contract = {};
-
-  if (!pb_decode(stream, protocol_UnfreezeBalanceContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_UnfreezeBalanceContract_fields,
+                 &msg.unfreeze_balance_contract)) {
     return false;
   }
-  content->resource = contract.resource;
+  content->resource = msg.unfreeze_balance_contract.resource;
 
-  COPY_ADDRESS(content->account, &contract.owner_address);
-  COPY_ADDRESS(content->destination, &contract.receiver_address);
+  COPY_ADDRESS(content->account, &msg.unfreeze_balance_contract.owner_address);
+  COPY_ADDRESS(content->destination,
+               &msg.unfreeze_balance_contract.receiver_address);
   return true;
 }
 
 static bool withdraw_balance_contract(txContent_t *content,
                                       pb_istream_t *stream) {
-  protocol_WithdrawBalanceContract contract = {};
-
-  if (!pb_decode(stream, protocol_WithdrawBalanceContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_WithdrawBalanceContract_fields,
+                 &msg.withdraw_balance_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &contract.owner_address);
+  COPY_ADDRESS(content->account, &msg.withdraw_balance_contract.owner_address);
   return true;
 }
 
@@ -456,37 +455,34 @@ static bool proposal_create_contract(txContent_t *content,
 
 static bool proposal_approve_contract(txContent_t *content,
                                       pb_istream_t *stream) {
-  protocol_ProposalApproveContract contract = {};
-
-  if (!pb_decode(stream, protocol_ProposalApproveContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_ProposalApproveContract_fields,
+                 &msg.proposal_approve_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &contract.owner_address);
+  COPY_ADDRESS(content->account, &msg.proposal_approve_contract.owner_address);
   return true;
 }
 
 static bool proposal_delete_contract(txContent_t *content,
                                      pb_istream_t *stream) {
-  protocol_ProposalDeleteContract contract = {};
-
-  if (!pb_decode(stream, protocol_ProposalDeleteContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_ProposalDeleteContract_fields,
+                 &msg.proposal_delete_contract)) {
     return false;
   }
 
-  content->exchangeID = contract.proposal_id;
-  COPY_ADDRESS(content->account, &contract.owner_address);
+  content->exchangeID = msg.proposal_delete_contract.proposal_id;
+  COPY_ADDRESS(content->account, &msg.proposal_delete_contract.owner_address);
   return true;
 }
 
 static bool account_update_contract(txContent_t *content,
                                     pb_istream_t *stream) {
-  protocol_AccountUpdateContract contract = {};
-
-  if (!pb_decode(stream, protocol_AccountUpdateContract_fields, &contract)) {
+  if (!pb_decode(stream, protocol_AccountUpdateContract_fields,
+                 &msg.account_update_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &contract.owner_address);
+  COPY_ADDRESS(content->account, &msg.account_update_contract.owner_address);
   return true;
 }
 

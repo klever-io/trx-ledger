@@ -4210,14 +4210,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // hash data
     cx_hash((cx_hash_t *)txContext.sha2, 0, workBuffer, dataLength, NULL, 32);
     txContent.bandwidth+=dataLength;
-    // check if any command request buffer queue
-    if (txContext.queueBufferLength>0){
-        PRINTF("Adding pending to workBuffer\n");
-        os_memmove(workBuffer+txContext.queueBufferLength,workBuffer,dataLength);
-        os_memmove(workBuffer,txContext.queueBuffer,txContext.queueBufferLength);
-        dataLength+=txContext.queueBufferLength;
-        txContext.queueBufferLength=0;
-    }
+
     // process buffer
     uint16_t txResult = processTx(workBuffer, dataLength, &txContent);
     PRINTF("txResult: %04x\n", txResult);

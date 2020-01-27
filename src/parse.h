@@ -36,6 +36,12 @@ typedef union {
   protocol_ExchangeInjectContract exchange_inject_contract;
   protocol_ExchangeWithdrawContract exchange_withdraw_contract;
   protocol_ExchangeTransactionContract exchange_transaction_contract;
+  protocol_AccountUpdateContract account_update_contract;
+  protocol_ProposalApproveContract proposal_approve_contract;
+  protocol_ProposalDeleteContract proposal_delete_contract;
+  protocol_WithdrawBalanceContract withdraw_balance_contract;
+  protocol_FreezeBalanceContract freeze_balance_contract;
+  protocol_UnfreezeBalanceContract  unfreeze_balance_contract;
 } contract_t;
 
 typedef enum parserStatus_e {
@@ -83,8 +89,6 @@ typedef struct stage_t {
 typedef struct txContext_t {
     cx_sha256_t *sha2;
     bool initialized;
-    uint8_t queueBuffer[60];
-    uint8_t queueBufferLength;
 } txContext_t;
 
 typedef struct publicKeyContext_t {
