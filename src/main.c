@@ -5021,14 +5021,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 );
                 G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
                 ui_approval_witnessvote_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_votes_transaction_nanos,(bagl_element_callback_t) ui_approval_votes_transaction_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         case FREEZEBALANCECONTRACT: // Freeze TRX
@@ -5051,16 +5051,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
                 ui_approval_freeze_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
+                     NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_freeze_nanos,(bagl_element_callback_t) ui_approval_freeze_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
-                    NULL);
             #endif // #if TARGET_ID
-
         break;
         default:
             // Write fullHash

@@ -399,8 +399,14 @@ static bool vote_witness_contract(txContent_t *content, pb_istream_t *stream) {
     return false;
   }
 
-  content->amount = msg.vote_witness_contract.votes_count;
+  content->numOfVotes = msg.vote_witness_contract.votes_count;
   COPY_ADDRESS(content->account, &msg.vote_witness_contract.owner_address);
+
+  for (uint64_t i = 0; i < content->numOfVotes; i++) {
+    content->voteCounts[i] = msg.vote_witness_contract.votes[i].vote_count;
+    COPY_ADDRESS(content->voteAddresses[i],
+                 &msg.vote_witness_contract.votes[i].vote_address);
+  }
   return true;
 }
 
@@ -410,9 +416,14 @@ static bool freeze_balance_contract(txContent_t *content,
                  &msg.freeze_balance_contract)) {
     return false;
   }
+  /* Tron only accepts 3 days freezing */
+  if (msg.freeze_balance_contract.frozen_duration != 3) {
+    return false;
+  }
   COPY_ADDRESS(content->account, &msg.freeze_balance_contract.owner_address);
   COPY_ADDRESS(content->destination,
                &msg.freeze_balance_contract.receiver_address);
+  content->amount = msg.freeze_balance_contract.frozen_balance;
   content->resource = msg.freeze_balance_contract.resource;
   return true;
 }
@@ -650,6 +661,7 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
     return USTREAM_FAULT;
   }
 
+  content->permission_id = transaction.contract->Permission_id;
   content->contractType = (contractType_e)transaction.contract->type;
 
   /* Transaction data */
