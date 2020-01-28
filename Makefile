@@ -25,11 +25,11 @@ APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LO
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-# APPVERSION = "1.0.0"  # $(file < VERSION)
+APPVERSION = $(file < VERSION)
 
-APPVERSION_M=1 # $(call splitVersion, $(APPVERSION), 1)
-APPVERSION_N=0 # $(call splitVersion, $(APPVERSION), 2)
-APPVERSION_P=0 # $(call splitVersion, $(APPVERSION), 3)
+APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
+APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
+APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
@@ -111,7 +111,7 @@ endif
 CC       := $(CLANGPATH)clang
 
 #CFLAGS   += -O0
-CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb-0.4.0-windows-x86 -Iproto
+CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
 
 AS     := $(GCCPATH)arm-none-eabi-gcc
 
@@ -119,13 +119,11 @@ LD       := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS  += -O3 -Os
 LDLIBS   += -lm -lgcc -lc
 
-SCRIPT_LD := script.ld
-
 # import rules to compile glyphs(/pone)
 include $(BOLOS_SDK)/Makefile.glyphs
 
 ### computed variables
-APP_SOURCE_PATH  += src
+APP_SOURCE_PATH  += src proto extra/nanopb
 SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
@@ -138,7 +136,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOS)
 
 	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux/src/ux_flow_engine.c)" ""
 		SDK_SOURCE_PATH  += lib_ux
-		DEFINES		       += HAVE_UX_FLOW		
+		DEFINES		       += HAVE_UX_FLOW
 	endif
 
 endif
