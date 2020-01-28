@@ -1603,11 +1603,6 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
 
-    /* FIXME: probably a bug here, need comments from developer */
-    memmove(G_io_apdu_buffer, transactionContext.bip32_path.indices,
-            transactionContext.bip32_path.length);
-    tx = transactionContext.bip32_path.length;
-
     // Get private key
     os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
             transactionContext.bip32_path.length, privateKeyData, NULL);
@@ -1618,8 +1613,8 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
                     G_io_apdu_buffer, 160);
     
     // Clear tmp buffer data
-    os_memset(&privateKey, 0, sizeof(privateKey));
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    explicit_bzero(&privateKey, sizeof(privateKey));
+    explicit_bzero(privateKeyData, sizeof(privateKeyData));
 
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
