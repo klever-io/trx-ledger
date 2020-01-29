@@ -70,8 +70,11 @@ transactionContext_t transactionContext;
 txContent_t txContent;
 txContext_t txContext;
 
-cx_sha3_t sha3;
-cx_sha256_t sha2;
+union hash_t {
+  // cx_sha3_t sha3;
+  cx_sha256_t sha2;
+} hash;
+
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
 volatile uint8_t customContractField;
@@ -4186,7 +4189,7 @@ UX_STEP_NOCB(
     ux_approval_exchange_wi_3_step,
     bnnn_paging,
     {
-      .title = "Excahnge ID",
+      .title = "Exchange ID",
       .text = toAddress,
     });
 UX_STEP_NOCB(
@@ -4674,6 +4677,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     // Add requested BIP path to tmp array
     if (read_bip32_path(dataBuffer, dataLength, &bip32_path) < 0) {
+        PRINTF("read_bip32_path failed\n");
         THROW(0x6A80);
     }
 
@@ -4691,11 +4695,12 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     // Get address from PK
     getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);
+                                // publicKeyContext.address,&hash.sha3);
+                      publicKeyContext.address,NULL);
                                 
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                publicKeyContext.address58, &sha2);
+                                publicKeyContext.address58, &hash.sha2);
     
     os_memmove((void *)toAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
@@ -4705,6 +4710,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         *tx=set_result_get_publicKey();
         THROW(0x9000);
     } else {
+      *tx = 0;
+      THROW(0x9000);
          
     // prepare for a UI based reply
 #if defined(TARGET_BLUE)
@@ -4745,7 +4752,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         workBuffer += ret;
         dataLength -= ret;
 
-        initTx(&txContext, &sha2, &txContent);
+        initTx(&txContext, &hash.sha2, &txContent);
         customContractField = 0;
         txContent.publicKeyContext = &publicKeyContext;
         
@@ -4826,11 +4833,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     if (txContent.permission_id>0){
         PRINTF("Set permission_id...\n");
         snprintf((char*)fromAddress, 5, "P%d - ",txContent.permission_id);
-        getBase58FromAddres(txContent.account, (void *)(fromAddress+4), &sha2);
+        getBase58FromAddres(txContent.account, (void *)(fromAddress+4), &hash.sha2);
         fromAddress[BASE58CHECK_ADDRESS_SIZE+5]='\0';
     } else {
         PRINTF("Regular transaction...\n");
-        getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
+        getBase58FromAddres(txContent.account, (void *)fromAddress, &hash.sha2);
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
     }
 
@@ -4850,7 +4857,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     if (!customContract) THROW(0x6B00);
                     customContractField = 1;
 
-                    getBase58FromAddres(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
+                    getBase58FromAddres(txContent.contractAddress, (uint8_t *)fullContract, &hash.sha2);
                     fullContract[BASE58CHECK_ADDRESS_SIZE]='\0';
                     snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
                     G_io_apdu_buffer[0]='\0';
@@ -4898,7 +4905,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddres(txContent.destination,
-                                        (uint8_t *)toAddress, &sha2);
+                                        (uint8_t *)toAddress, &hash.sha2);
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
 
             // get token name if any
@@ -4985,30 +4992,35 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
             #endif // #if TARGET_ID
         break;
-        case VOTEWITNESSCONTRACT:
+        case VOTEWITNESSCONTRACT: {
             // vote for SR
+            protocol_VoteWitnessContract *contract = &msg.vote_witness_contract;
+
             PRINTF("Voting!!\n");
-            PRINTF("Count: %d\n", txContent.numOfVotes);
-            os_memset((char *)G_io_apdu_buffer, 0, 200);
+            PRINTF("Count: %d\n", contract->votes_count);
+            memset(G_io_apdu_buffer, 0, 200);
             uint64_t totalVotes = 0;
-            for (uint8_t i=0; i < txContent.numOfVotes; i++) {
-                getBase58FromAddres(txContent.voteAddresses[i], (uint8_t *)fullContract, &sha2);
+
+            for (int i = 0; i < contract->votes_count; i++) {
+               getBase58FromAddres(contract->votes[i].vote_address,
+                                      (uint8_t *)fullContract, &hash.sha2);
+
             #if defined(TARGET_BLUE)
                 fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
                 snprintf(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
                     toAddress,
-                    (unsigned int)txContent.voteCounts[i]
+                    (unsigned int)contract->votes[i].vote_count
                 );
                 int lineLength = strlen((const char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)));
                 os_memset(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)+lineLength)
                     , 0x20, MAX_CHAR_PER_LINE - lineLength);
                 
-                totalVotes += txContent.voteCounts[i];
+                totalVotes += contract->votes[i].vote_count;
             #else
                 fillVoteAddressSlot((void *)G_io_apdu_buffer, (const char *)fullContract, i);
-                fillVoteAmountSlot((void *)G_io_apdu_buffer, txContent.voteCounts[i], i);
+                fillVoteAmountSlot((void *)G_io_apdu_buffer, contract->votes[i].vote_count, i);
             #endif
             }
 
@@ -5016,7 +5028,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 snprintf(
                     (char *)fullContract, sizeof(fullContract),"%d: %u",
-                    txContent.numOfVotes,
+                    contract->votes_count,
                     (unsigned int)totalVotes
                 );
                 G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
@@ -5030,6 +5042,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_votes_transaction_nanos,(bagl_element_callback_t) ui_approval_votes_transaction_prepro);
             #endif // #if TARGET_ID
+        }
         break;
         case FREEZEBALANCECONTRACT: // Freeze TRX
             if (txContent.resource == 0)
@@ -5039,11 +5052,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.amount,(void *)G_io_apdu_buffer,0, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddres(txContent.destination,
-                    (uint8_t *)toAddress, &sha2);
+                    (uint8_t *)toAddress, &hash.sha2);
                 PRINTF("Freezing to own %s", toAddress);
             } else {
                 getBase58FromAddres(txContent.account,
-                    (uint8_t *)toAddress, &sha2);
+                    (uint8_t *)toAddress, &hash.sha2);
                 PRINTF("Freezing to %s", toAddress);
             }
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
@@ -5148,19 +5161,21 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
     // Get address from PK
     getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);         
+                                // publicKeyContext.address,&hash.sha3);
+                      publicKeyContext.address,NULL);
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                (uint8_t *)fromAddress, &sha2);
+                                (uint8_t *)fromAddress, &hash.sha2);
     
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     // Get address from PK
     getAddressFromPublicKey(transactionContext.rawTx,
-                                publicKeyContext.address,&sha3);         
+                                // publicKeyContext.address,&hash.sha3);
+                            publicKeyContext.address,NULL);
     // Get Base58
     getBase58FromAddres(publicKeyContext.address,
-                                (uint8_t *)toAddress, &sha2);
+                                (uint8_t *)toAddress, &hash.sha2);
     
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -5206,13 +5221,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         dataLength -= 4;
 
         // Initialize message header + length
-        cx_keccak_init(&sha3, 256);
-        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL,32);
+        // cx_keccak_init(&hash.sha3, 256);
+        // cx_hash((cx_hash_t *)&hash.sha3, 0, (const uint8_t *)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL,32);
         
         char tmp[11];
         snprintf((char *)tmp, 11,"%d",transactionContext.rawTxLength);
-        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
-        cx_sha256_init(&sha2);
+        // cx_hash((cx_hash_t *)&hash.sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
+        cx_sha256_init(&hash.sha2);
 
     } else if (p1 != P1_MORE) {
         THROW(0x6B00);
@@ -5225,12 +5240,12 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         THROW(0x6A80);
     }
 
-    cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL,32);
-    cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL,32);
+    // cx_hash((cx_hash_t *)&hash.sha3, 0, workBuffer, dataLength, NULL,32);
+    cx_hash((cx_hash_t *)&hash.sha2, 0, workBuffer, dataLength, NULL,32);
     transactionContext.rawTxLength -= dataLength;
     if (transactionContext.rawTxLength == 0) {
-        cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, transactionContext.hash,32);
-        cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer, 0, hashMessage,32);
+        // cx_hash((cx_hash_t *)&hash.sha3, CX_LAST, workBuffer, 0, transactionContext.hash,32);
+        cx_hash((cx_hash_t *)&hash.sha2, CX_LAST, workBuffer, 0, hashMessage,32);
 
         #define HASH_LENGTH 4
         array_hexstr((char *)fullContract, hashMessage, HASH_LENGTH / 2);
@@ -5253,10 +5268,11 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
 
         // Get address from PK
         getAddressFromKey(&publicKeyContext.publicKey,
-                                    publicKeyContext.address,&sha3);         
+                                    // publicKeyContext.address,&hash.sha3);
+                          publicKeyContext.address,NULL);
         // Get Base58
         getBase58FromAddres(publicKeyContext.address,
-                                    (uint8_t *)fromAddress, &sha2);
+                                    (uint8_t *)fromAddress, &hash.sha2);
         
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 

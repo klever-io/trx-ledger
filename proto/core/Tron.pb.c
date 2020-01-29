@@ -15,7 +15,7 @@ PB_BIND(protocol_AccountId, protocol_AccountId, AUTO)
 PB_BIND(protocol_authority, protocol_authority, AUTO)
 
 
-PB_BIND(protocol_Transaction, protocol_Transaction, 2)
+PB_BIND(protocol_Transaction, protocol_Transaction, AUTO)
 
 
 PB_BIND(protocol_Transaction_Contract, protocol_Transaction_Contract, AUTO)
@@ -24,7 +24,7 @@ PB_BIND(protocol_Transaction_Contract, protocol_Transaction_Contract, AUTO)
 PB_BIND(protocol_Transaction_Result, protocol_Transaction_Result, AUTO)
 
 
-PB_BIND(protocol_Transaction_raw, protocol_Transaction_raw, 2)
+PB_BIND(protocol_Transaction_raw, protocol_Transaction_raw, AUTO)
 
 
 

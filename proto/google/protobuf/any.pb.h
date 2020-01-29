@@ -14,16 +14,15 @@ extern "C" {
 #endif
 
 /* Struct definitions */
-typedef PB_BYTES_ARRAY_T(128) google_protobuf_Any_value_t;
 typedef struct _google_protobuf_Any {
     pb_callback_t type_url;
-    google_protobuf_Any_value_t value;
+    pb_callback_t value;
 } google_protobuf_Any;
 
 
 /* Initializer values for message structs */
-#define google_protobuf_Any_init_default         {{{NULL}, NULL}, {0, {0}}}
-#define google_protobuf_Any_init_zero            {{{NULL}, NULL}, {0, {0}}}
+#define google_protobuf_Any_init_default         {{{NULL}, NULL}, {{NULL}, NULL}}
+#define google_protobuf_Any_init_zero            {{{NULL}, NULL}, {{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define google_protobuf_Any_type_url_tag         1
@@ -32,7 +31,7 @@ typedef struct _google_protobuf_Any {
 /* Struct field encoding specification for nanopb */
 #define google_protobuf_Any_FIELDLIST(X, a) \
 X(a, CALLBACK, SINGULAR, STRING,   type_url,          1) \
-X(a, STATIC,   SINGULAR, BYTES,    value,             2)
+X(a, CALLBACK, SINGULAR, BYTES,    value,             2)
 #define google_protobuf_Any_CALLBACK pb_default_field_callback
 #define google_protobuf_Any_DEFAULT NULL
 

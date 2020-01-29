@@ -1,4 +1,2 @@
-protocol.Transaction.raw.ref_block_bytes    max_size: 4
-protocol.Transaction.raw.ref_block_hash     max_size: 8
 protocol.Transaction.raw.contract           max_count: 1
-protocol.Transaction.raw.data               max_size: 256
+# protocol.Transaction.raw.data               max_size: 64

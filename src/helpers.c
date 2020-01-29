@@ -27,9 +27,10 @@ void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
 void getAddressFromPublicKey(uint8_t *publicKey, uint8_t *address,
                                 cx_sha3_t *sha3Context) {
     uint8_t hashAddress[32];
+    cx_sha3_t sha3;
 
-    cx_keccak_init(sha3Context, 256);
-    cx_hash((cx_hash_t *)sha3Context, CX_LAST, publicKey + 1, 64,
+    cx_keccak_init(&sha3, 256);
+    cx_hash((cx_hash_t *)&sha3, CX_LAST, publicKey + 1, 64,
             hashAddress, 32);
     
     os_memmove(address, hashAddress + 11, 21);

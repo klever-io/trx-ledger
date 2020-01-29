@@ -155,12 +155,11 @@ typedef struct _protocol_TransferContract {
     int64_t amount;
 } protocol_TransferContract;
 
-typedef PB_BYTES_ARRAY_T(128) protocol_TriggerSmartContract_data_t;
 typedef struct _protocol_TriggerSmartContract {
     pb_byte_t owner_address[21];
     pb_byte_t contract_address[21];
     int64_t call_value;
-    protocol_TriggerSmartContract_data_t data;
+    pb_callback_t data;
     int64_t call_token_value;
     int64_t token_id;
 } protocol_TriggerSmartContract;
@@ -238,7 +237,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ProposalCreateContract_ParametersEntry_init_default {0, 0}
 #define protocol_ProposalApproveContract_init_default {{0}, 0, 0}
 #define protocol_ProposalDeleteContract_init_default {{0}, 0}
-#define protocol_TriggerSmartContract_init_default {{0}, {0}, 0, {0, {0}}, 0, 0}
+#define protocol_TriggerSmartContract_init_default {{0}, {0}, 0, {{NULL}, NULL}, 0, 0}
 #define protocol_ExchangeCreateContract_init_default {{0}, {0, {0}}, 0, {0, {0}}, 0}
 #define protocol_ExchangeInjectContract_init_default {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_default {{0}, 0, {0, {0}}, 0}
@@ -265,7 +264,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ProposalCreateContract_ParametersEntry_init_zero {0, 0}
 #define protocol_ProposalApproveContract_init_zero {{0}, 0, 0}
 #define protocol_ProposalDeleteContract_init_zero {{0}, 0}
-#define protocol_TriggerSmartContract_init_zero  {{0}, {0}, 0, {0, {0}}, 0, 0}
+#define protocol_TriggerSmartContract_init_zero  {{0}, {0}, 0, {{NULL}, NULL}, 0, 0}
 #define protocol_ExchangeCreateContract_init_zero {{0}, {0, {0}}, 0, {0, {0}}, 0}
 #define protocol_ExchangeInjectContract_init_zero {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_zero {{0}, 0, {0, {0}}, 0}
@@ -539,10 +538,10 @@ X(a, STATIC,   SINGULAR, INT64,    proposal_id,       2)
 X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
 X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, contract_address,   2) \
 X(a, STATIC,   SINGULAR, INT64,    call_value,        3) \
-X(a, STATIC,   SINGULAR, BYTES,    data,              4) \
+X(a, CALLBACK, SINGULAR, BYTES,    data,              4) \
 X(a, STATIC,   SINGULAR, INT64,    call_token_value,   5) \
 X(a, STATIC,   SINGULAR, INT64,    token_id,          6)
-#define protocol_TriggerSmartContract_CALLBACK NULL
+#define protocol_TriggerSmartContract_CALLBACK pb_default_field_callback
 #define protocol_TriggerSmartContract_DEFAULT NULL
 
 #define protocol_ExchangeCreateContract_FIELDLIST(X, a) \
@@ -659,7 +658,7 @@ extern const pb_msgdesc_t protocol_ExchangeTransactionContract_msg;
 #define protocol_ProposalCreateContract_ParametersEntry_size 22
 #define protocol_ProposalApproveContract_size    36
 #define protocol_ProposalDeleteContract_size     34
-#define protocol_TriggerSmartContract_size       210
+/* protocol_TriggerSmartContract_size depends on runtime parameters */
 #define protocol_ExchangeCreateContract_size     65
 #define protocol_ExchangeInjectContract_size     55
 #define protocol_ExchangeWithdrawContract_size   55
