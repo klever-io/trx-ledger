@@ -78,6 +78,9 @@ else
 DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
 
+# nanopb
+DEFINES   += PB_NO_ERRMSG=1
+
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
