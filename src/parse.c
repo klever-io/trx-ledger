@@ -241,23 +241,19 @@ bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txCont
 }
 
 static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
-  for (unsigned int i = 0; i < 8; i++) {
-    PRINTF("%02x", data[i]);
+  if (size != TOKENID_SIZE && size != 1) {
+    return false;
   }
-  PRINTF("\n");
-   if (size != TOKENID_SIZE && size != 1) {
-     return false;
-   }
 
-   if (size == 1) {
-     if (data[0] != '_') {
-       return false;
-     }
-     strcpy(out, "TRX");
-     return true;
-   }
-   strcpy(out, (char *)data);
-   return true;
+  if (size == 1) {
+    if (data[0] != '_') {
+      return false;
+    }
+    strcpy(out, "TRX");
+    return true;
+  }
+  strcpy(out, (char *)data);
+  return true;
 }
 
 static bool set_token_info(txContent_t *content, unsigned int token_index,
@@ -492,7 +488,6 @@ static bool account_update_contract(txContent_t *content,
   return true;
 }
 
-/*
 static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_TriggerSmartContract_fields,
                  &msg.trigger_smart_contract)) {
@@ -545,7 +540,6 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
   return true;
 }
-*/
 
 static bool exchange_create_contract(txContent_t *content,
                                      pb_istream_t *stream) {
@@ -637,68 +631,75 @@ static bool exchange_transaction_contract(txContent_t *content,
   return true;
 }
 
-protocol_Transaction_raw transaction;
-
 typedef struct {
     const uint8_t *buf;
     size_t size;
 } buffer_t;
 
-bool pb_decode_contract(pb_istream_t *stream, const pb_field_t *field, void **arg) {
-  PRINTF("tag: %d\n", field->tag);
-
+bool pb_decode_contract_parameter(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+  PB_UNUSED(field);
   buffer_t *buffer = *arg;
+
   buffer->buf = stream->state;
   buffer->size = stream->bytes_left;
   return true;
 }
 
-parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content) {
-  // bool ret;
-  buffer_t contract_buffer;
+bool pb_get_tx_data_size(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+  PB_UNUSED(field);
+  uint64_t *data_size = *arg;
+  *data_size = (uint64_t)stream->bytes_left;
+  return true;
+}
+
+parserStatus_e processTx(uint8_t *buffer, uint32_t length,
+                         txContent_t *content) {
+  protocol_Transaction_raw transaction;
 
   if (length == 0) {
     return USTREAM_FINISHED;
   }
 
   memset(&transaction, 0, sizeof(transaction));
+  memset(&msg, 0, sizeof(msg));
 
-  for (unsigned int i = 0; i < length; i++) {
-      PRINTF("%02X", buffer[i]);
-  }
-  PRINTF("\n");
   pb_istream_t stream = pb_istream_from_buffer(buffer, length);
 
-  PRINTF("processTx\n");
-    transaction.contract->parameter.value.funcs.decode = pb_decode_contract;
-    transaction.contract->parameter.value.arg = &contract_buffer;
+  /* Set callbacks to retrieve "Contract" message bounds.
+   * This is required because contract type is not necessarily parsed at the
+   * time of the transaction is decoded (fields are not required to be ordered)
+   * and deserializing the nested contract inside the message requires too much
+   * stack for Nano S
+   */
+  buffer_t contract_buffer;
+  transaction.contract->parameter.value.funcs.decode =
+      pb_decode_contract_parameter;
+  transaction.contract->parameter.value.arg = &contract_buffer;
 
-    if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
+  /* Set callback to determine if transaction contains custom data.
+   * This allows to retrieve the size of arbitrary data. */
+  transaction.data.funcs.decode = pb_get_tx_data_size;
+  transaction.data.arg = &content->dataBytes;
+
+  if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
     return USTREAM_FAULT;
   }
-    PRINTF("Contract buffer: %x %x\n", contract_buffer.buf, contract_buffer.size);
 
-  // Contract must have a parameter
+  /* Contract must have a parameter */
   if (!transaction.contract->has_parameter) {
     return USTREAM_FAULT;
   }
 
   content->permission_id = transaction.contract->Permission_id;
   content->contractType = (contractType_e)transaction.contract->type;
-  PRINTF("Contract type assigned: %d\n", content->contractType);
 
+  if (!dataAllowed && content->dataBytes != 0) {
+    THROW(0x6a80);
+  }
 
-    /* Transaction data */
-  /*
-  if (transaction.data.size != 0) {
-    if (!dataAllowed)
-      THROW(0x6a80);
-    content->dataBytes = transaction.data.size;
-  }*/
-
-  pb_istream_t tx_stream = pb_istream_from_buffer(
-          contract_buffer.buf, contract_buffer.size);
-    bool ret;
+  pb_istream_t tx_stream =
+      pb_istream_from_buffer(contract_buffer.buf, contract_buffer.size);
+  bool ret;
   switch (transaction.contract->type) {
   case protocol_Transaction_Contract_ContractType_TransferContract:
     ret = transfer_contract(content, &tx_stream);
@@ -707,11 +708,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
   case protocol_Transaction_Contract_ContractType_TransferAssetContract:
     ret = transfer_asset_contract(content, &tx_stream);
     break;
-
-  case protocol_Transaction_Contract_ContractType_VoteWitnessContract: {
+  case protocol_Transaction_Contract_ContractType_VoteWitnessContract:
     ret = vote_witness_contract(content, &tx_stream);
     break;
-  }
   case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
     ret = freeze_balance_contract(content, &tx_stream);
     break;
@@ -733,9 +732,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length, txContent_t *content)
   case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
     ret = account_update_contract(content, &tx_stream);
     break;
-  /*case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
+  case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
     ret = trigger_smart_contract(content, &tx_stream);
-    break;*/
+    break;
   case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
     ret = exchange_create_contract(content, &tx_stream);
     break;

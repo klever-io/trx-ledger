@@ -1,2 +1,1 @@
 protocol.Transaction.raw.contract           max_count: 1
-# protocol.Transaction.raw.data               max_size: 64

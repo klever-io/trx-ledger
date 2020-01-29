@@ -19,41 +19,34 @@
 #include "base58.h"
 #include <stdbool.h>
 
-void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address,
-                                cx_sha3_t *sha3Context) {
-   return getAddressFromPublicKey(publicKey->W, address, sha3Context);
+void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *address) {
+  return getAddressFromPublicKey(publicKey->W, address);
 }
 
-void getAddressFromPublicKey(uint8_t *publicKey, uint8_t *address,
-                                cx_sha3_t *sha3Context) {
-    uint8_t hashAddress[32];
-    cx_sha3_t sha3;
+void getAddressFromPublicKey(const uint8_t *publicKey, uint8_t *address) {
+  uint8_t hashAddress[32];
+  cx_sha3_t sha3;
 
-    cx_keccak_init(&sha3, 256);
-    cx_hash((cx_hash_t *)&sha3, CX_LAST, publicKey + 1, 64,
-            hashAddress, 32);
-    
-    os_memmove(address, hashAddress + 11, 21);
-    address[0] = ADD_PRE_FIX_BYTE_MAINNET;
-    
+  cx_keccak_init(&sha3, 256);
+  cx_hash((cx_hash_t *)&sha3, CX_LAST, publicKey + 1, 64, hashAddress, 32);
+
+  memmove(address, hashAddress + 11, ADDRESS_SIZE);
+  address[0] = ADD_PRE_FIX_BYTE_MAINNET;
 }
 
-void getBase58FromAddres(uint8_t *address, uint8_t *out,
-                                cx_sha256_t* sha2) {
-    uint8_t sha256[32];
-    uint8_t addchecksum[ADDRESS_SIZE+4];
-    
-    cx_sha256_init(sha2);
-    cx_hash((cx_hash_t*)sha2, CX_LAST, address, 21, sha256, 32);
-    cx_sha256_init(sha2);
-    cx_hash((cx_hash_t*)sha2, CX_LAST, sha256, 32, sha256, 32);
-    
-    os_memmove(addchecksum, address , ADDRESS_SIZE);
-    os_memmove(addchecksum+ADDRESS_SIZE, sha256, 4);
-    
-    
-    encode_base_58(&addchecksum[0],25,(char *)out,BASE58CHECK_ADDRESS_SIZE);
-    
+void getBase58FromAddress(uint8_t *address, uint8_t *out, cx_sha256_t *sha2) {
+  uint8_t sha256[32];
+  uint8_t addchecksum[ADDRESS_SIZE + 4];
+
+  cx_sha256_init(sha2);
+  cx_hash((cx_hash_t *)sha2, CX_LAST, address, 21, sha256, 32);
+  cx_sha256_init(sha2);
+  cx_hash((cx_hash_t *)sha2, CX_LAST, sha256, 32, sha256, 32);
+
+  memmove(addchecksum, address, ADDRESS_SIZE);
+  memmove(addchecksum + ADDRESS_SIZE, sha256, 4);
+
+  encode_base_58(&addchecksum[0], 25, (char *)out, BASE58CHECK_ADDRESS_SIZE);
 }
 
 void transactionHash(uint8_t *raw, uint16_t dataLength,
