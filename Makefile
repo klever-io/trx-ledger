@@ -33,12 +33,12 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
-ICONNAME=icons/icon_blue.gif
+ICONNAME=icons/icon_blue.gif            # Name compatible w/ Blue SDK v2.1.1
 else
 ifeq ($(TARGET_NAME), TARGET_NANOX)
-ICONNAME=icons/icon_nanox.gif
+ICONNAME=icons/nanox_app_tron.gif
 else
-ICONNAME=icons/icon_r.gif
+ICONNAME=icons/nanos_app_tron.gif       # Names compatible w/ latest Nano S SDKs
 endif
 endif
 
@@ -78,6 +78,9 @@ else
 DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
 
+# nanopb
+DEFINES   += PB_NO_ERRMSG=1
+
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
@@ -111,7 +114,7 @@ endif
 CC       := $(CLANGPATH)clang
 
 #CFLAGS   += -O0
-CFLAGS   += -O3 -Os -Isrc/include
+CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
 
 AS     := $(GCCPATH)arm-none-eabi-gcc
 
@@ -123,7 +126,7 @@ LDLIBS   += -lm -lgcc -lc
 include $(BOLOS_SDK)/Makefile.glyphs
 
 ### computed variables
-APP_SOURCE_PATH  += src
+APP_SOURCE_PATH  += src proto extra/nanopb
 SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
@@ -136,7 +139,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOS)
 
 	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux/src/ux_flow_engine.c)" ""
 		SDK_SOURCE_PATH  += lib_ux
-		DEFINES		       += HAVE_UX_FLOW		
+		DEFINES		       += HAVE_UX_FLOW
 	endif
 
 endif

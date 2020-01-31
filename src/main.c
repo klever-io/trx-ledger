@@ -18,6 +18,7 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
+#include <sys/types.h>
 #include "helpers.h"
 
 #include "os_io_seproxyhal.h"
@@ -69,12 +70,12 @@ transactionContext_t transactionContext;
 txContent_t txContent;
 txContext_t txContext;
 
-cx_sha3_t sha3;
 cx_sha256_t sha2;
+
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
 volatile uint8_t customContractField;
-volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1];
+volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID 
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
 volatile char addressSummary[35];
 volatile char fullContract[MAX_TOKEN_LENGTH];
@@ -98,6 +99,26 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_address_cancel(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_signMessage_cancel(const bagl_element_t *e);
+
+#define VOTE_ADDRESS 0
+#define VOTE_ADDRESS_SIZE 15
+#define VOTE_AMOUNT VOTE_ADDRESS_SIZE
+#define VOTE_AMOUNT_SIZE 15
+#define VOTE_PACK (VOTE_ADDRESS_SIZE+VOTE_AMOUNT_SIZE)
+#define voteSlot(index, type) ( (index*VOTE_PACK)+type )
+
+void fillVoteAddressSlot(void *destination, const char * from, uint8_t index) {
+    os_memset(destination+voteSlot(index, VOTE_ADDRESS), 0, VOTE_PACK);
+    os_memmove(destination+voteSlot(index, VOTE_ADDRESS), from, 5);
+    os_memmove(destination+5+voteSlot(index, VOTE_ADDRESS), "...", 3);
+    os_memmove(destination+8+voteSlot(index, VOTE_ADDRESS), from+(BASE58CHECK_ADDRESS_SIZE-5), 5);
+    PRINTF("Vote Address: %d - %s\n", index, destination+(voteSlot(index, VOTE_ADDRESS)));
+}
+
+void fillVoteAmountSlot(void *destination, uint64_t value, uint8_t index) {
+    print_amount(value,destination+voteSlot(index, VOTE_AMOUNT),VOTE_AMOUNT_SIZE, 0);
+    PRINTF("Amount: %d - %s\n", index, destination+(voteSlot(index, VOTE_AMOUNT)));
+}
 
 void ui_idle(void);
 #ifdef HAVE_UX_FLOW
@@ -307,7 +328,7 @@ const ux_menu_entry_t menu_main[] = {
     {NULL, NULL, 0, &C_icon, "Use wallet to", "view accounts", 33, 12},
     {menu_settings, NULL, 0, NULL, "Settings", NULL, 0, 0},
     {menu_about, NULL, 0, NULL, "About", NULL, 0, 0},
-    {NULL, os_sched_exit, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
+    {NULL, (ux_menu_callback_t)os_sched_exit, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
     UX_MENU_END};
 
 #endif // #if TARGET_NANOS && !defined(HAVE_UX_FLOW)
@@ -537,7 +558,7 @@ const bagl_element_t ui_address_blue[] = {
 
 unsigned int ui_address_blue_prepro(const bagl_element_t *element) {
     if (element->component.userid > 0) {
-        unsigned int length = strlen(toAddress);
+        unsigned int length = strlen((const char *)toAddress);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
             os_memset((void *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
             os_memmove((void *)addressSummary,
@@ -830,12 +851,12 @@ const bagl_element_t ui_details_blue[] = {
 
 unsigned int ui_details_blue_prepro(const bagl_element_t *element) {
     if (element->component.userid == 1) {
-        strcpy(addressSummary, (const char *)PIC(ui_details_title));
+        strcpy((char *)addressSummary, (const char *)PIC(ui_details_title));
     } else if (element->component.userid > 0) {
         unsigned int length = strlen(ui_details_content);
         if (length >= (element->component.userid & 0xF) * MAX_CHAR_PER_LINE) {
-            os_memset((const char *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
-            os_memmove((const char *)addressSummary,
+            os_memset((void *)addressSummary, 0, MAX_CHAR_PER_LINE + 1);
+            os_memmove((void *)addressSummary,
                        (const char *) (ui_details_content + (element->component.userid & 0xF) *
                                                 MAX_CHAR_PER_LINE),
                        MIN(length - (element->component.userid & 0xF) *
@@ -856,8 +877,8 @@ unsigned int ui_details_blue_button(unsigned int button_mask,
 
 void ui_details_init(const char *title, const char *content,
                      callback_t back_callback) {
-    ui_details_title = title;
-    ui_details_content = content;
+    ui_details_title = (char *)title;
+    ui_details_content = (char *)content;
     ui_details_back_callback = back_callback;
     UX_DISPLAY(ui_details_blue, ui_details_blue_prepro);
 }
@@ -883,6 +904,8 @@ typedef enum {
     APPROVAL_EXCHANGE_CREATE,
     APPROVAL_EXCHANGE_TRANSACTION,
     APPROVAL_EXCHANGE_WITHDRAW_INJECT,
+    APPROVAL_WITNESSVOTE_TRANSACTION,
+    APPROVAL_FREEZEASSET_TRANSACTION,
     APPROVAL_SIGN_PERSONAL_MESSAGE,
     APPROVAL_CUSTOM_CONTRACT,
 } ui_approval_blue_state_t;
@@ -941,6 +964,26 @@ const char *const ui_approval_blue_details_name[][7] = {
         "FROM",
         "CONFIRM TRANSACTION",
         "Exchange MX Details",
+    },
+    /*APPROVAL_WITNESSVOTE_TRANSACTION*/
+    {
+        "TOTAL VOTES",
+        "DETAILS",
+        "FROM",
+        NULL,
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Witness Vote",
+    },
+    /*APPROVAL_FREEZE_TRANSACTION*/
+    {
+        "GAIN",
+        "AMOUNT",
+        "TO",
+        "FROM",
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Freeze TRX",
     },
     /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
     {
@@ -1542,6 +1585,31 @@ void ui_approval_exchange_transaction_blue_init(void) {
     ui_approval_blue_init();
 }
 
+void ui_approval_witnessvote_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_freeze_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_tx_cancel;
+    ui_approval_blue_values[0] = (const char*)fullContract;
+    ui_approval_blue_values[1] = (const char*)G_io_apdu_buffer;
+    ui_approval_blue_values[2] = (const char*)toAddress;
+    ui_approval_blue_values[3] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
 void ui_approval_exchange_create_blue_init(void) {
     // wipe all cases
     os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
@@ -1602,12 +1670,9 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
 
-    os_memmove(G_io_apdu_buffer, transactionContext.bip32Path, transactionContext.pathLength);
-    tx = transactionContext.pathLength;
-
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     
     tx = cx_ecdh(&privateKey, CX_ECDH_POINT,
@@ -1615,8 +1680,8 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
                     G_io_apdu_buffer, 160);
     
     // Clear tmp buffer data
-    os_memset(&privateKey, 0, sizeof(privateKey));
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    explicit_bzero(&privateKey, sizeof(privateKey));
+    explicit_bzero(privateKeyData, sizeof(privateKeyData));
 
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
@@ -2859,7 +2924,365 @@ unsigned int ui_approval_exchange_transaction_nanos_button(unsigned int button_m
     return 0;
 }
 
+// Show VOTES details for approval
+const bagl_element_t ui_approval_votes_transaction_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
 
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  31,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_EYE_BADGE  }, NULL, 0, 0, 0,
+    // NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Confirm",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Votes",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_ADDRESS)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_AMOUNT)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_ADDRESS)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_AMOUNT)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_ADDRESS)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_AMOUNT)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x05, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_ADDRESS)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x05, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_AMOUNT)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x06, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_ADDRESS)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x06, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_AMOUNT)),
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     
+
+     {{BAGL_LABELINE, 0x07, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Send From",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x07, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)fromAddress,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+  
+};
+
+unsigned int ui_approval_votes_transaction_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        if (ux_step > txContent.numOfVotes && ux_step < 0x06)
+            ux_step = 6;
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+            case 0x02:
+            case 0x03:
+            case 0x04:
+            case 0x05:
+            case 0x06:
+            case 0x07:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_votes_transaction_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
+
+// Show Freeze details for approval
+const bagl_element_t ui_approval_freeze_nanos[] = {
+    // type                               userid    x    y   w    h  str rad
+    // fill      fg        bg      fid iid  txt   touchparams...       ]
+    {{BAGL_RECTANGLE, 0x00, 0, 0, 128, 32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF,
+      0, 0},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    {{BAGL_ICON, 0x00, 3, 12, 7, 7, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CROSS},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_ICON, 0x00, 117, 13, 8, 6, 0, 0, 0, 0xFFFFFF, 0x000000, 0,
+      BAGL_GLYPH_ICON_CHECK},
+     NULL,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+    //{{BAGL_ICON                           , 0x01,  31,   9,  14,  14, 0, 0, 0
+    //, 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_EYE_BADGE  }, NULL, 0, 0, 0,
+    // NULL, NULL, NULL },
+    {{BAGL_LABELINE, 0x01, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Freeze For",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x01, 0, 26, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     (char *)fullContract,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x02, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Freeze To",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x02, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)toAddress,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x03, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Amount",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+    {{BAGL_LABELINE, 0x03, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+     (char *)G_io_apdu_buffer,
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+
+     {{BAGL_LABELINE, 0x04, 0, 12, 128, 32, 0, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_REGULAR_11px | BAGL_FONT_ALIGNMENT_CENTER, 0},
+     "Send From",
+     0,
+     0,
+     0,
+     NULL,
+     NULL,
+     NULL},
+     {{BAGL_LABELINE, 0x04, 23, 26, 82, 12, 0x80 | 10, 0, 0, 0xFFFFFF, 0x000000,
+      BAGL_FONT_OPEN_SANS_EXTRABOLD_11px | BAGL_FONT_ALIGNMENT_CENTER, 26},
+    (char *)fromAddress,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    NULL},
+  
+};
+
+unsigned int ui_approval_freeze_prepro(const bagl_element_t *element) {
+    unsigned int display = 1;
+    if (element->component.userid > 0) {
+        display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 0x01:
+            case 0x02:
+            case 0x03:
+            case 0x04:
+            case 0x05:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000,
+                    1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                    break;
+            }
+        }
+    }
+    return display;
+}
+
+unsigned int ui_approval_freeze_nanos_button(unsigned int button_mask,
+                                      unsigned int button_mask_counter) {
+    switch (button_mask) {
+    case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+        io_seproxyhal_touch_tx_cancel(NULL);
+        break;
+    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+        io_seproxyhal_touch_tx_ok(NULL);
+        break;
+    }
+    }
+    return 0;
+}
 
 // Show transactions details for Custom Contracts
 const bagl_element_t ui_approval_custom_contract_nanos[] = {
@@ -3483,6 +3906,178 @@ UX_DEF(ux_approval_exchange_create_data_warning_flow,
   &ux_approval_exchange_create_8_step
 );
 
+// WITNESS VOTE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_vote_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "votes",
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_2_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(0, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_3_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(1, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_4_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(2, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_5_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(3, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_6_step,
+    bnnn_paging,
+    {
+      .title = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_ADDRESS)),
+      .text = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_AMOUNT)),
+    });
+UX_STEP_NOCB(
+    ux_approval_vote_flow_7_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress,
+    });
+UX_STEP_VALID(
+    ux_approval_vote_flow_8_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_STEP_VALID(
+    ux_approval_vote_flow_9_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+UX_DEF(ux_approval_vote_flow,
+  &ux_approval_vote_flow_1_step,
+  &ux_approval_vote_flow_2_step,
+  &ux_approval_vote_flow_3_step,
+  &ux_approval_vote_flow_4_step,
+  &ux_approval_vote_flow_5_step,
+  &ux_approval_vote_flow_6_step,
+  &ux_approval_vote_flow_7_step,
+  &ux_approval_vote_flow_8_step,
+  &ux_approval_vote_flow_9_step
+);
+
+UX_DEF(ux_approval_vote_data_warning_flow,
+  &ux_approval_vote_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_vote_flow_2_step,
+  &ux_approval_vote_flow_3_step,
+  &ux_approval_vote_flow_4_step,
+  &ux_approval_vote_flow_5_step,
+  &ux_approval_vote_flow_6_step,
+  &ux_approval_vote_flow_7_step,
+  &ux_approval_vote_flow_8_step,
+  &ux_approval_vote_flow_9_step
+);
+
+// FREEZE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Review",
+      "freeze",
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_2_step,
+    bnnn_paging,
+    {
+      .title = "Gain",
+      .text = fullContract
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_3_step,
+    bnnn_paging,
+    {
+      .title = "Amount",
+      .text = G_io_apdu_buffer,
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_4_step,
+    bnnn_paging,
+    {
+      .title = "Freeze To",
+      .text = toAddress,
+    });
+UX_STEP_NOCB(
+    ux_approval_freeze_flow_5_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress,
+    });
+UX_STEP_VALID(
+    ux_approval_freeze_flow_6_step,
+    pbb,
+    io_seproxyhal_touch_tx_ok(NULL),
+    {
+      &C_icon_validate_14,
+      "Accept",
+      "and send",
+    });
+UX_STEP_VALID(
+    ux_approval_freeze_flow_7_step,
+    pb,
+    io_seproxyhal_touch_tx_cancel(NULL),
+    {
+      &C_icon_crossmark,
+      "Reject",
+    });
+
+UX_DEF(ux_approval_freeze_flow,
+  &ux_approval_freeze_flow_1_step,
+  &ux_approval_freeze_flow_2_step,
+  &ux_approval_freeze_flow_3_step,
+  &ux_approval_freeze_flow_4_step,
+  &ux_approval_freeze_flow_5_step,
+  &ux_approval_freeze_flow_6_step,
+  &ux_approval_freeze_flow_7_step
+);
+
+UX_DEF(ux_approval_freeze_data_warning_flow,
+  &ux_approval_freeze_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_freeze_flow_2_step,
+  &ux_approval_freeze_flow_3_step,
+  &ux_approval_freeze_flow_4_step,
+  &ux_approval_freeze_flow_5_step,
+  &ux_approval_freeze_flow_6_step,
+  &ux_approval_freeze_flow_7_step
+);
+
 // EXCHANGE TRANSACTION
 //////////////////////////////////////////////////////////////////////
 UX_STEP_NOCB(
@@ -3591,7 +4186,7 @@ UX_STEP_NOCB(
     ux_approval_exchange_wi_3_step,
     bnnn_paging,
     {
-      .title = "Excahnge ID",
+      .title = "Exchange ID",
       .text = toAddress,
     });
 UX_STEP_NOCB(
@@ -4036,26 +4631,40 @@ uint32_t set_result_get_publicKey() {
     return tx;
 }
 
+off_t read_bip32_path(const uint8_t *buffer, size_t length,
+                      bip32_path_t *path) {
+  if (length < 1) {
+    return -1;
+  }
+  unsigned int path_length = *buffer++;
+
+  if (path_length < 1 || path_length > MAX_BIP32_PATH) {
+    PRINTF("Invalid path\n");
+    return -1;
+  }
+
+  if (length < 1 + 4 * path_length) {
+    return -1;
+  }
+  path->length = path_length;
+  for (unsigned int i = 0; i < path_length; i++) {
+    path->indices[i] = U4BE(buffer, 0);
+    buffer += 4;
+  }
+  return 1 + 4 * path_length;
+}
+
 // APDU public key
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         uint16_t dataLength, volatile unsigned int *flags,
                         volatile unsigned int *tx) {
-    //Clear Buffer                        
-    UNUSED(dataLength);
     // Get private key data
     uint8_t privateKeyData[33];
-    uint32_t bip32Path[MAX_BIP32_PATH];  
-    uint32_t i;
-    uint8_t bip32PathLength = *(dataBuffer++);
+    bip32_path_t bip32_path;
     cx_ecfp_private_key_t privateKey;
     
     uint8_t p2Chain = p2 & 0x3F;   
 
-
-    if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
-        THROW(0x6A80);
-    }
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) {
         THROW(0x6B00);
     }
@@ -4064,14 +4673,14 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
 
     // Add requested BIP path to tmp array
-    for (i = 0; i < bip32PathLength; i++) {
-        bip32Path[i] = U4BE(dataBuffer,0);
-        dataBuffer += 4;
+    if (read_bip32_path(dataBuffer, dataLength, &bip32_path) < 0) {
+        PRINTF("read_bip32_path failed\n");
+        THROW(0x6A80);
     }
-    
+
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, bip32PathLength,
-                               privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path.indices,
+                               bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4082,11 +4691,10 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Get address from PK
-    getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);
-                                
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
+
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
+    getBase58FromAddress(publicKeyContext.address,
                                 publicKeyContext.address58, &sha2);
     
     os_memmove((void *)toAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
@@ -4097,6 +4705,8 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
         *tx=set_result_get_publicKey();
         THROW(0x9000);
     } else {
+      *tx = 0;
+      THROW(0x9000);
          
     // prepare for a UI based reply
 #if defined(TARGET_BLUE)
@@ -4127,28 +4737,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;
     uint256_t uint256;
 
-    if (dataLength>MAX_RAW_TX){
-        PRINTF("RawTX buffer overflow\n");
-        THROW(0x6A80);
-    }
-
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
             THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
 
         initTx(&txContext, &sha2, &txContent);
         customContractField = 0;
@@ -4156,7 +4753,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
         PRINTF("Setting token name\nContract type: %d\n",txContent.contractType);
-        parserStatus_e e;
         switch (txContent.contractType){
             case TRANSFERASSETCONTRACT:
             case EXCHANGECREATECONTRACT:
@@ -4164,11 +4760,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if ((p1&0x07)>1)
                     THROW(0x6A80);
                 // Decode Token name and validate signature
-                e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
-                if (e != USTREAM_FINISHED) {
+                if (!parseTokenName((p1&0x07),workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
-                } 
+                    THROW(0x6802);
+                }
                 // if not last token name, return
                 if (!(p1&0x08)) THROW(0x9000);
                 dataLength = 0; 
@@ -4184,10 +4779,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if (!(p1&0x08)) THROW(0x6A80);
                 PRINTF("Decoding Exchange\n");
                 // Decode Token name and validate signature
-                e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent);
-                if ( e != USTREAM_FINISHED) {
+                if (!parseExchange(workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
+                    THROW(0x6802);
                 }
                 dataLength = 0;
                 break;
@@ -4210,16 +4804,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // hash data
     cx_hash((cx_hash_t *)txContext.sha2, 0, workBuffer, dataLength, NULL, 32);
     txContent.bandwidth+=dataLength;
-    // check if any command request buffer queue
-    if (txContext.queueBufferLength>0){
-        PRINTF("Adding pending to workBuffer\n");
-        os_memmove(workBuffer+txContext.queueBufferLength,workBuffer,dataLength);
-        os_memmove(workBuffer,txContext.queueBuffer,txContext.queueBufferLength);
-        dataLength+=txContext.queueBufferLength;
-        txContext.queueBufferLength=0;
-    }
+
     // process buffer
-    uint16_t txResult = processTx(&txContext, workBuffer, dataLength, &txContent);
+    uint16_t txResult = processTx(workBuffer, dataLength, &txContent);
     PRINTF("txResult: %04x\n", txResult);
     switch (txResult) {
         case USTREAM_PROCESSING:
@@ -4238,8 +4825,16 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     cx_hash((cx_hash_t *)txContext.sha2, CX_LAST, workBuffer,
             0, transactionContext.hash, 32);
 
-    getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
-            fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
+    if (txContent.permission_id>0){
+        PRINTF("Set permission_id...\n");
+        snprintf((char*)fromAddress, 5, "P%d - ",txContent.permission_id);
+        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2);
+        fromAddress[BASE58CHECK_ADDRESS_SIZE+5]='\0';
+    } else {
+        PRINTF("Regular transaction...\n");
+        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2);
+        fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+    }
 
     switch (txContent.contractType){
         case TRANSFERCONTRACT: // TRX Transfer
@@ -4257,7 +4852,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     if (!customContract) THROW(0x6B00);
                     customContractField = 1;
 
-                    getBase58FromAddres(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
+                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
                     fullContract[BASE58CHECK_ADDRESS_SIZE]='\0';
                     snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
                     G_io_apdu_buffer[0]='\0';
@@ -4304,8 +4899,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             }else
                 print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
-            getBase58FromAddres(txContent.destination,
-                                        (uint8_t *)toAddress, &sha2);
+            getBase58FromAddress(txContent.destination, (uint8_t *)toAddress,
+                                 &sha2);
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
 
             // get token name if any
@@ -4392,6 +4987,88 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
             #endif // #if TARGET_ID
         break;
+        case VOTEWITNESSCONTRACT: {
+            // vote for SR
+            protocol_VoteWitnessContract *contract = &msg.vote_witness_contract;
+
+            PRINTF("Voting!!\n");
+            PRINTF("Count: %d\n", contract->votes_count);
+            memset(G_io_apdu_buffer, 0, 200);
+            uint64_t totalVotes = 0;
+
+            for (int i = 0; i < contract->votes_count; i++) {
+              getBase58FromAddress(contract->votes[i].vote_address,
+                                   (uint8_t *)fullContract, &sha2);
+
+#if defined(TARGET_BLUE)
+                fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
+                snprintf(
+                    (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
+                    toAddress,
+                    (unsigned int)contract->votes[i].vote_count
+                );
+                int lineLength = strlen((const char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)));
+                os_memset(
+                    (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)+lineLength)
+                    , 0x20, MAX_CHAR_PER_LINE - lineLength);
+                
+                totalVotes += contract->votes[i].vote_count;
+            #else
+                fillVoteAddressSlot((void *)G_io_apdu_buffer, (const char *)fullContract, i);
+                fillVoteAmountSlot((void *)G_io_apdu_buffer, contract->votes[i].vote_count, i);
+            #endif
+            }
+
+            // TODO: ui element BLUE/NANOX
+            #if defined(TARGET_BLUE)
+                snprintf(
+                    (char *)fullContract, sizeof(fullContract),"%d: %u",
+                    contract->votes_count,
+                    (unsigned int)totalVotes
+                );
+                G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
+                ui_approval_witnessvote_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
+                    NULL);
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 7;
+                UX_DISPLAY(ui_approval_votes_transaction_nanos,(bagl_element_callback_t) ui_approval_votes_transaction_prepro);
+            #endif // #if TARGET_ID
+        }
+        break;
+        case FREEZEBALANCECONTRACT: // Freeze TRX
+            if (txContent.resource == 0)
+                os_memmove((void *)fullContract, "Bandwidth\0", 10);
+            else os_memmove((void *)fullContract, "Energy\0", 7);
+
+            print_amount(txContent.amount,(void *)G_io_apdu_buffer,0, SUN_DIG);
+            if (strlen((const char *)txContent.destination)>0) {
+                getBase58FromAddress(txContent.destination,
+                    (uint8_t *)toAddress, &sha2);
+                PRINTF("Freezing to own %s", toAddress);
+            } else {
+                getBase58FromAddress(txContent.account,
+                    (uint8_t *)toAddress, &sha2);
+                PRINTF("Freezing to %s", toAddress);
+            }
+            toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
+                ui_approval_freeze_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
+                     NULL);
+            #elif defined(TARGET_NANOS)
+                ux_step = 0;
+                ux_step_count = 5;
+                UX_DISPLAY(ui_approval_freeze_nanos,(bagl_element_callback_t) ui_approval_freeze_prepro);
+            #endif // #if TARGET_ID
+        break;
         default:
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
@@ -4444,7 +5121,6 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;    
     uint8_t privateKeyData[32];
     cx_ecfp_private_key_t privateKey;
     
@@ -4452,20 +5128,12 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6B00);
     }
 
-    transactionContext.pathLength = workBuffer[0];
-    if ((transactionContext.pathLength < 0x01) ||
-        (transactionContext.pathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
+    off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+    if (ret < 0) {
         THROW(0x6a80);
     }
-    workBuffer++;
-    dataLength--;
-
-    for (i = 0; i < transactionContext.pathLength; i++) {
-        transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-        workBuffer += 4;
-        dataLength -= 4;
-    }
+    workBuffer += ret;
+    dataLength -= ret;
     if (dataLength != 65) {
         THROW(0x6700);
     }
@@ -4475,8 +5143,8 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     transactionContext.rawTxLength = dataLength;
 
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4487,21 +5155,19 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Get address from PK
-    getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);         
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
+    getBase58FromAddress(publicKeyContext.address,
                                 (uint8_t *)fromAddress, &sha2);
     
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     // Get address from PK
-    getAddressFromPublicKey(transactionContext.rawTx,
-                                publicKeyContext.address,&sha3);         
+    getAddressFromPublicKey(transactionContext.rawTx, publicKeyContext.address);
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
-                                (uint8_t *)toAddress, &sha2);
-    
+    getBase58FromAddress(publicKeyContext.address, (uint8_t *)toAddress,
+                         &sha2);
+
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     #if defined(TARGET_BLUE)
@@ -4523,10 +5189,10 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
 void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
   UNUSED(tx);
-  uint32_t i;
   uint8_t hashMessage[32];
   uint8_t privateKeyData[32];
   cx_ecfp_private_key_t privateKey;
+  cx_sha3_t sha3;
 
     if (dataLength>MAX_RAW_TX){
         PRINTF("RawTX buffer overflow\n");
@@ -4534,19 +5200,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     }
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
-            THROW(0x6a80);
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
+          THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
+
         // Message Length
         transactionContext.rawTxLength = U4BE(workBuffer, 0);
         workBuffer += 4;
@@ -4554,8 +5214,9 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
 
         // Initialize message header + length
         cx_keccak_init(&sha3, 256);
-        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL,32);
-        
+        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC,
+                sizeof(SIGN_MAGIC) - 1, NULL, 32);
+
         char tmp[11];
         snprintf((char *)tmp, 11,"%d",transactionContext.rawTxLength);
         cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
@@ -4587,8 +5248,8 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         array_hexstr((char *)fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
 
         // Get private key
-        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-                transactionContext.pathLength, privateKeyData, NULL);
+        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+                transactionContext.bip32_path.length, privateKeyData, NULL);
 
         cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
         cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4600,9 +5261,9 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
 
         // Get address from PK
         getAddressFromKey(&publicKeyContext.publicKey,
-                                    publicKeyContext.address,&sha3);         
+                          publicKeyContext.address);
         // Get Base58
-        getBase58FromAddres(publicKeyContext.address,
+        getBase58FromAddress(publicKeyContext.address,
                                     (uint8_t *)fromAddress, &sha2);
         
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
@@ -4712,12 +5373,15 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     END_TRY;
 }
 
+#include "usbd_core.h"
 
 // App main loop
 void tron_main(void) {
     volatile unsigned int rx = 0;
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
+
+    USBD_Device.dev_state = USBD_STATE_CONFIGURED;
 
     // DESIGN NOTE: the bootloader ignores the way APDU are fetched. The only
     // goal is to retrieve APDU.

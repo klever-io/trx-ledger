@@ -408,9 +408,6 @@ v4.vote_count=1000
 v5 = newContract.votes.add()
 v5.vote_address=bytes.fromhex(address_hex("TSNbzxac4WhxN91XvaUfPTKP2jNT18mP6T"))
 v5.vote_count=1000
-v6 = newContract.votes.add()
-v6.vote_address=bytes.fromhex(address_hex("TFA1qpUkQ1yBDw4pgZKx25wEZAqkjGoZo1"))
-v6.vote_count=1000
 # End vote list
 c = tx.raw_data.contract.add()
 c.type = tron.Transaction.Contract.VoteWitnessContract

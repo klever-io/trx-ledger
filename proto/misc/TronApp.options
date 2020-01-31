@@ -1,0 +1,8 @@
+ExchangeDetails.token1Id    max_size: 8   /* Must be  or 1 */
+ExchangeDetails.token1Name  max_size: 32
+ExchangeDetails.token2Id    max_size: 8   /* Must be  or 1 */
+ExchangeDetails.token2Name  max_size: 32
+ExchangeDetails.signature   max_size: 72
+
+TokenDetails.name           max_size: 32
+TokenDetails.signature      max_size: 72
