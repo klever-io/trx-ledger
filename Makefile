@@ -33,12 +33,12 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
-ICONNAME=icons/blue_app_tron.gif
+ICONNAME=icons/icon_blue.gif            # Name compatible w/ Blue SDK v2.1.1
 else
 ifeq ($(TARGET_NAME), TARGET_NANOX)
 ICONNAME=icons/nanox_app_tron.gif
 else
-ICONNAME=icons/nanos_app_tron.gif
+ICONNAME=icons/nanos_app_tron.gif       # Names compatible w/ latest Nano S SDKs
 endif
 endif
 

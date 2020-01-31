@@ -410,11 +410,15 @@ int verifyTokenNameID(const char *tokenId, const char *tokenName, uint8_t decima
    
     cx_ecfp_init_public_key(CX_CURVE_256K1,(uint8_t *)PIC(&token_public_key), 65, &(publicKeyContext->publicKey));
     
+#ifndef TARGET_BLUE
     io_seproxyhal_io_heartbeat();
+#endif // TARGET_BLUE
     int ret = cx_ecdsa_verify((cx_ecfp_public_key_t WIDE *)&(publicKeyContext->publicKey), CX_LAST,
                     CX_SHA256, hash, 32, 
                     signature, signatureLength);
+#ifndef TARGET_BLUE
     io_seproxyhal_io_heartbeat();
+#endif // TARGET_BLUE
 
     return ret;
 }
@@ -428,11 +432,15 @@ int verifyExchangeID(const unsigned char *exchangeValidation, uint8_t datLength,
    
     cx_ecfp_init_public_key(CX_CURVE_256K1,(uint8_t *)PIC(&token_public_key), 65, &(publicKeyContext->publicKey));
     
+#ifndef TARGET_BLUE
     io_seproxyhal_io_heartbeat();
+#endif // TARGET_BLUE
     int ret = cx_ecdsa_verify((cx_ecfp_public_key_t WIDE *)&(publicKeyContext->publicKey), CX_LAST,
                     CX_SHA256, hash, 32, 
                     signature, signatureLength);
+#ifndef TARGET_BLUE
     io_seproxyhal_io_heartbeat();
+#endif // TARGET_BLUE
 
     return ret;
 }
