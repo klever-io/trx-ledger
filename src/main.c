@@ -18,6 +18,7 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
+#include <sys/types.h>
 #include "helpers.h"
 
 #include "os_io_seproxyhal.h"
@@ -69,8 +70,8 @@ transactionContext_t transactionContext;
 txContent_t txContent;
 txContext_t txContext;
 
-cx_sha3_t sha3;
 cx_sha256_t sha2;
+
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
 volatile uint8_t customContractField;
@@ -120,16 +121,16 @@ void fillVoteAmountSlot(void *destination, uint64_t value, uint8_t index) {
 }
 
 void ui_idle(void);
-#ifdef TARGET_NANOX
+#ifdef HAVE_UX_FLOW
 #include "ux.h"
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
-#else // TARGET_NANOX
+#else // HAVE_UX_FLOW
 ux_state_t ux;
 // display stepped screens
 unsigned int ux_step;
 unsigned int ux_step_count;
-#endif // TARGET_NANOX
+#endif // HAVE_UX_FLOW
 
 const bagl_element_t *ui_menu_item_out_over(const bagl_element_t *e) {
     // the selection rectangle is after the none|touchable
@@ -264,7 +265,7 @@ unsigned int ui_idle_blue_button(unsigned int button_mask,
 }
 #endif // #if TARGET_BLUE
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_settings[];
@@ -330,7 +331,7 @@ const ux_menu_entry_t menu_main[] = {
     {NULL, (ux_menu_callback_t)os_sched_exit, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
     UX_MENU_END};
 
-#endif // #if TARGET_NANOS
+#endif // #if TARGET_NANOS && !defined(HAVE_UX_FLOW)
 
 #if defined(TARGET_BLUE)
 const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
@@ -579,7 +580,7 @@ unsigned int ui_address_blue_button(unsigned int button_mask,
 }
 #endif // #if defined(TARGET_BLUE)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 const bagl_element_t ui_address_nanos[] = {
     // type                               userid    x    y   w    h  str rad
     // fill      fg        bg      fid iid  txt   touchparams...       ]
@@ -675,7 +676,7 @@ unsigned int ui_address_prepro(const bagl_element_t *element) {
 
 unsigned int ui_address_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter);
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 #if defined(TARGET_BLUE)
 // reuse addressSummary for each line content
@@ -1669,21 +1670,18 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     cx_ecfp_private_key_t privateKey;
     uint32_t tx = 0;
 
-    os_memmove(G_io_apdu_buffer, transactionContext.bip32Path, transactionContext.pathLength);
-    tx = transactionContext.pathLength;
-
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     
     tx = cx_ecdh(&privateKey, CX_ECDH_POINT,
-                    transactionContext.rawTx, 65,
+                    transactionContext.signature, 65,
                     G_io_apdu_buffer, 160);
     
     // Clear tmp buffer data
-    os_memset(&privateKey, 0, sizeof(privateKey));
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    explicit_bzero(&privateKey, sizeof(privateKey));
+    explicit_bzero(privateKeyData, sizeof(privateKeyData));
 
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
@@ -1807,7 +1805,7 @@ static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
 
 #endif // #if defined(TARGET_BLUE)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 unsigned int ui_approval_pgp_ecdh_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter) {
     switch (button_mask) {
@@ -1995,9 +1993,9 @@ unsigned int ui_approval_signMessage_nanos_button(unsigned int button_mask, unsi
     return 0;
 }
 
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 const bagl_element_t ui_approval_simple_nanos[] = {
     // type                               userid    x    y   w    h  str rad
     // fill      fg        bg      fid iid  txt   touchparams...       ]
@@ -2133,10 +2131,10 @@ unsigned int ui_approval_simple_prepro(const bagl_element_t *element) {
 
 unsigned int ui_approval_simple_nanos_button(unsigned int button_mask,
                                      unsigned int button_mask_counter);
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 
-#if defined(TARGET_NANOS)
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 // Show transactions details for approval
 const bagl_element_t ui_approval_nanos[] = {
     // type                               userid    x    y   w    h  str rad
@@ -3506,9 +3504,9 @@ unsigned int ui_approval_custom_contract_nanos_button(unsigned int button_mask,
     return 0;
 }
 
-#endif // #if defined(TARGET_NANOS)
+#endif // #if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
-#if defined(TARGET_NANOX)
+#if defined(HAVE_UX_FLOW)
 
 void display_settings(void);
 void switch_settings_contract_data();
@@ -3556,6 +3554,28 @@ UX_DEF(ux_idle_flow,
 );
 
 
+#if defined(TARGET_NANOS)
+
+UX_STEP_VALID(
+    ux_settings_flow_1_step,
+    bnnn_paging,
+    switch_settings_contract_data(),
+    {
+      .title = "Transactions data",
+      .text = addressSummary,
+    });
+
+UX_STEP_VALID(
+    ux_settings_flow_2_step,
+    bnnn_paging,
+    switch_settings_custom_contracts(),
+    {
+      .title = "Custom contracts",
+      .text = addressSummary + 20
+    });
+
+#else
+
 UX_STEP_VALID(
     ux_settings_flow_1_step,
     bnnn,
@@ -3577,6 +3597,8 @@ UX_STEP_VALID(
       "contracts",
       addressSummary + 20
     });
+
+#endif
 
 UX_STEP_VALID(
     ux_settings_flow_3_step,
@@ -4164,7 +4186,7 @@ UX_STEP_NOCB(
     ux_approval_exchange_wi_3_step,
     bnnn_paging,
     {
-      .title = "Excahnge ID",
+      .title = "Exchange ID",
       .text = toAddress,
     });
 UX_STEP_NOCB(
@@ -4428,19 +4450,19 @@ UX_DEF(ux_approval_custom_contract_data_warning_flow,
 );
 
 
-#endif // #if defined(TARGET_NANOX)
+#endif // #if defined(HAVE_UX_FLOW)
 
 void ui_idle(void) {
 #if defined(TARGET_BLUE)
     UX_DISPLAY(ui_idle_blue, NULL);
-#elif defined(TARGET_NANOS)
-    UX_MENU_DISPLAY(0, menu_main, NULL);
-#elif defined(TARGET_NANOX)
+#elif defined(HAVE_UX_FLOW)
     // reserve a display stack slot if none yet
     if(G_ux.stack_count == 0) {
         ux_stack_push();
     }
     ux_flow_init(0, ux_idle_flow, NULL);
+#elif defined(TARGET_NANOS)
+    UX_MENU_DISPLAY(0, menu_main, NULL);
 #endif // #if TARGET_ID
 }
 
@@ -4609,26 +4631,40 @@ uint32_t set_result_get_publicKey() {
     return tx;
 }
 
+off_t read_bip32_path(const uint8_t *buffer, size_t length,
+                      bip32_path_t *path) {
+  if (length < 1) {
+    return -1;
+  }
+  unsigned int path_length = *buffer++;
+
+  if (path_length < 1 || path_length > MAX_BIP32_PATH) {
+    PRINTF("Invalid path\n");
+    return -1;
+  }
+
+  if (length < 1 + 4 * path_length) {
+    return -1;
+  }
+  path->length = path_length;
+  for (unsigned int i = 0; i < path_length; i++) {
+    path->indices[i] = U4BE(buffer, 0);
+    buffer += 4;
+  }
+  return 1 + 4 * path_length;
+}
+
 // APDU public key
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         uint16_t dataLength, volatile unsigned int *flags,
                         volatile unsigned int *tx) {
-    //Clear Buffer                        
-    UNUSED(dataLength);
     // Get private key data
     uint8_t privateKeyData[33];
-    uint32_t bip32Path[MAX_BIP32_PATH];  
-    uint32_t i;
-    uint8_t bip32PathLength = *(dataBuffer++);
+    bip32_path_t bip32_path;
     cx_ecfp_private_key_t privateKey;
     
     uint8_t p2Chain = p2 & 0x3F;   
 
-
-    if ((bip32PathLength < 0x01) || (bip32PathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
-        THROW(0x6A80);
-    }
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) {
         THROW(0x6B00);
     }
@@ -4637,14 +4673,14 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     }
 
     // Add requested BIP path to tmp array
-    for (i = 0; i < bip32PathLength; i++) {
-        bip32Path[i] = U4BE(dataBuffer,0);
-        dataBuffer += 4;
+    if (read_bip32_path(dataBuffer, dataLength, &bip32_path) < 0) {
+        PRINTF("read_bip32_path failed\n");
+        THROW(0x6A80);
     }
-    
+
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32Path, bip32PathLength,
-                               privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path.indices,
+                               bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -4655,31 +4691,29 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Get address from PK
-    getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);
-                                
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
+
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
+    getBase58FromAddress(publicKeyContext.address,
                                 publicKeyContext.address58, &sha2);
     
     os_memmove((void *)toAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
   
     if (p1 == P1_NON_CONFIRM) {
-        //os_memmove(G_io_apdu_buffer, toAddress,sizeof(toAddress));
         *tx=set_result_get_publicKey();
         THROW(0x9000);
     } else {
-         
+
     // prepare for a UI based reply
 #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_address_blue, ui_address_blue_prepro);
+#elif defined(HAVE_UX_FLOW)
+        ux_flow_init(0, ux_display_public_flow, NULL);
 #elif defined(TARGET_NANOS)
         ux_step = 0;
         ux_step_count = 2;
         UX_DISPLAY(ui_address_nanos, (bagl_element_callback_t) ui_address_prepro);
-#elif defined(TARGET_NANOX)
-        ux_flow_init(0, ux_display_public_flow, NULL);
 #endif // #if TARGET
 
         *flags |= IO_ASYNCH_REPLY;
@@ -4700,28 +4734,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;
     uint256_t uint256;
 
-    if (dataLength>MAX_RAW_TX){
-        PRINTF("RawTX buffer overflow\n");
-        THROW(0x6A80);
-    }
-
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
             THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
 
         initTx(&txContext, &sha2, &txContent);
         customContractField = 0;
@@ -4729,7 +4750,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         
     } else if ((p1&0xF0) == P1_TRC10_NAME)  {
         PRINTF("Setting token name\nContract type: %d\n",txContent.contractType);
-        parserStatus_e e;
         switch (txContent.contractType){
             case TRANSFERASSETCONTRACT:
             case EXCHANGECREATECONTRACT:
@@ -4737,11 +4757,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if ((p1&0x07)>1)
                     THROW(0x6A80);
                 // Decode Token name and validate signature
-                e = parseTokenName((p1&0x07),workBuffer, dataLength, &txContent);
-                if (e != USTREAM_FINISHED) {
+                if (!parseTokenName((p1&0x07),workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
-                } 
+                    THROW(0x6802);
+                }
                 // if not last token name, return
                 if (!(p1&0x08)) THROW(0x9000);
                 dataLength = 0; 
@@ -4757,10 +4776,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if (!(p1&0x08)) THROW(0x6A80);
                 PRINTF("Decoding Exchange\n");
                 // Decode Token name and validate signature
-                e = parseExchange((p1&0x07),workBuffer, dataLength, &txContent);
-                if ( e != USTREAM_FINISHED) {
+                if (!parseExchange(workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6800 | (e & 0x7FF));
+                    THROW(0x6802);
                 }
                 dataLength = 0;
                 break;
@@ -4783,16 +4801,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // hash data
     cx_hash((cx_hash_t *)txContext.sha2, 0, workBuffer, dataLength, NULL, 32);
     txContent.bandwidth+=dataLength;
-    // check if any command request buffer queue
-    if (txContext.queueBufferLength>0){
-        PRINTF("Adding pending to workBuffer\n");
-        os_memmove(workBuffer+txContext.queueBufferLength,workBuffer,dataLength);
-        os_memmove(workBuffer,txContext.queueBuffer,txContext.queueBufferLength);
-        dataLength+=txContext.queueBufferLength;
-        txContext.queueBufferLength=0;
-    }
+
     // process buffer
-    uint16_t txResult = processTx(&txContext, workBuffer, dataLength, &txContent);
+    uint16_t txResult = processTx(workBuffer, dataLength, &txContent);
     PRINTF("txResult: %04x\n", txResult);
     switch (txResult) {
         case USTREAM_PROCESSING:
@@ -4814,11 +4825,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     if (txContent.permission_id>0){
         PRINTF("Set permission_id...\n");
         snprintf((char*)fromAddress, 5, "P%d - ",txContent.permission_id);
-        getBase58FromAddres(txContent.account, (void *)(fromAddress+4), &sha2);
+        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2);
         fromAddress[BASE58CHECK_ADDRESS_SIZE+5]='\0';
     } else {
         PRINTF("Regular transaction...\n");
-        getBase58FromAddres(txContent.account, (void *)fromAddress, &sha2);
+        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2);
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
     }
 
@@ -4838,7 +4849,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     if (!customContract) THROW(0x6B00);
                     customContractField = 1;
 
-                    getBase58FromAddres(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
+                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
                     fullContract[BASE58CHECK_ADDRESS_SIZE]='\0';
                     snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
                     G_io_apdu_buffer[0]='\0';
@@ -4865,14 +4876,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     #if defined(TARGET_BLUE)
                         G_ui_approval_blue_state = APPROVAL_CUSTOM_CONTRACT;
                         ui_approval_custom_contract_blue_init();
+                    #elif defined(HAVE_UX_FLOW)
+                        ux_flow_init(0,
+                            ((txContent.dataBytes>0)? ux_approval_custom_contract_data_warning_flow : ux_approval_custom_contract_flow),
+                            NULL);
                     #elif defined(TARGET_NANOS)
                         ux_step = 0;
                         ux_step_count = 7;
                         UX_DISPLAY(ui_approval_custom_contract_nanos,(bagl_element_callback_t) ui_approval_custom_contract_prepro);
-                    #elif defined(TARGET_NANOX)
-                        ux_flow_init(0,
-                            ((txContent.dataBytes>0)? ux_approval_custom_contract_data_warning_flow : ux_approval_custom_contract_flow),
-                            NULL);
                     #endif // #if TARGET_ID
 
                     break;
@@ -4885,8 +4896,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             }else
                 print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
-            getBase58FromAddres(txContent.destination,
-                                        (uint8_t *)toAddress, &sha2);
+            getBase58FromAddress(txContent.destination, (uint8_t *)toAddress,
+                                 &sha2);
             toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
 
             // get token name if any
@@ -4895,14 +4906,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSFER;
                 ui_approval_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_nanos,(bagl_element_callback_t) ui_approval_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_tx_data_warning_flow : ux_approval_tx_flow),
-                    NULL);
             #endif // #if TARGET_ID
 
         break;
@@ -4918,14 +4929,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_CREATE;
                 ui_approval_exchange_create_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_create_data_warning_flow : ux_approval_exchange_create_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_nanos,(bagl_element_callback_t) ui_approval_exchange_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_create_data_warning_flow : ux_approval_exchange_create_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGEINJECTCONTRACT:
@@ -4940,14 +4951,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
                 ui_approval_exchange_withdraw_inject_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_wi_data_warning_flow : ux_approval_exchange_wi_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_exchange_withdraw_nanos,(bagl_element_callback_t) ui_approval_exchange_withdraw_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_wi_data_warning_flow : ux_approval_exchange_wi_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
         case EXCHANGETRANSACTIONCONTRACT:
@@ -4963,40 +4974,45 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_TRANSACTION;
                 ui_approval_exchange_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_exchange_transaction_data_warning_flow : ux_approval_exchange_transaction_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 6;
                 UX_DISPLAY(ui_approval_exchange_transaction_nanos, (bagl_element_callback_t)ui_approval_exchange_transaction_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_exchange_transaction_data_warning_flow : ux_approval_exchange_transaction_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
-        case VOTEWITNESSCONTRACT:
+        case VOTEWITNESSCONTRACT: {
             // vote for SR
+            protocol_VoteWitnessContract *contract = &msg.vote_witness_contract;
+
             PRINTF("Voting!!\n");
-            PRINTF("Count: %d\n", txContent.numOfVotes);
-            os_memset((char *)G_io_apdu_buffer, 0, 200);
+            PRINTF("Count: %d\n", contract->votes_count);
+            memset(G_io_apdu_buffer, 0, 200);
             uint64_t totalVotes = 0;
-            for (uint8_t i=0; i < txContent.numOfVotes; i++) {
-                getBase58FromAddres(txContent.voteAddresses[i], (uint8_t *)fullContract, &sha2);
-            #if defined(TARGET_BLUE)
+
+            for (int i = 0; i < contract->votes_count; i++) {
+              getBase58FromAddress(contract->votes[i].vote_address,
+                                   (uint8_t *)fullContract, &sha2);
+
+#if defined(TARGET_BLUE)
                 fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
                 snprintf(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
                     toAddress,
-                    (unsigned int)txContent.voteCounts[i]
+                    (unsigned int)contract->votes[i].vote_count
                 );
                 int lineLength = strlen((const char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)));
                 os_memset(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)+lineLength)
                     , 0x20, MAX_CHAR_PER_LINE - lineLength);
                 
-                totalVotes += txContent.voteCounts[i];
+                totalVotes += contract->votes[i].vote_count;
             #else
                 fillVoteAddressSlot((void *)G_io_apdu_buffer, (const char *)fullContract, i);
-                fillVoteAmountSlot((void *)G_io_apdu_buffer, txContent.voteCounts[i], i);
+                fillVoteAmountSlot((void *)G_io_apdu_buffer, contract->votes[i].vote_count, i);
             #endif
             }
 
@@ -5004,20 +5020,21 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 snprintf(
                     (char *)fullContract, sizeof(fullContract),"%d: %u",
-                    txContent.numOfVotes,
+                    contract->votes_count,
                     (unsigned int)totalVotes
                 );
                 G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
                 ui_approval_witnessvote_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
                 UX_DISPLAY(ui_approval_votes_transaction_nanos,(bagl_element_callback_t) ui_approval_votes_transaction_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
-                    NULL);
             #endif // #if TARGET_ID
+        }
         break;
         case FREEZEBALANCECONTRACT: // Freeze TRX
             if (txContent.resource == 0)
@@ -5026,11 +5043,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             print_amount(txContent.amount,(void *)G_io_apdu_buffer,0, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
-                getBase58FromAddres(txContent.destination,
+                getBase58FromAddress(txContent.destination,
                     (uint8_t *)toAddress, &sha2);
                 PRINTF("Freezing to own %s", toAddress);
             } else {
-                getBase58FromAddres(txContent.account,
+                getBase58FromAddress(txContent.account,
                     (uint8_t *)toAddress, &sha2);
                 PRINTF("Freezing to %s", toAddress);
             }
@@ -5039,16 +5056,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
                 ui_approval_freeze_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
+                     NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 5;
                 UX_DISPLAY(ui_approval_freeze_nanos,(bagl_element_callback_t) ui_approval_freeze_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_freeze_data_warning_flow : ux_approval_freeze_flow),
-                    NULL);
             #endif // #if TARGET_ID
-
         break;
         default:
             // Write fullHash
@@ -5059,14 +5075,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
                 ui_approval_simple_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
+                    NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 4;
                 UX_DISPLAY(ui_approval_simple_nanos,(bagl_element_callback_t) ui_approval_simple_prepro);
-            #elif defined(TARGET_NANOX)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_st_data_warning_flow : ux_approval_st_flow),
-                    NULL);
             #endif // #if TARGET_ID
         break;
     }
@@ -5102,39 +5118,31 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 volatile unsigned int *tx) {
 
     UNUSED(tx);
-    uint32_t i;    
     uint8_t privateKeyData[32];
     cx_ecfp_private_key_t privateKey;
+    uint32_t rawTxLength;
     
     if ((p1 != 0x00) || (p2 != 0x01) ) {
             THROW(0x6B00);
     }
 
-    transactionContext.pathLength = workBuffer[0];
-    if ((transactionContext.pathLength < 0x01) ||
-        (transactionContext.pathLength > MAX_BIP32_PATH)) {
-        PRINTF("Invalid path\n");
+    off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+    if (ret < 0) {
         THROW(0x6a80);
     }
-    workBuffer++;
-    dataLength--;
-
-    for (i = 0; i < transactionContext.pathLength; i++) {
-        transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-        workBuffer += 4;
-        dataLength -= 4;
-    }
+    workBuffer += ret;
+    dataLength -= ret;
     if (dataLength != 65) {
         THROW(0x6700);
     }
 
     // Load raw Data
-    os_memmove(transactionContext.rawTx, workBuffer, dataLength);
-    transactionContext.rawTxLength = dataLength;
+    os_memmove(transactionContext.signature, workBuffer, dataLength);
+    rawTxLength = dataLength;
 
     // Get private key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-            transactionContext.pathLength, privateKeyData, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+            transactionContext.bip32_path.length, privateKeyData, NULL);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -5145,35 +5153,33 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     os_memset(privateKeyData, 0, sizeof(privateKeyData));
 
     // Get address from PK
-    getAddressFromKey(&publicKeyContext.publicKey,
-                                publicKeyContext.address,&sha3);         
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
+    getBase58FromAddress(publicKeyContext.address,
                                 (uint8_t *)fromAddress, &sha2);
     
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     // Get address from PK
-    getAddressFromPublicKey(transactionContext.rawTx,
-                                publicKeyContext.address,&sha3);         
+    getAddressFromPublicKey(transactionContext.signature, publicKeyContext.address);
     // Get Base58
-    getBase58FromAddres(publicKeyContext.address,
-                                (uint8_t *)toAddress, &sha2);
-    
+    getBase58FromAddress(publicKeyContext.address, (uint8_t *)toAddress,
+                         &sha2);
+
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_approval_pgp_ecdh_blue, NULL);
-    #elif defined(TARGET_NANOS)
-        ux_step = 0;
-        ux_step_count = 3;
-        UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
-    #elif defined(TARGET_NANOX)
+    #elif defined(HAVE_UX_FLOW)
         // reserve a display stack slot if none yet
         if(G_ux.stack_count == 0) {
             ux_stack_push();
         }
         ux_flow_init(0, ux_approval_pgp_ecdh_flow, NULL);
+    #elif defined(TARGET_NANOS)
+        ux_step = 0;
+        ux_step_count = 3;
+        UX_DISPLAY(ui_approval_pgp_ecdh_nanos,(bagl_element_callback_t) ui_approval_pgp_ecdh_prepro);
     #endif
     *flags |= IO_ASYNCH_REPLY;
 
@@ -5181,43 +5187,32 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
 void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
   UNUSED(tx);
-  uint32_t i;
-  uint8_t hashMessage[32];
   uint8_t privateKeyData[32];
   cx_ecfp_private_key_t privateKey;
-
-    if (dataLength>MAX_RAW_TX){
-        PRINTF("RawTX buffer overflow\n");
-        THROW(0x6A80);
-    }
+  cx_sha3_t sha3;
+  uint32_t rawTxLength;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
-        transactionContext.pathLength = workBuffer[0];
-        if ((transactionContext.pathLength < 0x01) ||
-            (transactionContext.pathLength > MAX_BIP32_PATH)) {
-            PRINTF("Invalid path\n");
-            THROW(0x6a80);
+        off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+        if (ret < 0) {
+          THROW(0x6a80);
         }
-        workBuffer++;
-        dataLength--;
-        for (i = 0; i < transactionContext.pathLength; i++) {
-            transactionContext.bip32Path[i] = U4BE(workBuffer, 0);
-            workBuffer += 4;
-            dataLength -= 4;
-        }
+        workBuffer += ret;
+        dataLength -= ret;
+
         // Message Length
-        transactionContext.rawTxLength = U4BE(workBuffer, 0);
+        rawTxLength = U4BE(workBuffer, 0);
         workBuffer += 4;
         dataLength -= 4;
 
         // Initialize message header + length
         cx_keccak_init(&sha3, 256);
-        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC, sizeof(SIGN_MAGIC) - 1, NULL,32);
-        
+        cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)SIGN_MAGIC,
+                sizeof(SIGN_MAGIC) - 1, NULL, 32);
+
         char tmp[11];
-        snprintf((char *)tmp, 11,"%d",transactionContext.rawTxLength);
+        snprintf((char *)tmp, 11,"%d",rawTxLength);
         cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
-        cx_sha256_init(&sha2);
 
     } else if (p1 != P1_MORE) {
         THROW(0x6B00);
@@ -5226,27 +5221,25 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     if (p2 != 0) {
         THROW(0x6B00);
     }
-    if (dataLength > transactionContext.rawTxLength) {
+    if (dataLength > rawTxLength) {
         THROW(0x6A80);
     }
 
     cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL,32);
-    cx_hash((cx_hash_t *)&sha2, 0, workBuffer, dataLength, NULL,32);
-    transactionContext.rawTxLength -= dataLength;
-    if (transactionContext.rawTxLength == 0) {
+    rawTxLength -= dataLength;
+    if (rawTxLength == 0) {
         cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, transactionContext.hash,32);
-        cx_hash((cx_hash_t *)&sha2, CX_LAST, workBuffer, 0, hashMessage,32);
 
         #define HASH_LENGTH 4
-        array_hexstr((char *)fullContract, hashMessage, HASH_LENGTH / 2);
+        array_hexstr((char *)fullContract, transactionContext.hash, HASH_LENGTH / 2);
         fullContract[HASH_LENGTH / 2 * 2] = '.';
         fullContract[HASH_LENGTH / 2 * 2 + 1] = '.';
         fullContract[HASH_LENGTH / 2 * 2 + 2] = '.';
-        array_hexstr((char *)fullContract + HASH_LENGTH / 2 * 2 + 3, hashMessage + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
+        array_hexstr((char *)fullContract + HASH_LENGTH / 2 * 2 + 3, transactionContext.hash + 32 - HASH_LENGTH / 2, HASH_LENGTH / 2);
 
         // Get private key
-        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32Path,
-                transactionContext.pathLength, privateKeyData, NULL);
+        os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
+                transactionContext.bip32_path.length, privateKeyData, NULL);
 
         cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
         cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
@@ -5258,9 +5251,9 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
 
         // Get address from PK
         getAddressFromKey(&publicKeyContext.publicKey,
-                                    publicKeyContext.address,&sha3);         
+                          publicKeyContext.address);
         // Get Base58
-        getBase58FromAddres(publicKeyContext.address,
+        getBase58FromAddress(publicKeyContext.address,
                                     (uint8_t *)fromAddress, &sha2);
         
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
@@ -5268,13 +5261,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         #if defined(TARGET_BLUE)
             G_ui_approval_blue_state = APPROVAL_SIGN_PERSONAL_MESSAGE;
             ui_approval_message_sign_blue_init();
+        #elif defined(HAVE_UX_FLOW)
+            ux_flow_init(0, ux_sign_flow, NULL);
         #elif defined(TARGET_NANOS)
             ux_step = 0;
             ux_step_count = 3;
             UX_DISPLAY(ui_approval_signMessage_nanos,
                 (bagl_element_callback_t) ui_approval_signMessage_prepro);
-        #elif defined(TARGET_NANOX)
-            ux_flow_init(0, ux_sign_flow, NULL);
         #endif
 
         *flags |= IO_ASYNCH_REPLY;
@@ -5370,12 +5363,15 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     END_TRY;
 }
 
+#include "usbd_core.h"
 
 // App main loop
 void tron_main(void) {
     volatile unsigned int rx = 0;
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
+
+    USBD_Device.dev_state = USBD_STATE_CONFIGURED;
 
     // DESIGN NOTE: the bootloader ignores the way APDU are fetched. The only
     // goal is to retrieve APDU.
@@ -5473,7 +5469,7 @@ unsigned char io_event(unsigned char channel) {
     case SEPROXYHAL_TAG_TICKER_EVENT:
         UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer,
         {
-          #ifndef TARGET_NANOX
+          #ifndef HAVE_UX_FLOW
           if (UX_ALLOWED) {
             if (ux_step_count) {
               // prepare next screen
@@ -5482,7 +5478,7 @@ unsigned char io_event(unsigned char channel) {
               UX_REDISPLAY();
             }
           }
-          #endif // TARGET_NANOX
+          #endif // HAVE_UX_FLOW
         });
         break;
     }
