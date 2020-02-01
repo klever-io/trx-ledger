@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+message ExchangeDetails {
+    uint64 exchangeId = 1;
+
+    string token1Id = 2;
+    string token1Name = 3;
+    uint32 token1Precision = 4;
+
+    string token2Id = 5;
+    string token2Name = 6;
+    uint32 token2Precision = 7;
+
+    bytes signature = 8;
+}
+
+message TokenDetails {
+    string name = 1;
+    uint32 precision = 2;
+    bytes signature = 3;
+}

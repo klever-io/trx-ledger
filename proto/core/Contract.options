@@ -1,0 +1,46 @@
+# Address size is 21
+
+protocol.AccountUpdateContract.owner_address        max_size: 21, fixed_length: true
+
+protocol.TransferContract.owner_address             max_size: 21, fixed_length: true
+protocol.TransferContract.to_address                max_size: 21, fixed_length: true
+
+protocol.TransferAssetContract.asset_name           max_size: 16
+protocol.TransferAssetContract.owner_address        max_size: 21, fixed_length: true
+protocol.TransferAssetContract.to_address           max_size: 21, fixed_length: true
+
+protocol.VoteWitnessContract.owner_address          max_size: 21, fixed_length: true
+protocol.VoteWitnessContract.votes                  max_count: 5  # Assume 5 votes max
+protocol.VoteWitnessContract.Vote.vote_address      max_size: 21, fixed_length: true
+
+protocol.FreezeBalanceContract.owner_address        max_size: 21, fixed_length: true
+protocol.FreezeBalanceContract.receiver_address     max_size: 21, fixed_length: true
+
+protocol.UnfreezeBalanceContract.owner_address      max_size: 21, fixed_length: true
+protocol.UnfreezeBalanceContract.receiver_address   max_size: 21, fixed_length: true
+
+protocol.WithdrawBalanceContract.owner_address      max_size: 21, fixed_length: true
+
+protocol.ProposalCreateContract.owner_address       max_size: 21, fixed_length: true
+protocol.ProposalCreateContract.parameters          max_count: 10
+
+protocol.ProposalApproveContract.owner_address      max_size: 21, fixed_length: true
+
+protocol.ProposalDeleteContract.owner_address       max_size: 21, fixed_length: true
+
+protocol.TriggerSmartContract.owner_address         max_size: 21, fixed_length: true
+protocol.TriggerSmartContract.contract_address      max_size: 21, fixed_length: true
+protocol.TriggerSmartContract.data                  max_size: 72
+
+protocol.ExchangeCreateContract.owner_address       max_size: 21, fixed_length: true
+protocol.ExchangeCreateContract.first_token_id      max_size: 8
+protocol.ExchangeCreateContract.second_token_id     max_size: 8
+
+protocol.ExchangeInjectContract.owner_address       max_size: 21, fixed_length: true
+protocol.ExchangeInjectContract.token_id            max_size: 8
+
+protocol.ExchangeWithdrawContract.owner_address     max_size: 21, fixed_length: true
+protocol.ExchangeWithdrawContract.token_id          max_size: 8
+
+protocol.ExchangeTransactionContract.owner_address  max_size: 21, fixed_length: true
+protocol.ExchangeTransactionContract.token_id       max_size: 8
