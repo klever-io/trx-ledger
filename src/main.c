@@ -74,6 +74,7 @@ cx_sha256_t sha2;
 
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
+volatile uint8_t truncateAddress;
 volatile uint8_t customContractField;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID 
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
@@ -287,6 +288,13 @@ void menu_settings_custom_change(unsigned int enabled) {
   UX_MENU_DISPLAY(0, menu_settings, NULL);
 }
 
+void menu_settings_truncate_change(unsigned int enabled) {
+  truncateAddress = enabled;
+  nvm_write((void *)&N_storage.truncateAddress, (void*)&truncateAddress, sizeof(uint8_t));
+  // go back to the menu entry
+  UX_MENU_DISPLAY(0, menu_settings, NULL);
+}
+
 // show the currently activated entry
 void menu_settings_data_init(unsigned int ignored) {
   UNUSED(ignored);
@@ -296,6 +304,11 @@ void menu_settings_data_init(unsigned int ignored) {
 void menu_settings_custom_init(unsigned int ignored) {
   UNUSED(ignored);
   UX_MENU_DISPLAY(N_storage.customContract?1:0, menu_settings_custom, NULL);
+}
+
+void menu_settings_truncate_init(unsigned int ignored) {
+  UNUSED(ignored);
+  UX_MENU_DISPLAY(N_storage.truncateAddress?1:0, menu_settings_custom, NULL);
 }
 
 const ux_menu_entry_t menu_settings_data[] = {
@@ -310,10 +323,17 @@ const ux_menu_entry_t menu_settings_custom[] = {
   UX_MENU_END
 };
 
+const ux_menu_entry_t menu_settings_truncate[] = {
+  {NULL, menu_settings_truncate_change, 0, NULL, "No", NULL, 0, 0},
+  {NULL, menu_settings_truncate_change, 1, NULL, "Yes", NULL, 0, 0},
+  UX_MENU_END
+};
+
 // Menu Settings
 const ux_menu_entry_t menu_settings[] = {
     {NULL, menu_settings_data_init, 0, NULL, "Allow data", NULL, 0, 0},
     {NULL, menu_settings_custom_init, 0, NULL, "Custom Contracts", NULL, 0, 0},
+    {NULL, menu_settings_truncate_init, 0, NULL, "Truncate Address", NULL, 0, 0},
     {menu_main, NULL, 0, &C_icon_back, "Back", NULL, 61, 40},
     UX_MENU_END};
 
@@ -3511,6 +3531,7 @@ unsigned int ui_approval_custom_contract_nanos_button(unsigned int button_mask,
 void display_settings(void);
 void switch_settings_contract_data();
 void switch_settings_custom_contracts();
+void switch_settings_truncate_address();
 
 //////////////////////////////////////////////////////////////////////
 UX_STEP_NOCB(
@@ -3574,6 +3595,15 @@ UX_STEP_VALID(
       .text = addressSummary + 20
     });
 
+UX_STEP_VALID(
+    ux_settings_flow_3_step,
+    bnnn_paging,
+    switch_settings_truncate_address(),
+    {
+      .title = "Truncate Address",
+      .text = addressSummary + 40
+    });
+
 #else
 
 UX_STEP_VALID(
@@ -3598,10 +3628,21 @@ UX_STEP_VALID(
       addressSummary + 20
     });
 
+UX_STEP_VALID(
+    ux_settings_flow_3_step,
+    bnnn,
+    switch_settings_truncate_address(),
+    {
+      "Truncate address",
+      "Truncate display",
+      "address",
+      addressSummary + 40
+    });
+
 #endif
 
 UX_STEP_VALID(
-    ux_settings_flow_3_step,
+    ux_settings_flow_4_step,
     pb,
     ui_idle(),
     {
@@ -3612,12 +3653,14 @@ UX_STEP_VALID(
 UX_DEF(ux_settings_flow,
   &ux_settings_flow_1_step,
   &ux_settings_flow_2_step,
-  &ux_settings_flow_3_step
+  &ux_settings_flow_3_step,
+  &ux_settings_flow_4_step
 );
 
 void display_settings() {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
   strcpy(addressSummary + 20, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 40, (N_storage.truncateAddress ? "Yes" : "No"));
   ux_flow_init(0, ux_settings_flow, NULL);
 }
 
@@ -3632,6 +3675,13 @@ void switch_settings_custom_contracts() {
   uint8_t value = (N_storage.customContract ? 0 : 1);
   customContract = value;
   nvm_write((void*)&N_storage.customContract, (void*)&value, sizeof(uint8_t));
+  display_settings();
+}
+
+void switch_settings_truncate_address() {
+  uint8_t value = (N_storage.truncateAddress ? 0 : 1);
+  truncateAddress = value;
+  nvm_write((void*)&N_storage.truncateAddress, (void*)&value, sizeof(uint8_t));
   display_settings();
 }
 
@@ -4695,7 +4745,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     // Get Base58
     getBase58FromAddress(publicKeyContext.address,
-                                publicKeyContext.address58, &sha2);
+                                publicKeyContext.address58, &sha2, false);
     
     os_memmove((void *)toAddress,publicKeyContext.address58,BASE58CHECK_ADDRESS_SIZE);    
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
@@ -4825,12 +4875,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     if (txContent.permission_id>0){
         PRINTF("Set permission_id...\n");
         snprintf((char*)fromAddress, 5, "P%d - ",txContent.permission_id);
-        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2);
-        fromAddress[BASE58CHECK_ADDRESS_SIZE+5]='\0';
+        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2, truncateAddress);
     } else {
         PRINTF("Regular transaction...\n");
-        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2);
-        fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
+        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2, truncateAddress);
     }
 
     switch (txContent.contractType){
@@ -4849,8 +4897,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     if (!customContract) THROW(0x6B00);
                     customContractField = 1;
 
-                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2);
-                    fullContract[BASE58CHECK_ADDRESS_SIZE]='\0';
+                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2, truncateAddress);
                     snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
                     G_io_apdu_buffer[0]='\0';
                     G_io_apdu_buffer[100]='\0';
@@ -4897,8 +4944,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddress(txContent.destination, (uint8_t *)toAddress,
-                                 &sha2);
-            toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';    
+                                 &sha2, truncateAddress);
 
             // get token name if any
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
@@ -4995,9 +5041,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             for (int i = 0; i < contract->votes_count; i++) {
               getBase58FromAddress(contract->votes[i].vote_address,
-                                   (uint8_t *)fullContract, &sha2);
+                                   (uint8_t *)fullContract, &sha2, truncateAddress);
 
-#if defined(TARGET_BLUE)
+            #if defined(TARGET_BLUE)
                 fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
                 snprintf(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
@@ -5044,14 +5090,13 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,0, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
-                    (uint8_t *)toAddress, &sha2);
+                    (uint8_t *)toAddress, &sha2, truncateAddress);
                 PRINTF("Freezing to own %s", toAddress);
             } else {
                 getBase58FromAddress(txContent.account,
-                    (uint8_t *)toAddress, &sha2);
+                    (uint8_t *)toAddress, &sha2, truncateAddress);
                 PRINTF("Freezing to %s", toAddress);
             }
-            toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_FREEZEASSET_TRANSACTION;
@@ -5105,6 +5150,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     G_io_apdu_buffer[0] = 0x00;
     G_io_apdu_buffer[0] |= (N_storage.dataAllowed<<0);
     G_io_apdu_buffer[0] |= (N_storage.customContract<<1);
+    G_io_apdu_buffer[0] |= (N_storage.truncateAddress<<2);
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -5156,7 +5202,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
     // Get Base58
     getBase58FromAddress(publicKeyContext.address,
-                                (uint8_t *)fromAddress, &sha2);
+                                (uint8_t *)fromAddress, &sha2, false);
     
     fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -5164,7 +5210,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     getAddressFromPublicKey(transactionContext.signature, publicKeyContext.address);
     // Get Base58
     getBase58FromAddress(publicKeyContext.address, (uint8_t *)toAddress,
-                         &sha2);
+                         &sha2, false);
 
     toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -5254,7 +5300,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
                           publicKeyContext.address);
         // Get Base58
         getBase58FromAddress(publicKeyContext.address,
-                                    (uint8_t *)fromAddress, &sha2);
+                                    (uint8_t *)fromAddress, &sha2, false);
         
         fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
@@ -5529,11 +5575,13 @@ __attribute__((section(".boot"))) int main(void) {
                   internalStorage_t storage;
                   storage.dataAllowed = 0x00;
                   storage.customContract = 0x00;
+                  storage.truncateAddress = 0x00;
                   storage.initialized = 0x01;
                   nvm_write((void*)&N_storage, (void*)&storage, sizeof(internalStorage_t));
                 }
                 dataAllowed = N_storage.dataAllowed;
                 customContract = N_storage.customContract;
+                truncateAddress = N_storage.truncateAddress;
                 
                 USB_power(1);
                 ui_idle();
