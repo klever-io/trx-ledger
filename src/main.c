@@ -4026,30 +4026,8 @@ UX_STEP_VALID(
       "Reject",
     });
 
-UX_DEF(ux_approval_vote_flow,
-  &ux_approval_vote_flow_1_step,
-  &ux_approval_vote_flow_2_step,
-  &ux_approval_vote_flow_3_step,
-  &ux_approval_vote_flow_4_step,
-  &ux_approval_vote_flow_5_step,
-  &ux_approval_vote_flow_6_step,
-  &ux_approval_vote_flow_7_step,
-  &ux_approval_vote_flow_8_step,
-  &ux_approval_vote_flow_9_step
-);
-
-UX_DEF(ux_approval_vote_data_warning_flow,
-  &ux_approval_vote_flow_1_step,
-  &ux_approval_tx_data_warning_step,
-  &ux_approval_vote_flow_2_step,
-  &ux_approval_vote_flow_3_step,
-  &ux_approval_vote_flow_4_step,
-  &ux_approval_vote_flow_5_step,
-  &ux_approval_vote_flow_6_step,
-  &ux_approval_vote_flow_7_step,
-  &ux_approval_vote_flow_8_step,
-  &ux_approval_vote_flow_9_step
-);
+// 11 slots for dynamic NanoS/NanoX UX voting steps
+const ux_flow_step_t * ux_approval_vote_flow[11];
 
 // FREEZE TRANSACTION
 //////////////////////////////////////////////////////////////////////
@@ -5072,9 +5050,26 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
                 ui_approval_witnessvote_transaction_blue_init();
             #elif defined(HAVE_UX_FLOW)
-                ux_flow_init(0,
-                    ((txContent.dataBytes>0)? ux_approval_vote_data_warning_flow : ux_approval_vote_flow),
-                    NULL);
+                int step = 0;
+                ux_approval_vote_flow[step++] = &ux_approval_vote_flow_1_step;
+                if (txContent.dataBytes>0) ux_approval_vote_flow[step++] = &ux_approval_tx_data_warning_step;
+
+                if (contract->votes_count-- > 0)
+                    ux_approval_vote_flow[step++] = &ux_approval_vote_flow_2_step;
+                if (contract->votes_count-- > 0)
+                    ux_approval_vote_flow[step++] = &ux_approval_vote_flow_3_step;
+                if (contract->votes_count-- > 0)
+                    ux_approval_vote_flow[step++] = &ux_approval_vote_flow_4_step;
+                if (contract->votes_count-- > 0)
+                    ux_approval_vote_flow[step++] = &ux_approval_vote_flow_5_step;
+                if (contract->votes_count-- > 0)
+                    ux_approval_vote_flow[step++] = &ux_approval_vote_flow_6_step;
+
+                ux_approval_vote_flow[step++] = &ux_approval_vote_flow_7_step;
+                ux_approval_vote_flow[step++] = &ux_approval_vote_flow_8_step;
+                ux_approval_vote_flow[step++] = &ux_approval_vote_flow_9_step;
+                ux_approval_vote_flow[step++] = FLOW_END_STEP;
+                ux_flow_init(0, ux_approval_vote_flow, NULL);
             #elif defined(TARGET_NANOS)
                 ux_step = 0;
                 ux_step_count = 7;
