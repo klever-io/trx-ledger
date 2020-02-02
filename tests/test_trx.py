@@ -139,9 +139,13 @@ class App:
 
     def exchangeD(self, packet, verbose=False):
         dongle = getDongle(verbose)
-        resp = dongle.exchange(packet)
-        dongle.close()
-        return resp, resp
+        try:
+            resp = dongle.exchange(packet)
+            dongle.close()
+            return resp, 0x9000
+        except:
+            dongle.close()
+            return "", 0x6800
 
     def exchange(self, packet, verbose=False):
         if (self.hardware): return self.exchangeD(packet, verbose)
@@ -201,7 +205,7 @@ class TestTRX:
         )
         pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
         data, status = app.exchange(pack)
-        assert(status == 0x900)
+        assert(status == 0x9000)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -288,15 +292,12 @@ class TestTRX:
         pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
         data, status = app.exchange(pack)
         pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00,0x00,None, tokenSignature)
-        try:
-            data, status = app.exchange(pack)
-            assert(len(data) > 0 )
-        except:
-            # expected fail
-            assert(True)
+        data, status = app.exchange(pack)
+        # expected fail
+        assert( status == 0x6800 )
 
 
-    def test_trx_create_exchange(self, app):
+    def test_trx_exchange_create(self, app):
         tx = app.packContract(
             tron.Transaction.Contract.ExchangeCreateContract,
             contract.ExchangeCreateContract(
@@ -313,7 +314,7 @@ class TestTRX:
         assert(validSignature == True)
 
 
-    def test_trx_exchange_create(self, app):
+    def test_trx_exchange_create_with_token_name(self, app):
         tx = app.packContract(
             tron.Transaction.Contract.ExchangeCreateContract,
             contract.ExchangeCreateContract(
@@ -636,6 +637,6 @@ class TestTRX:
 
     # TODO: ECDH secrets
 
-
+'''
 def pytest_generate_tests(metafunc):
     metafunc.parametrize('app', [App()], scope='class')
