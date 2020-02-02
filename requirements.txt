@@ -1,6 +1,7 @@
 base58==1.0.3
 bip32utils==0.3.post4
 mnemonic==0.19
+pycryptodome==3.9.4
 crypto==1.4.1
 cryptography==2.8
 ecdsa==0.14.1
