@@ -109,8 +109,7 @@ typedef struct transactionContext_t {
 } transactionContext_t;
 
 typedef struct txContent_t {
-    uint64_t amount;
-    uint64_t amount2;
+    uint64_t amount[2];
     uint64_t exchangeID;
     uint64_t bandwidth;
     uint8_t account[ADDRESS_SIZE];

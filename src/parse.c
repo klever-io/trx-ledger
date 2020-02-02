@@ -355,7 +355,7 @@ static bool transfer_contract(txContent_t *content, pb_istream_t *stream) {
     return false;
   }
 
-  content->amount = msg.transfer_contract.amount;
+  content->amount[0] = msg.transfer_contract.amount;
 
   COPY_ADDRESS(content->account, &msg.transfer_contract.owner_address);
   COPY_ADDRESS(content->destination, &msg.transfer_contract.to_address);
@@ -371,7 +371,7 @@ static bool transfer_asset_contract(txContent_t *content,
                  &msg.transfer_asset_contract)) {
     return false;
   }
-  content->amount = msg.transfer_asset_contract.amount;
+  content->amount[0] = msg.transfer_asset_contract.amount;
 
   if (!printTokenFromID((char *)content->tokenNames[0],
                         msg.transfer_asset_contract.asset_name.bytes,
@@ -408,7 +408,7 @@ static bool freeze_balance_contract(txContent_t *content,
   COPY_ADDRESS(content->account, &msg.freeze_balance_contract.owner_address);
   COPY_ADDRESS(content->destination,
                &msg.freeze_balance_contract.receiver_address);
-  content->amount = msg.freeze_balance_contract.frozen_balance;
+  content->amount[0] = msg.freeze_balance_contract.frozen_balance;
   content->resource = msg.freeze_balance_contract.resource;
   return true;
 }
@@ -444,7 +444,7 @@ static bool proposal_create_contract(txContent_t *content,
     return false;
   }
 
-  content->amount = msg.proposal_create_contract.parameters_count;
+  content->amount[0] = msg.proposal_create_contract.parameters_count;
   COPY_ADDRESS(content->account, &msg.proposal_create_contract.owner_address);
   return true;
 }
@@ -491,7 +491,7 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
   COPY_ADDRESS(content->contractAddress,
                &msg.trigger_smart_contract.contract_address);
-  content->amount = msg.trigger_smart_contract.call_value;
+  content->amount[0] = msg.trigger_smart_contract.call_value;
 
   // Parse smart contract
   if (msg.trigger_smart_contract.data.size < 4) {
@@ -558,8 +558,8 @@ static bool exchange_create_contract(txContent_t *content,
   }
   content->tokenNamesLength[1] = strlen((char *)content->tokenNames[1]);
 
-  content->amount = msg.exchange_create_contract.first_token_balance;
-  content->amount2 = msg.exchange_create_contract.second_token_balance;
+  content->amount[0] = msg.exchange_create_contract.first_token_balance;
+  content->amount[1] = msg.exchange_create_contract.second_token_balance;
   return true;
 }
 
@@ -579,7 +579,7 @@ static bool exchange_inject_contract(txContent_t *content,
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount = msg.exchange_inject_contract.quant;
+  content->amount[0] = msg.exchange_inject_contract.quant;
   return true;
 }
 
@@ -599,7 +599,7 @@ static bool exchange_withdraw_contract(txContent_t *content,
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount = msg.exchange_withdraw_contract.quant;
+  content->amount[0] = msg.exchange_withdraw_contract.quant;
   return true;
 }
 
@@ -620,8 +620,8 @@ static bool exchange_transaction_contract(txContent_t *content,
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount = msg.exchange_transaction_contract.quant;
-  content->amount2 = msg.exchange_transaction_contract.expected;
+  content->amount[0] = msg.exchange_transaction_contract.quant;
+  content->amount[1] = msg.exchange_transaction_contract.expected;
   return true;
 }
 

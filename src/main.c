@@ -3099,7 +3099,7 @@ const bagl_element_t ui_approval_votes_transaction_nanos[] = {
 unsigned int ui_approval_votes_transaction_prepro(const bagl_element_t *element) {
     unsigned int display = 1;
     if (element->component.userid > 0) {
-        if (ux_step > txContent.numOfVotes && ux_step < 0x06)
+        if (ux_step > txContent.amount[0] && ux_step < 0x06)
             ux_step = 6;
         display = (ux_step == element->component.userid - 1);
         if (display) {
@@ -4855,16 +4855,16 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     G_io_apdu_buffer[0]='\0';
                     G_io_apdu_buffer[100]='\0';
                     toAddress[0]='\0';
-                    if (txContent.amount>0 && txContent.amount2>0) THROW(0x6A80);
+                    if (txContent.amount[0]>0 && txContent.amount[1]>0) THROW(0x6A80);
                     // call has value
-                    if (txContent.amount>0) {
+                    if (txContent.amount[0]>0) {
                         os_memmove((void *)toAddress, "TRX\0", 4);
-                        print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, SUN_DIG);
+                        print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, SUN_DIG);
                         customContractField |= (1<<0x05);
                         customContractField |= (1<<0x06);
-                    }else if (txContent.amount2>0) {
+                    }else if (txContent.amount[1]>0) {
                         os_memmove((void *)toAddress, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
-                        print_amount(txContent.amount2,(void *)G_io_apdu_buffer,100, 0);
+                        print_amount(txContent.amount[1],(void *)G_io_apdu_buffer,100, 0);
                         customContractField |= (1<<0x05);
                         customContractField |= (1<<0x06);
                     }else{
@@ -4894,7 +4894,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if (!adjustDecimals((char *)G_io_apdu_buffer+100, strlen((const char *)G_io_apdu_buffer+100), (char *)G_io_apdu_buffer, 100, txContent.decimals[0]))
                     THROW(0x6B00);
             }else
-                print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
+                print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddress(txContent.destination, (uint8_t *)toAddress,
                                  &sha2);
@@ -4921,8 +4921,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             os_memmove((void *)toAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
-            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
-            print_amount(txContent.amount2,(void *)G_io_apdu_buffer+100,100, (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
+            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount[1],(void *)G_io_apdu_buffer+100,100, (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
             
@@ -4944,7 +4944,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
-            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
        
@@ -4966,8 +4966,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             snprintf((char *)fullContract, sizeof(fullContract), "%s -> %s", txContent.tokenNames[0], txContent.tokenNames[1]);
 
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
-            print_amount(txContent.amount,(void *)G_io_apdu_buffer,100, txContent.decimals[0]);
-            print_amount(txContent.amount2,(void *)G_io_apdu_buffer+100,100, txContent.decimals[1]);
+            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, txContent.decimals[0]);
+            print_amount(txContent.amount[1],(void *)G_io_apdu_buffer+100,100, txContent.decimals[1]);
             // write exchange contract type
             if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
 
@@ -4991,7 +4991,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             PRINTF("Voting!!\n");
             PRINTF("Count: %d\n", contract->votes_count);
             memset(G_io_apdu_buffer, 0, 200);
-            uint64_t totalVotes = 0;
+            txContent.amount[0] = 0;
 
             for (int i = 0; i < contract->votes_count; i++) {
               getBase58FromAddress(contract->votes[i].vote_address,
@@ -5009,7 +5009,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)+lineLength)
                     , 0x20, MAX_CHAR_PER_LINE - lineLength);
                 
-                totalVotes += contract->votes[i].vote_count;
+                txContent.amount[0] += contract->votes[i].vote_count;
             #else
                 fillVoteAddressSlot((void *)G_io_apdu_buffer, (const char *)fullContract, i);
                 fillVoteAmountSlot((void *)G_io_apdu_buffer, contract->votes[i].vote_count, i);
@@ -5041,7 +5041,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 os_memmove((void *)fullContract, "Bandwidth\0", 10);
             else os_memmove((void *)fullContract, "Energy\0", 7);
 
-            print_amount(txContent.amount,(void *)G_io_apdu_buffer,0, SUN_DIG);
+            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,0, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
                     (uint8_t *)toAddress, &sha2);
