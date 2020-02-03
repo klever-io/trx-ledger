@@ -109,7 +109,7 @@ class App:
     def getAccount(self, number):
         return self.accounts[number]
 
-    def packContract(self, contractType, newContract, data = None):
+    def packContract(self, contractType, newContract, data = None, permission_id = None):
         tx = tron.Transaction()
         tx.raw_data.timestamp = 1575712492061
         tx.raw_data.expiration = 1575712551000
@@ -123,6 +123,10 @@ class App:
         param = Any()
         param.Pack(newContract)
         c.parameter.CopyFrom(param)
+
+        if permission_id:
+            c.Permission_id = permission_id
+
         return tx.raw_data.SerializeToString().hex()
 
 
@@ -685,6 +689,23 @@ class TestTRX:
         assert(validSignature == True)
 
     # TODO: ECDH secrets
+ 
+    def test_trx_send_permissioned(self, app):
+        tx = app.packContract(
+            tron.Transaction.Contract.TransferContract,
+            contract.TransferContract(
+                owner_address=bytes.fromhex(app.getAccount(0)['addressHex']),
+                to_address=bytes.fromhex(app.getAccount(0)['addressHex']),
+                amount=100000000
+            ),
+            None,
+            2
+        )
+        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
+        data, status = app.exchange(pack)
+        assert(status == 0x9000)
+        validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
+        assert(validSignature == True)
 
 
 def pytest_generate_tests(metafunc):
