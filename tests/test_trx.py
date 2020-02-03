@@ -19,6 +19,8 @@ from bip32utils import BIP32Key, BIP32_HARDEN
 from mnemonic import Mnemonic
 from eth_keys import keys
 from Crypto.Hash import keccak
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from ledgerblue.comm import getDongle
 
@@ -45,12 +47,14 @@ class App:
         for i in range(2):
             HD = self.getPrivateKey(self._mnemonic(), i, 0, 0)
             key = keys.PrivateKey(HD.PrivateKey())
+            diffieHellman = ec.derive_private_key(int.from_bytes(HD.PrivateKey(), "big"), ec.SECP256K1(), default_backend())
             self.accounts[i] = {
                     "path": parse_bip32_path("44'/195'/{}'/0/0".format(i)),
                     "privateKeyHex": HD.PrivateKey().hex(),
                     "key": key,
                     "addressHex": "41" + key.public_key.to_checksum_address()[2:].upper(),
-                    "publicKey": key.public_key.to_hex().upper()
+                    "publicKey": key.public_key.to_hex().upper(),
+                    "dh": diffieHellman,
                 }
 
     def address_hex(self, address):
@@ -688,8 +692,7 @@ class TestTRX:
         validSignature = validateSignature.validateHASH(hash,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
-    # TODO: ECDH secrets
- 
+
     def test_trx_send_permissioned(self, app):
         tx = app.packContract(
             tron.Transaction.Contract.TransferContract,
@@ -706,6 +709,28 @@ class TestTRX:
         assert(status == 0x9000)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
+
+
+    def test_trx_ecdh_key(self, app):
+        # get ledger public key
+        pack = app.apduMessage(0x02,0x00,0x00,app.getAccount(0)['path'], "")
+        data, status = app.exchange(pack)
+        assert(data[0] == 65)
+        pubKey = bytes(data[1:66])
+
+        # get pair key
+        pack = app.apduMessage(0x0A,0x00,0x01,app.getAccount(0)['path'], "04" + app.getAccount(1)['publicKey'][2:])
+        data, status = app.exchange(pack)
+        assert(status == 0x9000)
+
+        # check if pair key matchs
+        pubKeyDH = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), pubKey)
+        shared_key = app.getAccount(1)['dh'].exchange(ec.ECDH(), pubKeyDH)
+        assert(shared_key.hex() == data[1:33].hex())        
+
+    # TODO: Custom contract
+
+    
 
 
 def pytest_generate_tests(metafunc):

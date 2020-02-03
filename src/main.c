@@ -1713,7 +1713,6 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     return 0; // do not redraw the widget
 }
 
-
 #if defined(TARGET_BLUE)
 
 unsigned int
@@ -5160,7 +5159,6 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(tx);
     uint8_t privateKeyData[32];
     cx_ecfp_private_key_t privateKey;
-    uint32_t rawTxLength;
     
     if ((p1 != 0x00) || (p2 != 0x01) ) {
             THROW(0x6B00);
@@ -5173,12 +5171,12 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     workBuffer += ret;
     dataLength -= ret;
     if (dataLength != 65) {
+        printf("Public key length error!")
         THROW(0x6700);
     }
 
     // Load raw Data
     os_memmove(transactionContext.signature, workBuffer, dataLength);
-    rawTxLength = dataLength;
 
     // Get private key
     os_perso_derive_node_bip32(CX_CURVE_256K1, transactionContext.bip32_path.indices,
@@ -5197,16 +5195,12 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     // Get Base58
     getBase58FromAddress(publicKeyContext.address,
                                 (uint8_t *)fromAddress, &sha2, false);
-    
-    fromAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     // Get address from PK
     getAddressFromPublicKey(transactionContext.signature, publicKeyContext.address);
     // Get Base58
     getBase58FromAddress(publicKeyContext.address, (uint8_t *)toAddress,
                          &sha2, false);
-
-    toAddress[BASE58CHECK_ADDRESS_SIZE]='\0';
 
     #if defined(TARGET_BLUE)
         UX_DISPLAY(ui_approval_pgp_ecdh_blue, NULL);
