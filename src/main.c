@@ -5051,18 +5051,19 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 ui_approval_witnessvote_transaction_blue_init();
             #elif defined(HAVE_UX_FLOW)
                 int step = 0;
+                int votes_count = contract->votes_count;
                 ux_approval_vote_flow[step++] = &ux_approval_vote_flow_1_step;
                 if (txContent.dataBytes>0) ux_approval_vote_flow[step++] = &ux_approval_tx_data_warning_step;
-
-                if (contract->votes_count-- > 0)
+                
+                if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_2_step;
-                if (contract->votes_count-- > 0)
+                if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_3_step;
-                if (contract->votes_count-- > 0)
+                if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_4_step;
-                if (contract->votes_count-- > 0)
+                if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_5_step;
-                if (contract->votes_count-- > 0)
+                if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_6_step;
 
                 ux_approval_vote_flow[step++] = &ux_approval_vote_flow_7_step;
@@ -5086,11 +5087,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
                     (uint8_t *)toAddress, &sha2, truncateAddress);
-                PRINTF("Freezing to own %s", toAddress);
             } else {
                 getBase58FromAddress(txContent.account,
                     (uint8_t *)toAddress, &sha2, truncateAddress);
-                PRINTF("Freezing to %s", toAddress);
             }
 
             #if defined(TARGET_BLUE)
@@ -5318,6 +5317,24 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     }
 }
 
+uint8_t getDataLength(uint8_t *workBuffer, uint16_t *dataLength) {
+    *dataLength = 0;
+    uint8_t count = 0;
+    PRINTF("Checking buffer size\n");
+    // find end of base128
+    for(int b128=0; count < 2; count++){
+        *dataLength += ((uint8_t)( *workBuffer & 0x7F) << b128);
+        if ((*workBuffer&0x80) == 0) break;
+        b128+=7;
+        workBuffer++;
+    }
+    if (count == 2 || *dataLength > 330) {
+        PRINTF("Invalid buffer size[%d]: %d...\n", count, *dataLength);
+        THROW(0x6a80);
+    }
+    return count+1;
+}
+
 // Check ADPU and process the assigned task
 void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     unsigned short sw = 0;
@@ -5327,46 +5344,51 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
             if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
                 THROW(0x6E00);
             }
+            
+            uint16_t dataLength;
+            uint8_t offsetCount;
+            if (G_io_apdu_buffer[OFFSET_INS]!=INS_GET_APP_CONFIGURATION)
+                offsetCount = getDataLength(G_io_apdu_buffer + OFFSET_LC, &dataLength);
 
             switch (G_io_apdu_buffer[OFFSET_INS]) {
             case INS_GET_PUBLIC_KEY:
                 // Request Publick Key
                 handleGetPublicKey(G_io_apdu_buffer[OFFSET_P1],
                                    G_io_apdu_buffer[OFFSET_P2],
-                                   G_io_apdu_buffer + OFFSET_CDATA,
-                                   G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                                   G_io_apdu_buffer + OFFSET_LC + offsetCount,
+                                   dataLength, flags, tx);
                 break;
 
             case INS_SIGN:
                 // Request Signature
                 handleSign(G_io_apdu_buffer[OFFSET_P1],
                            G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_CDATA,
-                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                           G_io_apdu_buffer + OFFSET_LC + offsetCount,
+                           dataLength, flags, tx);
                 break;
             
             case INS_GET_APP_CONFIGURATION:
                 // Request App configuration
                 handleGetAppConfiguration(
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
-                    G_io_apdu_buffer + OFFSET_CDATA,
-                    G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                    G_io_apdu_buffer + OFFSET_LC + offsetCount,
+                    dataLength, flags, tx);
                 break;
 
             case INS_GET_ECDH_SECRET: 
                 // Request Signature
                 handleECDHSecret(G_io_apdu_buffer[OFFSET_P1],
                            G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_CDATA,
-                           G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                           G_io_apdu_buffer + OFFSET_LC + offsetCount,
+                           dataLength, flags, tx);
                 break;
             
             case INS_SIGN_PERSONAL_MESSAGE:
                 handleSignPersonalMessage(
                     G_io_apdu_buffer[OFFSET_P1],
                     G_io_apdu_buffer[OFFSET_P2],
-                    G_io_apdu_buffer + OFFSET_CDATA,
-                    G_io_apdu_buffer[OFFSET_LC], flags, tx);
+                    G_io_apdu_buffer + OFFSET_LC + offsetCount,
+                    dataLength, flags, tx);
                 break;
 
             default:

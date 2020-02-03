@@ -71,6 +71,18 @@ class App:
         m = m.ChildKey(address_index)
         return m
 
+    def encodeVariant(self, value):
+        out = bytes()
+        while True:
+            byte = value & 0x7F
+            value = value >> 7
+            if value == 0:
+                out += bytes([byte])
+                break
+            else:
+                out += bytes([byte | 0x80])
+        return out.hex()
+
     def _recvall(self, s, size):
         data = b''
         while size > 0:
@@ -88,9 +100,9 @@ class App:
     def apduMessage(self, INS, P1, P2, PATH, MESSAGE):
         hexString = ""
         if PATH:
-            hexString = "E0{:02x}{:02x}{:02x}{:02x}{:02x}{}".format(INS,P1,P2,(len(PATH)+len(MESSAGE))//2+1,len(PATH)//4//2,PATH+MESSAGE)
+            hexString = "E0{:02x}{:02x}{:02x}{}{:02x}{}".format(INS,P1,P2,self.encodeVariant((len(PATH)+len(MESSAGE))//2+1),len(PATH)//4//2,PATH+MESSAGE)
         else:
-            hexString = "E0{:02x}{:02x}{:02x}{:02x}{}".format(INS,P1,P2,len(MESSAGE)//2,MESSAGE)
+            hexString = "E0{:02x}{:02x}{:02x}{}{}".format(INS,P1,P2,self.encodeVariant(len(MESSAGE)//2),MESSAGE)
         print(hexString)
         return binascii.unhexlify(hexString)
     
@@ -271,7 +283,7 @@ class TestTRX:
         tokenSignature = "0a0a426974546f7272656e7410061a46304402202e2502f36b00e57be785fc79ec4043abcdd4fdd1b58d737ce123599dffad2cb602201702c307f009d014a553503b499591558b3634ceee4c054c61cedd8aca94c02b"
         pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
         data, status = app.exchange(pack)
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00,0x00,None, tokenSignature)
+        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00,0x00, None, tokenSignature)
         data, status = app.exchange(pack)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
@@ -394,8 +406,6 @@ class TestTRX:
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
-
-    # TODO: Check votes length on show
     def test_trx_vote_witness(self, app):
         tx = app.packContract(
             tron.Transaction.Contract.VoteWitnessContract,
@@ -426,6 +436,45 @@ class TestTRX:
         data, status = app.exchange(pack)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
+
+
+    def test_trx_vote_witness_more_than_5(self, app):
+        tx = app.packContract(
+            tron.Transaction.Contract.VoteWitnessContract,
+            contract.VoteWitnessContract(
+                owner_address=bytes.fromhex(app.getAccount(0)['addressHex']),
+                votes=[
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TKSXDA8HfE9E1y39RczVQ1ZascUEtaSToF")),
+                        vote_count=100
+                    ),
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TE7hnUtWRRBz3SkFrX8JESWUmEvxxAhoPt")),
+                        vote_count=100
+                    ),
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TTcYhypP8m4phDhN6oRexz2174zAerjEWP")),
+                        vote_count=100
+                    ),
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TY65QiDt4hLTMpf3WRzcX357BnmdxT2sw9")),
+                        vote_count=100
+                    ),
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TSzoLaVCdSNDpNxgChcFt9rSRF5wWAZiR4")),
+                        vote_count=100
+                    ),
+                    contract.VoteWitnessContract.Vote(
+                        vote_address=bytes.fromhex(app.address_hex("TSNbzxac4WhxN91XvaUfPTKP2jNT18mP6T")),
+                        vote_count=100
+                    ),
+                ]
+            )
+        )
+
+        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
+        data, status = app.exchange(pack)
+        assert(status == 0x6800)
 
 
     def test_trx_freeze_balance_bw(self, app):
@@ -637,6 +686,6 @@ class TestTRX:
 
     # TODO: ECDH secrets
 
-'''
+
 def pytest_generate_tests(metafunc):
     metafunc.parametrize('app', [App()], scope='class')
