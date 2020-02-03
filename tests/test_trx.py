@@ -726,11 +726,26 @@ class TestTRX:
         # check if pair key matchs
         pubKeyDH = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), pubKey)
         shared_key = app.getAccount(1)['dh'].exchange(ec.ECDH(), pubKeyDH)
-        assert(shared_key.hex() == data[1:33].hex())        
-
-    # TODO: Custom contract
+        assert(shared_key.hex() == data[1:33].hex())
 
     
+    def test_trx_custom_contract(self, app):
+        tx = app.packContract(
+            tron.Transaction.Contract.TriggerSmartContract,
+            contract.TriggerSmartContract(
+                owner_address=bytes.fromhex(app.getAccount(0)['addressHex']),
+                contract_address=bytes.fromhex(app.address_hex("TTg3AAJBYsDNjx5Moc5EPNsgJSa4anJQ3M")),
+                data=bytes.fromhex('{:08x}{:064x}'.format(
+                    0x0a857040,
+                    int(10001)
+                    ))
+            )
+        )
+        
+        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
+        data, status = app.exchange(pack)
+        validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
+        assert(validSignature == True)
 
 
 def pytest_generate_tests(metafunc):
