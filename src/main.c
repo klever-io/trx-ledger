@@ -5015,12 +5015,15 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             PRINTF("Count: %d\n", contract->votes_count);
             memset(G_io_apdu_buffer, 0, 200);
             txContent.amount[0] = 0;
+            
+            uint32_t total_votes = 0;
 
             for (int i = 0; i < contract->votes_count; i++) {
               getBase58FromAddress(contract->votes[i].vote_address,
                                    (uint8_t *)fullContract, &sha2, truncateAddress);
 
             #if defined(TARGET_BLUE)
+                total_votes += (unsigned int)contract->votes[i].vote_count;
                 fillVoteAddressSlot((void *)toAddress, (const char *)fullContract, 0);
                 snprintf(
                     (char *)(G_io_apdu_buffer+(i*MAX_CHAR_PER_LINE)), MAX_CHAR_PER_LINE,"%s: %u",
@@ -5044,7 +5047,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 snprintf(
                     (char *)fullContract, sizeof(fullContract),"%d: %u",
                     contract->votes_count,
-                    (unsigned int)totalVotes
+                    (unsigned int)total_votes
                 );
                 G_ui_approval_blue_state = APPROVAL_WITNESSVOTE_TRANSACTION;
                 ui_approval_witnessvote_transaction_blue_init();
@@ -5171,7 +5174,7 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     workBuffer += ret;
     dataLength -= ret;
     if (dataLength != 65) {
-        printf("Public key length error!")
+        PRINTF("Public key length error!");
         THROW(0x6700);
     }
 
