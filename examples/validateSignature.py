@@ -17,11 +17,14 @@ def getPublicKey(transaction, signature):
     return public_key
 
 def validate(transaction, signature, public_key):
-    s = Signature(signature_bytes=signature)
-    txID = hashlib.sha256(bytes.fromhex(transaction)).digest()
-    keys = KeyAPI('eth_keys.backends.NativeECCBackend')
-    publicKey = PublicKey(bytes.fromhex(public_key))
-    return keys.ecdsa_verify(txID,s,publicKey), txID.hex()
+    try:
+        s = Signature(signature_bytes=signature)
+        txID = hashlib.sha256(bytes.fromhex(transaction)).digest()
+        keys = KeyAPI('eth_keys.backends.NativeECCBackend')
+        publicKey = PublicKey(bytes.fromhex(public_key))
+        return keys.ecdsa_verify(txID,s,publicKey), txID.hex()
+    except:
+        return False, ""
 
 def validateHASH(txID, signature, public_key):
     s = Signature(signature_bytes=signature)

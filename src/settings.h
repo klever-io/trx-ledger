@@ -4,11 +4,13 @@
 
 extern volatile uint8_t dataAllowed;
 extern volatile uint8_t customContract;
+extern volatile uint8_t truncateAddress;
 
 
 typedef struct internalStorage_t {
   unsigned char dataAllowed;
   unsigned char customContract;
+  unsigned char truncateAddress;
   uint8_t initialized;
 } internalStorage_t;
 
