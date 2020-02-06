@@ -156,7 +156,7 @@ bool setContractType(uint8_t type, void *out){
             strcpy(out,"Unfreeze Balance");
             break;
         case WITHDRAWBALANCECONTRACT:
-            strcpy(out,"Withdraw Balance");
+            strcpy(out,"Claim Rewards");
             break;
         case UNFREEZEASSETCONTRACT:
             strcpy(out,"Unfreeze Asset");

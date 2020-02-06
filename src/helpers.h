@@ -23,6 +23,10 @@
 #ifndef HELPER_H
 #define HELPER_H
 
+#ifdef TARGET_BLUE
+void io_seproxyhal_io_heartbeat(void);
+#endif
+
 void getAddressFromKey(cx_ecfp_public_key_t *publicKey, uint8_t *out);
 
 void getAddressFromPublicKey(const uint8_t *publicKey, uint8_t *address);
