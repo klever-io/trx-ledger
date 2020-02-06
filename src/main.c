@@ -5227,7 +5227,6 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
   uint8_t privateKeyData[32];
   cx_ecfp_private_key_t privateKey;
   cx_sha3_t sha3;
-  uint32_t rawTxLength;
 
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
@@ -5238,7 +5237,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         dataLength -= ret;
 
         // Message Length
-        rawTxLength = U4BE(workBuffer, 0);
+        txContent.dataBytes = U4BE(workBuffer, 0);
         workBuffer += 4;
         dataLength -= 4;
 
@@ -5248,7 +5247,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
                 sizeof(SIGN_MAGIC) - 1, NULL, 32);
 
         char tmp[11];
-        snprintf((char *)tmp, 11,"%d",rawTxLength);
+        snprintf((char *)tmp, 11,"%d",(uint32_t)txContent.dataBytes);
         cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
 
     } else if (p1 != P1_MORE) {
@@ -5258,13 +5257,13 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     if (p2 != 0) {
         THROW(0x6B00);
     }
-    if (dataLength > rawTxLength) {
+    if (dataLength > txContent.dataBytes) {
         THROW(0x6A80);
     }
 
     cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL,32);
-    rawTxLength -= dataLength;
-    if (rawTxLength == 0) {
+    txContent.dataBytes -= dataLength;
+    if (txContent.dataBytes == 0) {
         cx_hash((cx_hash_t *)&sha3, CX_LAST, workBuffer, 0, transactionContext.hash,32);
 
         #define HASH_LENGTH 4
@@ -5320,6 +5319,7 @@ uint8_t getDataLength(uint8_t *workBuffer, uint16_t *dataLength) {
     PRINTF("Checking buffer size\n");
     // find end of base128
     for(int b128=0; count < 2; count++){
+        PRINTF("Checking buffer size\n");
         *dataLength += ((uint8_t)( *workBuffer & 0x7F) << b128);
         if ((*workBuffer&0x80) == 0) break;
         b128+=7;
