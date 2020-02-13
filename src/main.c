@@ -5544,6 +5544,11 @@ __attribute__((section(".boot"))) int main(void) {
                 USB_power(1);
                 ui_idle();
 
+#ifdef HAVE_BLE
+                BLE_power(0, NULL);
+                BLE_power(1, "Nano X");
+#endif // HAVE_BLE
+
                 //Call Tron main Loop
                 tron_main();
             }
