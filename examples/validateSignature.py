@@ -19,7 +19,9 @@ def getPublicKey(transaction, signature):
 def validate(transaction, signature, public_key):
     try:
         s = Signature(signature_bytes=signature)
-        txID = hashlib.sha256(bytes.fromhex(transaction)).digest()
+        txID = hashlib.sha256(
+            bytes.fromhex(transaction) if type(transaction) is str else transaction
+        ).digest()
         keys = KeyAPI('eth_keys.backends.NativeECCBackend')
         publicKey = PublicKey(bytes.fromhex(public_key))
         return keys.ecdsa_verify(txID,s,publicKey), txID.hex()
