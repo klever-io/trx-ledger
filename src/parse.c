@@ -342,6 +342,7 @@ void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
     memset(content, 0, sizeof(txContent_t));
     context->sha2 = sha2;
     context->initialized = true;
+    content->contractType = INVALID_CONTRACT;
     cx_sha256_init(sha2); //init sha
 }
 
@@ -679,71 +680,75 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
     return USTREAM_FAULT;
   }
 
-  /* Contract must have a parameter */
-  if (!transaction.contract->has_parameter) {
-    return USTREAM_FAULT;
-  }
-
-  content->permission_id = transaction.contract->Permission_id;
-  content->contractType = (contractType_e)transaction.contract->type;
-
   if (!dataAllowed && content->dataBytes != 0) {
     THROW(0x6a80);
   }
+  
 
-  pb_istream_t tx_stream =
-      pb_istream_from_buffer(contract_buffer.buf, contract_buffer.size);
-  bool ret;
-  switch (transaction.contract->type) {
-  case protocol_Transaction_Contract_ContractType_TransferContract:
-    ret = transfer_contract(content, &tx_stream);
-    break;
+  /* Parse contract parameters if any...
+     and it may come in different message chunk
+     so test if chunk has the contract
+   */
+  if (transaction.contract->has_parameter) {
+    content->permission_id = transaction.contract->Permission_id;
+    content->contractType = (contractType_e)transaction.contract->type;
 
-  case protocol_Transaction_Contract_ContractType_TransferAssetContract:
-    ret = transfer_asset_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_VoteWitnessContract:
-    ret = vote_witness_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
-    ret = freeze_balance_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_UnfreezeBalanceContract:
-    ret = unfreeze_balance_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_WithdrawBalanceContract:
-    ret = withdraw_balance_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ProposalCreateContract:
-    ret = proposal_create_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ProposalApproveContract:
-    ret = proposal_approve_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ProposalDeleteContract:
-    ret = proposal_delete_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
-    ret = account_update_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
-    ret = trigger_smart_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
-    ret = exchange_create_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
-    ret = exchange_inject_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
-    ret = exchange_withdraw_contract(content, &tx_stream);
-    break;
-  case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
-    ret = exchange_transaction_contract(content, &tx_stream);
-    break;
-  default:
-    return USTREAM_FAULT;
+    pb_istream_t tx_stream =
+        pb_istream_from_buffer(contract_buffer.buf, contract_buffer.size);
+    bool ret;
+
+    switch (transaction.contract->type) {
+      case protocol_Transaction_Contract_ContractType_TransferContract:
+        ret = transfer_contract(content, &tx_stream);
+        break;
+
+      case protocol_Transaction_Contract_ContractType_TransferAssetContract:
+        ret = transfer_asset_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_VoteWitnessContract:
+        ret = vote_witness_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
+        ret = freeze_balance_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_UnfreezeBalanceContract:
+        ret = unfreeze_balance_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_WithdrawBalanceContract:
+        ret = withdraw_balance_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ProposalCreateContract:
+        ret = proposal_create_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ProposalApproveContract:
+        ret = proposal_approve_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ProposalDeleteContract:
+        ret = proposal_delete_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
+        ret = account_update_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
+        ret = trigger_smart_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
+        ret = exchange_create_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
+        ret = exchange_inject_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
+        ret = exchange_withdraw_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
+        ret = exchange_transaction_contract(content, &tx_stream);
+        break;
+      default:
+        return USTREAM_FAULT;
+    }
+    return ret ? USTREAM_PROCESSING : USTREAM_FAULT;
   }
 
-  return ret ? USTREAM_PROCESSING : USTREAM_FAULT;
+  return USTREAM_PROCESSING;
 }

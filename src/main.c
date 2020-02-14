@@ -5051,6 +5051,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 THROW(0x6B00); // not implemented
             #endif // #if TARGET_ID
         break;
+        case INVALID_CONTRACT:
+            THROW(0x6B00); // Contract not initialized
+        break;
         default:
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
@@ -5257,25 +5260,6 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     }
 }
 
-uint8_t getDataLength(uint8_t *workBuffer, uint16_t *dataLength) {
-    *dataLength = 0;
-    uint8_t count = 0;
-    PRINTF("Checking buffer size\n");
-    // find end of base128
-    for(int b128=0; count < 2; count++){
-        PRINTF("Checking buffer size\n");
-        *dataLength += ((uint8_t)( *workBuffer & 0x7F) << b128);
-        if ((*workBuffer&0x80) == 0) break;
-        b128+=7;
-        workBuffer++;
-    }
-    if (count == 2 || *dataLength > 330) {
-        PRINTF("Invalid buffer size[%d]: %d...\n", count, *dataLength);
-        THROW(0x6a80);
-    }
-    return count+1;
-}
-
 // Check ADPU and process the assigned task
 void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
     unsigned short sw = 0;
@@ -5285,51 +5269,51 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
             if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
                 THROW(0x6E00);
             }
-            
-            uint16_t dataLength;
-            uint8_t offsetCount;
-            if (G_io_apdu_buffer[OFFSET_INS]!=INS_GET_APP_CONFIGURATION)
-                offsetCount = getDataLength(G_io_apdu_buffer + OFFSET_LC, &dataLength);
 
             switch (G_io_apdu_buffer[OFFSET_INS]) {
             case INS_GET_PUBLIC_KEY:
                 // Request Publick Key
                 handleGetPublicKey(G_io_apdu_buffer[OFFSET_P1],
-                                   G_io_apdu_buffer[OFFSET_P2],
-                                   G_io_apdu_buffer + OFFSET_LC + offsetCount,
-                                   dataLength, flags, tx);
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
                 break;
 
             case INS_SIGN:
                 // Request Signature
                 handleSign(G_io_apdu_buffer[OFFSET_P1],
-                           G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_LC + offsetCount,
-                           dataLength, flags, tx);
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
                 break;
             
             case INS_GET_APP_CONFIGURATION:
                 // Request App configuration
                 handleGetAppConfiguration(
                     G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2],
-                    G_io_apdu_buffer + OFFSET_LC + offsetCount,
-                    dataLength, flags, tx);
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
                 break;
 
             case INS_GET_ECDH_SECRET: 
                 // Request Signature
                 handleECDHSecret(G_io_apdu_buffer[OFFSET_P1],
-                           G_io_apdu_buffer[OFFSET_P2],
-                           G_io_apdu_buffer + OFFSET_LC + offsetCount,
-                           dataLength, flags, tx);
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
                 break;
             
             case INS_SIGN_PERSONAL_MESSAGE:
                 handleSignPersonalMessage(
                     G_io_apdu_buffer[OFFSET_P1],
                     G_io_apdu_buffer[OFFSET_P2],
-                    G_io_apdu_buffer + OFFSET_LC + offsetCount,
-                    dataLength, flags, tx);
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
                 break;
 
             default:

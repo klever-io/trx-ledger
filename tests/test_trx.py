@@ -6,7 +6,6 @@ export LEDGER_MNEMONIC="abandon abandon abandon abandon abandon abandon abandon 
 Usage: pytest -v -s ./tests/test_trx.py
 '''
 
-import binascii
 import pytest
 import os
 import socket
@@ -35,6 +34,7 @@ Tron Protobuf
 from core import Contract_pb2 as contract
 from core import Tron_pb2 as tron
 from google.protobuf.any_pb2 import Any
+from google.protobuf.internal.decoder import _DecodeVarint32
 
 class App:
     # default APDU TCP server
@@ -75,18 +75,6 @@ class App:
         m = m.ChildKey(address_index)
         return m
 
-    def encodeVariant(self, value):
-        out = bytes()
-        while True:
-            byte = value & 0x7F
-            value = value >> 7
-            if value == 0:
-                out += bytes([byte])
-                break
-            else:
-                out += bytes([byte | 0x80])
-        return out.hex()
-
     def _recvall(self, s, size):
         data = b''
         while size > 0:
@@ -101,14 +89,9 @@ class App:
             size -= len(tmp)
         return data
 
-    def apduMessage(self, INS, P1, P2, PATH, MESSAGE):
-        hexString = ""
-        if PATH:
-            hexString = "E0{:02x}{:02x}{:02x}{}{:02x}{}".format(INS,P1,P2,self.encodeVariant((len(PATH)+len(MESSAGE))//2+1),len(PATH)//4//2,PATH+MESSAGE)
-        else:
-            hexString = "E0{:02x}{:02x}{:02x}{}{}".format(INS,P1,P2,self.encodeVariant(len(MESSAGE)//2),MESSAGE)
-        print(hexString)
-        return binascii.unhexlify(hexString)
+    def apduMessage(self, INS, P1, P2, MESSAGE):
+        hexString = "E0{:02x}{:02x}{:02x}{:02x}{}".format(INS,P1,P2,len(MESSAGE)//2,MESSAGE)
+        return bytes.fromhex(hexString)
     
     def getAccount(self, number):
         return self.accounts[number]
@@ -117,8 +100,8 @@ class App:
         tx = tron.Transaction()
         tx.raw_data.timestamp = 1575712492061
         tx.raw_data.expiration = 1575712551000
-        tx.raw_data.ref_block_hash = binascii.unhexlify("95DA42177DB00507")
-        tx.raw_data.ref_block_bytes = binascii.unhexlify("3DCE")
+        tx.raw_data.ref_block_hash = bytes.fromhex("95DA42177DB00507")
+        tx.raw_data.ref_block_bytes = bytes.fromhex("3DCE")
         if data:
             tx.raw_data.data = data
 
@@ -131,9 +114,7 @@ class App:
         if permission_id:
             c.Permission_id = permission_id
 
-        return tx.raw_data.SerializeToString().hex()
-
-
+        return tx.raw_data.SerializeToString()
 
     def _recv_packet(self, s):
         data = self._recvall(s, 4)
@@ -148,12 +129,12 @@ class App:
     def _exchange(self, s, packet, verbose):
         packet = len(packet).to_bytes(4, 'big') + packet
         if verbose:
-            print('[>]', binascii.hexlify(packet))
+            print('[>]', packet.hex())
         s.sendall(packet)
 
         data, status = self._recv_packet(s)
         if verbose:
-            print('[<]', binascii.hexlify(data), hex(status))
+            print('[<]', data.hex(), hex(status))
 
         return data, status
 
@@ -192,6 +173,66 @@ class App:
 
         s.close()
         return data, status
+    
+    def get_next_length(self,tx):
+        field, pos = _DecodeVarint32(tx,0)
+        size, newpos = _DecodeVarint32(tx,pos)
+        if (field&0x07==0): return newpos
+        return size + newpos
+
+    def sign(self, path, tx, signatures=[], verbose=False):
+        max_length = 255
+        offset = 0
+        to_send = []
+        start_bytes = []
+
+        data = bytearray.fromhex(f"05{path}")
+        while len(tx)>0:
+            # get next message field
+            newpos = self.get_next_length(tx)
+            assert(newpos<max_length)
+            if (len(data)+newpos) > (max_length-21 if len(to_send)==0 else max_length):
+                # add chunk
+                to_send.append(data.hex())
+                data = bytearray()
+                continue
+            # append to data
+            data.extend(tx[:newpos])
+            tx = tx[newpos:]
+        # append last
+        to_send.append(data.hex())
+        token_pos = len(to_send)
+        to_send.extend(signatures)
+
+        if len(to_send)==1:
+            start_bytes.append(0x10)
+        else:
+            start_bytes.append(0x00)
+            for i in range(1, len(to_send) - 1):
+                if (i>=token_pos):
+                    start_bytes.append(0xA0 | 0X00 | i-token_pos )
+                else:
+                    start_bytes.append(0x80)
+            
+            if not(signatures==None) and len(signatures)>0:
+                start_bytes.append(0xa0 | 0x08 | len(signatures)-1)
+            else:
+                start_bytes.append(0x90)
+
+        result = None
+        for i in range(len(to_send)):
+            pack = self.apduMessage(
+                0x04,
+                start_bytes[i],
+                0x00,
+                to_send[i]
+            )
+            result, status = self.exchange(pack, True)
+            if not(status == 0x9000):
+                return None, status
+
+        return result, 0x9000
+        # send signature if any
 
 
 class TestTRX:
@@ -199,14 +240,14 @@ class TestTRX:
     
     '''Send a get_version APDU to the TRX app.'''
     def test_trx_get_version(self, app):    
-        packet = binascii.unhexlify('E0060000FF')
-        data, status = app.exchange(packet)
+        pack = app.apduMessage(0x06,0x00,0x00,"FF")
+        data, status = app.exchange(pack)
         assert(data[1:].hex() == "000105")
 
 
     def test_trx_get_addresses(self, app):
         for i in range(2):
-            pack = app.apduMessage(0x02,0x00,0x00,app.getAccount(i)['path'], "")
+            pack = app.apduMessage(0x02,0x00,0x00,f"05{app.getAccount(i)['path']}")
             data, status = app.exchange(pack)
             assert(data[0] == 65)
             assert(app.accounts[i]['publicKey'][2:] == data[2:66].hex().upper())
@@ -223,8 +264,7 @@ class TestTRX:
                 amount=100000000
             )
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         assert(status == 0x9000)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
@@ -240,8 +280,7 @@ class TestTRX:
             ),
             b'CryptoChain-TronSR Ledger Transactions Tests'
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -255,8 +294,7 @@ class TestTRX:
                 amount=100000000
             )
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(1)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == False)
 
@@ -271,8 +309,7 @@ class TestTRX:
                 asset_name="1002000".encode()
             )
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -288,11 +325,8 @@ class TestTRX:
             )
         )
         # BTT token ID 1002000 - 6 decimals
-        tokenSignature = "0a0a426974546f7272656e7410061a46304402202e2502f36b00e57be785fc79ec4043abcdd4fdd1b58d737ce123599dffad2cb602201702c307f009d014a553503b499591558b3634ceee4c054c61cedd8aca94c02b"
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00,0x00, None, tokenSignature)
-        data, status = app.exchange(pack)
+        tokenSignature = ["0a0a426974546f7272656e7410061a46304402202e2502f36b00e57be785fc79ec4043abcdd4fdd1b58d737ce123599dffad2cb602201702c307f009d014a553503b499591558b3634ceee4c054c61cedd8aca94c02b"]
+        data, status = app.sign(app.getAccount(0)['path'], tx, tokenSignature)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -308,11 +342,8 @@ class TestTRX:
             )
         )
         # BTT token ID 1002000 - 6 decimals
-        tokenSignature = "0a0a4e6577416765436f696e10001a473045022100d8d73b4fad5200aa40b5cdbe369172b5c3259c10f1fb17dfb9c3fa6aa934ace702204e7ef9284969c74a0e80b7b7c17e027d671f3a9b3556c05269e15f7ce45986c8"
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00,0x00,None, tokenSignature)
-        data, status = app.exchange(pack)
+        tokenSignature = ["0a0a4e6577416765436f696e10001a473045022100d8d73b4fad5200aa40b5cdbe369172b5c3259c10f1fb17dfb9c3fa6aa934ace702204e7ef9284969c74a0e80b7b7c17e027d671f3a9b3556c05269e15f7ce45986c8"]
+        data, status = app.sign(app.getAccount(0)['path'], tx, tokenSignature)
         # expected fail
         assert( status == 0x6800 )
 
@@ -328,8 +359,7 @@ class TestTRX:
                 second_token_balance=10000000
             )
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -345,14 +375,9 @@ class TestTRX:
                 second_token_balance=10000000
             )
         )
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
         tokenSignature = ["0a0354525810061a463044022037c53ecb06abe1bfd708bd7afd047720b72e2bfc0a2e4b6ade9a33ae813565a802200a7d5086dc08c4a6f866aad803ac7438942c3c0a6371adcb6992db94487f66c7",
                   "0a0b43727970746f436861696e10001a4730450221008417d04d1caeae31f591ae50f7d19e53e0dfb827bd51c18e66081941bf04639802203c73361a521c969e3fd7f62e62b46d61aad00e47d41e7da108546d954278a6b1"]
-        pack = app.apduMessage(0x04,0xA0 | 0x00 | 0x00, 0x00, None, tokenSignature[0])
-        data, status = app.exchange(pack)
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x01, 0x00, None, tokenSignature[1])
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx, tokenSignature)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -367,11 +392,8 @@ class TestTRX:
                 quant=10000000
                 )
         )
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
-        exchangeSignature = "08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00, 0x00, None, exchangeSignature)
-        data, status = app.exchange(pack)
+        exchangeSignature = ["08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"]
+        data, status = app.sign(app.getAccount(0)['path'], tx, exchangeSignature)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -386,11 +408,8 @@ class TestTRX:
                 quant=1000000
                 )
         )
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
-        exchangeSignature = "08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00, 0x00, None, exchangeSignature)
-        data, status = app.exchange(pack)
+        exchangeSignature = ["08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"]
+        data, status = app.sign(app.getAccount(0)['path'], tx, exchangeSignature)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -406,13 +425,11 @@ class TestTRX:
                 expected=100
                 )
         )
-        pack = app.apduMessage(0x04,0x00,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
-        exchangeSignature = "08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"
-        pack = app.apduMessage(0x04,0xA0 | 0x08 | 0x00, 0x00, None, exchangeSignature)
-        data, status = app.exchange(pack)
+        exchangeSignature = ["08061207313030303136361a0b43727970746f436861696e20002a015f3203545258380642473045022100fe276f30a63173b2440991affbbdc5d6d2d22b61b306b24e535a2fb866518d9c02205f7f41254201131382ec6c8b3c78276a2bb136f910b9a1f37bfde192fc448793"]
+        data, status = app.sign(app.getAccount(0)['path'], tx, exchangeSignature)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
+
 
     def test_trx_vote_witness(self, app):
         tx = app.packContract(
@@ -440,8 +457,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -480,8 +496,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         assert(status == 0x6800)
 
 
@@ -496,8 +511,7 @@ class TestTRX:
                 )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -513,8 +527,7 @@ class TestTRX:
                 )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -531,8 +544,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -546,8 +558,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -562,8 +573,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -576,8 +586,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -591,8 +600,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -607,8 +615,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -622,8 +629,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -637,8 +643,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -653,8 +658,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -669,8 +673,7 @@ class TestTRX:
             )
         )
 
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
@@ -681,9 +684,8 @@ class TestTRX:
         message = 'CryptoChain-TronSR Ledger Transactions Tests'.encode()
         encodedTx = struct.pack(">I", len(message)) + message
 
-        pack = app.apduMessage(0x08,0x00,0x00,app.getAccount(0)['path'], encodedTx.hex())
+        pack = app.apduMessage(0x08,0x00,0x00,f"05{app.getAccount(0)['path']}{encodedTx.hex()}")
         data, status = app.exchange(pack)
-        
         signedMessage = SIGN_MAGIC + str(len(message)).encode() + message
         keccak_hash = keccak.new(digest_bits=256)
         keccak_hash.update(signedMessage)
@@ -704,8 +706,7 @@ class TestTRX:
             None,
             2
         )
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         assert(status == 0x9000)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
@@ -713,13 +714,13 @@ class TestTRX:
 
     def test_trx_ecdh_key(self, app):
         # get ledger public key
-        pack = app.apduMessage(0x02,0x00,0x00,app.getAccount(0)['path'], "")
+        pack = app.apduMessage(0x02,0x00,0x00,f"05{app.getAccount(0)['path']}")
         data, status = app.exchange(pack)
         assert(data[0] == 65)
         pubKey = bytes(data[1:66])
 
         # get pair key
-        pack = app.apduMessage(0x0A,0x00,0x01,app.getAccount(0)['path'], "04" + app.getAccount(1)['publicKey'][2:])
+        pack = app.apduMessage(0x0A,0x00,0x01,f"05{app.getAccount(0)['path']}04{app.getAccount(1)['publicKey'][2:]}")
         data, status = app.exchange(pack)
         assert(status == 0x9000)
 
@@ -742,8 +743,7 @@ class TestTRX:
             )
         )
         
-        pack = app.apduMessage(0x04,0x10,0x00,app.getAccount(0)['path'], tx)
-        data, status = app.exchange(pack)
+        data, status = app.sign(app.getAccount(0)['path'], tx)
         validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
         assert(validSignature == True)
 
