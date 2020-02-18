@@ -925,6 +925,7 @@ typedef enum {
     APPROVAL_WITNESSVOTE_TRANSACTION,
     APPROVAL_FREEZEASSET_TRANSACTION,
     APPROVAL_UNFREEZEASSET_TRANSACTION,
+    APPROVAL_WITHDRAWBALANCE_TRANSACTION,
     APPROVAL_SIGN_PERSONAL_MESSAGE,
     APPROVAL_CUSTOM_CONTRACT,
 } ui_approval_blue_state_t;
@@ -1013,6 +1014,16 @@ const char *const ui_approval_blue_details_name[][7] = {
         NULL,
         "CONFIRM TRANSACTION",
         "Unfreeze TRX",
+    },
+    /*APPROVAL_WITHDRAWBALANCE_TRANSACTION*/
+    {
+        "FROM",
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        "CONFIRM TRANSACTION",
+        "Claim Rewards",
     },
     /*APPROVAL_SIGN_PERSONAL_MESSAGE*/
     {
@@ -1648,6 +1659,16 @@ void ui_approval_unfreeze_transaction_blue_init(void) {
     ui_approval_blue_values[0] = (const char*)fullContract;
     ui_approval_blue_values[1] = (const char*)toAddress;
     ui_approval_blue_values[2] = (const char*)fromAddress;
+    ui_approval_blue_init();
+}
+
+void ui_approval_withdraw_balance_transaction_blue_init(void) {
+    // wipe all cases
+    os_memset(ui_approval_blue_values, 0, sizeof(ui_approval_blue_values));
+    ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
+    ui_approval_blue_cancel =
+        (bagl_element_callback_t)io_seproxyhal_touch_cancel;
+    ui_approval_blue_values[0] = (const char*)fromAddress;
     ui_approval_blue_init();
 }
 
@@ -3704,6 +3725,14 @@ UX_STEP_NOCB(ux_approval_tx_data_warning_step,
       "Present",
     });
 
+UX_STEP_NOCB(
+    ux_approval_from_address_step,
+    bnnn_paging,
+    {
+      .title = "From Address",
+      .text = fromAddress
+    });
+
 UX_STEP_VALID(
     ux_approval_confirm_step,
     pbb,
@@ -3772,18 +3801,11 @@ UX_STEP_NOCB(
       .title = "Hash",
       .text = fullHash
     });
-UX_STEP_NOCB(
-    ux_approval_st_flow_3_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress
-    });
 
 UX_DEF(ux_approval_st_flow,
   &ux_approval_st_flow_1_step,
   &ux_approval_st_flow_2_step,
-  &ux_approval_st_flow_3_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -3792,7 +3814,7 @@ UX_DEF(ux_approval_st_data_warning_flow,
   &ux_approval_st_flow_1_step,
   &ux_approval_tx_data_warning_step,
   &ux_approval_st_flow_2_step,
-  &ux_approval_st_flow_3_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -3828,21 +3850,13 @@ UX_STEP_NOCB(
       .title = TRC20ActionSendAllow,
       .text = toAddress,
     });
-UX_STEP_NOCB(
-    ux_approval_tx_5_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
-
 
 UX_DEF(ux_approval_tx_flow,
   &ux_approval_tx_1_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
   &ux_approval_tx_4_step,
-  &ux_approval_tx_5_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -3853,7 +3867,7 @@ UX_DEF(ux_approval_tx_data_warning_flow,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
   &ux_approval_tx_4_step,
-  &ux_approval_tx_5_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -3896,15 +3910,8 @@ UX_STEP_NOCB(
       .title = "Amount 2",
       .text = G_io_apdu_buffer+100,
     });
-UX_STEP_NOCB(
-    ux_approval_exchange_create_6_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
 UX_STEP_VALID(
-    ux_approval_exchange_create_7_step,
+    ux_approval_exchange_create_confirm_step,
     pbb,
     io_seproxyhal_touch_tx_ok(NULL),
     {
@@ -3919,8 +3926,8 @@ UX_DEF(ux_approval_exchange_create_flow,
   &ux_approval_exchange_create_3_step,
   &ux_approval_exchange_create_4_step,
   &ux_approval_exchange_create_5_step,
-  &ux_approval_exchange_create_6_step,
-  &ux_approval_exchange_create_7_step,
+  &ux_approval_from_address_step,
+  &ux_approval_exchange_create_confirm_step,
   &ux_approval_reject_step
 );
 
@@ -3931,8 +3938,8 @@ UX_DEF(ux_approval_exchange_create_data_warning_flow,
   &ux_approval_exchange_create_3_step,
   &ux_approval_exchange_create_4_step,
   &ux_approval_exchange_create_5_step,
-  &ux_approval_exchange_create_6_step,
-  &ux_approval_exchange_create_7_step,
+  &ux_approval_from_address_step,
+  &ux_approval_exchange_create_confirm_step,
   &ux_approval_reject_step
 );
 
@@ -3981,13 +3988,6 @@ UX_STEP_NOCB(
       .title = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_ADDRESS)),
       .text = (char *)(G_io_apdu_buffer+voteSlot(4, VOTE_AMOUNT)),
     });
-UX_STEP_NOCB(
-    ux_approval_vote_flow_7_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
 
 // 11 slots for dynamic NanoS/NanoX UX voting steps
 const ux_flow_step_t * ux_approval_vote_flow[11];
@@ -4023,21 +4023,13 @@ UX_STEP_NOCB(
       .title = "Freeze To",
       .text = toAddress,
     });
-UX_STEP_NOCB(
-    ux_approval_freeze_flow_5_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
-
 
 UX_DEF(ux_approval_freeze_flow,
   &ux_approval_freeze_flow_1_step,
   &ux_approval_freeze_flow_2_step,
   &ux_approval_freeze_flow_3_step,
   &ux_approval_freeze_flow_4_step,
-  &ux_approval_freeze_flow_5_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4048,7 +4040,7 @@ UX_DEF(ux_approval_freeze_data_warning_flow,
   &ux_approval_freeze_flow_2_step,
   &ux_approval_freeze_flow_3_step,
   &ux_approval_freeze_flow_4_step,
-  &ux_approval_freeze_flow_5_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4079,11 +4071,9 @@ UX_STEP_NOCB(
 
 UX_DEF(ux_approval_unfreeze_flow,
   &ux_approval_unfreeze_flow_1_step,
-  &ux_approval_tx_data_warning_step,
   &ux_approval_unfreeze_flow_2_step,
   &ux_approval_unfreeze_flow_3_step,
-  &ux_approval_freeze_flow_5_step,
-  &ux_approval_freeze_flow_5_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4093,8 +4083,34 @@ UX_DEF(ux_approval_unfreeze_data_warning_flow,
   &ux_approval_tx_data_warning_step,
   &ux_approval_unfreeze_flow_2_step,
   &ux_approval_unfreeze_flow_3_step,
-  &ux_approval_freeze_flow_5_step,
-  &ux_approval_freeze_flow_5_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+
+// WITHDRAW BALANCE TRANSACTION
+//////////////////////////////////////////////////////////////////////
+UX_STEP_NOCB(
+    ux_approval_withdraw_balance_flow_1_step,
+    pnn,
+    {
+      &C_icon_eye,
+      "Claim",
+      "rewards",
+    });
+
+UX_DEF(ux_approval_withdraw_balance_flow,
+  &ux_approval_withdraw_balance_flow_1_step,
+  &ux_approval_from_address_step,
+  &ux_approval_confirm_step,
+  &ux_approval_reject_step
+);
+
+UX_DEF(ux_approval_withdraw_balance_data_warning_flow,
+  &ux_approval_withdraw_balance_flow_1_step,
+  &ux_approval_tx_data_warning_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4137,13 +4153,6 @@ UX_STEP_NOCB(
       .title = "Expected",
       .text = G_io_apdu_buffer+100,
     });
-UX_STEP_NOCB(
-    ux_approval_exchange_transaction_6_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
 
 UX_DEF(ux_approval_exchange_transaction_flow,
   &ux_approval_exchange_transaction_1_step,
@@ -4151,7 +4160,7 @@ UX_DEF(ux_approval_exchange_transaction_flow,
   &ux_approval_exchange_transaction_3_step,
   &ux_approval_exchange_transaction_4_step,
   &ux_approval_exchange_transaction_5_step,
-  &ux_approval_exchange_transaction_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4163,7 +4172,7 @@ UX_DEF(ux_approval_exchange_transaction_data_warning_flow,
   &ux_approval_exchange_transaction_3_step,
   &ux_approval_exchange_transaction_4_step,
   &ux_approval_exchange_transaction_5_step,
-  &ux_approval_exchange_transaction_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4207,13 +4216,6 @@ UX_STEP_NOCB(
       .title = "Amount",
       .text = G_io_apdu_buffer,
     });
-UX_STEP_NOCB(
-    ux_approval_exchange_wi_6_step,
-    bnnn_paging,
-    {
-      .title = "From ADDRESS",
-      .text = fromAddress,
-    });
 
 UX_DEF(ux_approval_exchange_wi_flow,
   &ux_approval_exchange_wi_1_step,
@@ -4221,7 +4223,7 @@ UX_DEF(ux_approval_exchange_wi_flow,
   &ux_approval_exchange_wi_3_step,
   &ux_approval_exchange_wi_4_step,
   &ux_approval_exchange_wi_5_step,
-  &ux_approval_exchange_wi_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4233,7 +4235,7 @@ UX_DEF(ux_approval_exchange_wi_data_warning_flow,
   &ux_approval_exchange_wi_3_step,
   &ux_approval_exchange_wi_4_step,
   &ux_approval_exchange_wi_5_step,
-  &ux_approval_exchange_wi_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4378,13 +4380,6 @@ UX_STEP_NOCB(
       .title = "Call Amount",
       .text = G_io_apdu_buffer,
     });
-UX_STEP_NOCB(
-    ux_approval_custom_contract_6_step,
-    bnnn_paging,
-    {
-      .title = "From Address",
-      .text = fromAddress,
-    });
 
 UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     pnn,
@@ -4401,7 +4396,7 @@ UX_DEF(ux_approval_custom_contract_flow,
   &ux_approval_custom_contract_3_step,
   &ux_approval_custom_contract_4_step,
   &ux_approval_custom_contract_5_step,
-  &ux_approval_custom_contract_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4414,7 +4409,7 @@ UX_DEF(ux_approval_custom_contract_data_warning_flow,
   &ux_approval_custom_contract_3_step,
   &ux_approval_custom_contract_4_step,
   &ux_approval_custom_contract_5_step,
-  &ux_approval_custom_contract_6_step,
+  &ux_approval_from_address_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -4988,7 +4983,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 if (votes_count-- > 0)
                     ux_approval_vote_flow[step++] = &ux_approval_vote_flow_6_step;
 
-                ux_approval_vote_flow[step++] = &ux_approval_vote_flow_7_step;
+                ux_approval_vote_flow[step++] = &ux_approval_from_address_step;
                 ux_approval_vote_flow[step++] = &ux_approval_confirm_step;
                 ux_approval_vote_flow[step++] = &ux_approval_reject_step;
                 ux_approval_vote_flow[step++] = FLOW_END_STEP;
@@ -5046,6 +5041,21 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #elif defined(HAVE_UX_FLOW)
                 ux_flow_init(0,
                      ((txContent.dataBytes>0)? ux_approval_unfreeze_data_warning_flow : ux_approval_unfreeze_flow),
+                     NULL);
+            #elif defined(TARGET_NANOS)
+                THROW(0x6B00); // not implemented
+            #endif // #if TARGET_ID
+        break;
+        case WITHDRAWBALANCECONTRACT: // Claim Rewards
+            getBase58FromAddress(txContent.account,
+                (uint8_t *)toAddress, &sha2, truncateAddress);
+
+            #if defined(TARGET_BLUE)
+                G_ui_approval_blue_state = APPROVAL_WITHDRAWBALANCE_TRANSACTION;
+                ui_approval_withdraw_balance_transaction_blue_init();
+            #elif defined(HAVE_UX_FLOW)
+                ux_flow_init(0,
+                     ((txContent.dataBytes>0)? ux_approval_withdraw_balance_data_warning_flow : ux_approval_withdraw_balance_flow),
                      NULL);
             #elif defined(TARGET_NANOS)
                 THROW(0x6B00); // not implemented
