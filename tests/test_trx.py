@@ -191,7 +191,7 @@ class App:
             # get next message field
             newpos = self.get_next_length(tx)
             assert(newpos<max_length)
-            if (len(data)+newpos) > (max_length-21 if len(to_send)==0 else max_length):
+            if (len(data)+newpos) > max_length:
                 # add chunk
                 to_send.append(data.hex())
                 data = bytearray()
