@@ -626,6 +626,16 @@ static bool exchange_transaction_contract(txContent_t *content,
   return true;
 }
 
+static bool account_update_permission_contract(txContent_t *content, pb_istream_t *stream) {
+  if (!pb_decode(stream, protocol_AccountPermissionUpdateContract_fields,
+                 &msg.account_update_permission_contract)) {
+    return false;
+  }
+
+  // TODO: Update tx content
+  return true;
+}
+
 typedef struct {
     const uint8_t *buf;
     size_t size;
@@ -744,6 +754,8 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
       case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
         ret = exchange_transaction_contract(content, &tx_stream);
         break;
+      case protocol_Transaction_Contract_ContractType_AccountPermissionUpdateContract:
+        ret = account_update_permission_contract(content, &tx_stream);
       default:
         return USTREAM_FAULT;
     }

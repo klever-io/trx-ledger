@@ -39,6 +39,7 @@ typedef union {
   protocol_WithdrawBalanceContract withdraw_balance_contract;
   protocol_FreezeBalanceContract freeze_balance_contract;
   protocol_UnfreezeBalanceContract  unfreeze_balance_contract;
+  protocol_AccountPermissionUpdateContract  account_update_permission_contract;
 } contract_t;
 
 extern contract_t msg;
