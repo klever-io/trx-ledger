@@ -46,6 +46,15 @@ typedef struct _protocol_AccountCreateContract {
     protocol_AccountType type;
 } protocol_AccountCreateContract;
 
+typedef struct _protocol_AccountPermissionUpdateContract {
+    pb_callback_t owner_address;
+    bool has_owner;
+    protocol_Permission owner;
+    bool has_witness;
+    protocol_Permission witness;
+    pb_callback_t actives;
+} protocol_AccountPermissionUpdateContract;
+
 typedef struct _protocol_AccountUpdateContract {
     pb_callback_t account_name;
     pb_byte_t owner_address[21];
@@ -243,6 +252,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ExchangeInjectContract_init_default {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_default {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeTransactionContract_init_default {{0}, 0, {0, {0}}, 0, 0}
+#define protocol_AccountPermissionUpdateContract_init_default {{{NULL}, NULL}, false, protocol_Permission_init_default, false, protocol_Permission_init_default, {{NULL}, NULL}}
 #define protocol_AccountCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0}}
 #define protocol_TransferContract_init_zero      {{0}, {0}, 0}
@@ -270,6 +280,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ExchangeInjectContract_init_zero {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_zero {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeTransactionContract_init_zero {{0}, 0, {0, {0}}, 0, 0}
+#define protocol_AccountPermissionUpdateContract_init_zero {{{NULL}, NULL}, false, protocol_Permission_init_zero, false, protocol_Permission_init_zero, {{NULL}, NULL}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_DeployContract_owner_address_tag 1
@@ -282,6 +293,10 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_AccountCreateContract_owner_address_tag 1
 #define protocol_AccountCreateContract_account_address_tag 2
 #define protocol_AccountCreateContract_type_tag  3
+#define protocol_AccountPermissionUpdateContract_owner_address_tag 1
+#define protocol_AccountPermissionUpdateContract_owner_tag 2
+#define protocol_AccountPermissionUpdateContract_witness_tag 3
+#define protocol_AccountPermissionUpdateContract_actives_tag 4
 #define protocol_AccountUpdateContract_account_name_tag 1
 #define protocol_AccountUpdateContract_owner_address_tag 2
 #define protocol_AssetIssueContract_owner_address_tag 1
@@ -579,6 +594,17 @@ X(a, STATIC,   SINGULAR, INT64,    expected,          5)
 #define protocol_ExchangeTransactionContract_CALLBACK NULL
 #define protocol_ExchangeTransactionContract_DEFAULT NULL
 
+#define protocol_AccountPermissionUpdateContract_FIELDLIST(X, a) \
+X(a, CALLBACK, SINGULAR, BYTES,    owner_address,     1) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  owner,             2) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  witness,           3) \
+X(a, CALLBACK, REPEATED, MESSAGE,  actives,           4)
+#define protocol_AccountPermissionUpdateContract_CALLBACK pb_default_field_callback
+#define protocol_AccountPermissionUpdateContract_DEFAULT NULL
+#define protocol_AccountPermissionUpdateContract_owner_MSGTYPE protocol_Permission
+#define protocol_AccountPermissionUpdateContract_witness_MSGTYPE protocol_Permission
+#define protocol_AccountPermissionUpdateContract_actives_MSGTYPE protocol_Permission
+
 extern const pb_msgdesc_t protocol_AccountCreateContract_msg;
 extern const pb_msgdesc_t protocol_AccountUpdateContract_msg;
 extern const pb_msgdesc_t protocol_TransferContract_msg;
@@ -606,6 +632,7 @@ extern const pb_msgdesc_t protocol_ExchangeCreateContract_msg;
 extern const pb_msgdesc_t protocol_ExchangeInjectContract_msg;
 extern const pb_msgdesc_t protocol_ExchangeWithdrawContract_msg;
 extern const pb_msgdesc_t protocol_ExchangeTransactionContract_msg;
+extern const pb_msgdesc_t protocol_AccountPermissionUpdateContract_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define protocol_AccountCreateContract_fields &protocol_AccountCreateContract_msg
@@ -635,6 +662,7 @@ extern const pb_msgdesc_t protocol_ExchangeTransactionContract_msg;
 #define protocol_ExchangeInjectContract_fields &protocol_ExchangeInjectContract_msg
 #define protocol_ExchangeWithdrawContract_fields &protocol_ExchangeWithdrawContract_msg
 #define protocol_ExchangeTransactionContract_fields &protocol_ExchangeTransactionContract_msg
+#define protocol_AccountPermissionUpdateContract_fields &protocol_AccountPermissionUpdateContract_msg
 
 /* Maximum encoded size of messages (where known) */
 /* protocol_AccountCreateContract_size depends on runtime parameters */
@@ -664,6 +692,7 @@ extern const pb_msgdesc_t protocol_ExchangeTransactionContract_msg;
 #define protocol_ExchangeInjectContract_size     55
 #define protocol_ExchangeWithdrawContract_size   55
 #define protocol_ExchangeTransactionContract_size 66
+/* protocol_AccountPermissionUpdateContract_size depends on runtime parameters */
 
 #ifdef __cplusplus
 } /* extern "C" */
