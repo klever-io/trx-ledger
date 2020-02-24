@@ -1,19 +1,19 @@
 /*******************************************************************************
-*   TRON Ledger
-*   (c) 2018 Ledger
-*
-*  Licensed under the Apache License, Version 2.0 (the "License");
-*  you may not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-********************************************************************************/
+ *   TRON Ledger
+ *   (c) 2018 Ledger
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ********************************************************************************/
 
 #include "parse.h"
 #include <misc/TronApp.pb.h>
@@ -23,182 +23,182 @@
 #include "settings.h"
 #include "tokens.h"
 
-tokenDefinition_t* getKnownToken(txContent_t *context) {
-    uint16_t i;
+tokenDefinition_t *getKnownToken(txContent_t *context) {
+  uint16_t i;
 
-    tokenDefinition_t *currentToken = NULL;
-    for (i=0; i<NUM_TOKENS_TRC20; i++) {
-        currentToken = (tokenDefinition_t *)PIC(&TOKENS_TRC20[i]);
-        if (memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) == 0) {
-            PRINTF("Selected token %d\n",i);
-            return currentToken;
-        }
+  tokenDefinition_t *currentToken = NULL;
+  for (i = 0; i < NUM_TOKENS_TRC20; i++) {
+    currentToken = (tokenDefinition_t *)PIC(&TOKENS_TRC20[i]);
+    if (memcmp(currentToken->address, context->contractAddress, ADDRESS_SIZE) ==
+        0) {
+      PRINTF("Selected token %d\n", i);
+      return currentToken;
     }
-    return NULL;
+  }
+  return NULL;
 }
 
 bool adjustDecimals(const char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals) {
-    uint32_t startOffset;
-    uint32_t lastZeroOffset = 0;
-    uint32_t offset = 0;
+  uint32_t startOffset;
+  uint32_t lastZeroOffset = 0;
+  uint32_t offset = 0;
 
-    if ((srcLength == 1) && (*src == '0')) {
-        if (targetLength < 2) {
-            return false;
-        }
-        target[offset++] = '0';
-        target[offset++] = '\0';
-        return true;
+  if ((srcLength == 1) && (*src == '0')) {
+    if (targetLength < 2) {
+      return false;
     }
-    if (srcLength <= decimals) {
-        uint32_t delta = decimals - srcLength;
-        if (targetLength < srcLength + 1 + 2 + delta) {
-            return false;
-        }
-        target[offset++] = '0';
-        target[offset++] = '.';
-        for (uint32_t i = 0; i < delta; i++) {
-            target[offset++] = '0';
-        }
-        startOffset = offset;
-        for (uint32_t i = 0; i < srcLength; i++) {
-            target[offset++] = src[i];
-        }
-        target[offset] = '\0';
-    } else {
-        uint32_t sourceOffset = 0;
-        uint32_t delta = srcLength - decimals;
-        if (targetLength < srcLength + 1 + 1) {
-            return false;
-        }
-        while (offset < delta) {
-            target[offset++] = src[sourceOffset++];
-        }
-        if (decimals != 0) {
-            target[offset++] = '.';
-        }
-        startOffset = offset;
-        while (sourceOffset < srcLength) {
-            target[offset++] = src[sourceOffset++];
-        }
-        target[offset] = '\0';
-    }
-    for (uint32_t i = startOffset; i < offset; i++) {
-        if (target[i] == '0') {
-            if (lastZeroOffset == 0) {
-                lastZeroOffset = i;
-            }
-        } else {
-            lastZeroOffset = 0;
-        }
-    }
-    if (lastZeroOffset != 0) {
-        target[lastZeroOffset] = '\0';
-        if (target[lastZeroOffset - 1] == '.') {
-            target[lastZeroOffset - 1] = '\0';
-        }
-    }
+    target[offset++] = '0';
+    target[offset++] = '\0';
     return true;
+  }
+  if (srcLength <= decimals) {
+    uint32_t delta = decimals - srcLength;
+    if (targetLength < srcLength + 1 + 2 + delta) {
+      return false;
+    }
+    target[offset++] = '0';
+    target[offset++] = '.';
+    for (uint32_t i = 0; i < delta; i++) {
+      target[offset++] = '0';
+    }
+    startOffset = offset;
+    for (uint32_t i = 0; i < srcLength; i++) {
+      target[offset++] = src[i];
+    }
+    target[offset] = '\0';
+  } else {
+    uint32_t sourceOffset = 0;
+    uint32_t delta = srcLength - decimals;
+    if (targetLength < srcLength + 1 + 1) {
+      return false;
+    }
+    while (offset < delta) {
+      target[offset++] = src[sourceOffset++];
+    }
+    if (decimals != 0) {
+      target[offset++] = '.';
+    }
+    startOffset = offset;
+    while (sourceOffset < srcLength) {
+      target[offset++] = src[sourceOffset++];
+    }
+    target[offset] = '\0';
+  }
+  for (uint32_t i = startOffset; i < offset; i++) {
+    if (target[i] == '0') {
+      if (lastZeroOffset == 0) {
+        lastZeroOffset = i;
+      }
+    } else {
+      lastZeroOffset = 0;
+    }
+  }
+  if (lastZeroOffset != 0) {
+    target[lastZeroOffset] = '\0';
+    if (target[lastZeroOffset - 1] == '.') {
+      target[lastZeroOffset - 1] = '\0';
+    }
+  }
+  return true;
 }
-unsigned short print_amount(uint64_t amount, uint8_t *out,
-                                uint32_t outlen, uint8_t sun) {
-    char tmp[20];
-    char tmp2[25];
-    uint32_t numDigits = 0, i;
-    uint64_t base = 1;
-    while (base <= amount) {
-        base *= 10;
-        numDigits++;
-    }
-    if (numDigits > sizeof(tmp) - 1) {
-        THROW(0x6a80);
-    }
+unsigned short print_amount(uint64_t amount, uint8_t *out, uint32_t outlen,
+                            uint8_t sun) {
+  char tmp[20];
+  char tmp2[25];
+  uint32_t numDigits = 0, i;
+  uint64_t base = 1;
+  while (base <= amount) {
+    base *= 10;
+    numDigits++;
+  }
+  if (numDigits > sizeof(tmp) - 1) {
+    THROW(0x6a80);
+  }
+  base /= 10;
+  for (i = 0; i < numDigits; i++) {
+    tmp[i] = '0' + ((amount / base) % 10);
     base /= 10;
-    for (i = 0; i < numDigits; i++) {
-        tmp[i] = '0' + ((amount / base) % 10);
-        base /= 10;
-    }
-    tmp[i] = '\0';
-    adjustDecimals(tmp, i, tmp2, 25, sun);
-    if (strlen(tmp2) < outlen - 1) {
-        strcpy((char *)out, tmp2);
-    } else {
-        out[0] = '\0';
-    }
-    return strlen((char *)out);
+  }
+  tmp[i] = '\0';
+  adjustDecimals(tmp, i, tmp2, 25, sun);
+  if (strlen(tmp2) < outlen - 1) {
+    strcpy((char *)out, tmp2);
+  } else {
+    out[0] = '\0';
+  }
+  return strlen((char *)out);
 }
 
-bool setContractType(uint8_t type, void *out){
-    switch (type){
-        case ACCOUNTCREATECONTRACT:
-            strcpy(out, "Account Create");
-            break;
-        case VOTEASSETCONTRACT:
-            strcpy(out, "Vote Asset");
-            break;
-        case WITNESSCREATECONTRACT:
-            strcpy(out,"Witness Create");
-            break;
-        case ASSETISSUECONTRACT:
-            strcpy(out,"Asset Issue");
-            break;
-        case WITNESSUPDATECONTRACT:
-            strcpy(out,"Witness Update");
-            break; 
-        case PARTICIPATEASSETISSUECONTRACT:
-            strcpy(out,"Participate Asset");
-            break;
-        case ACCOUNTUPDATECONTRACT:
-            strcpy(out,"Account Update");
-            break;
-        case UNFREEZEBALANCECONTRACT:
-            strcpy(out,"Unfreeze Balance");
-            break;
-        case WITHDRAWBALANCECONTRACT:
-            strcpy(out,"Claim Rewards");
-            break;
-        case UNFREEZEASSETCONTRACT:
-            strcpy(out,"Unfreeze Asset");
-            break;
-        case UPDATEASSETCONTRACT:
-            strcpy(out,"Update Asset");
-            break;
-        case PROPOSALCREATECONTRACT:
-            strcpy(out,"Proposal Create");
-            break;
-        case PROPOSALAPPROVECONTRACT:
-            strcpy(out,"Proposal Approve");
-            break;
-        case PROPOSALDELETECONTRACT:
-            strcpy(out,"Proposal Delete");
-            break;
-        default: 
-            return false;
-    }
-    return true;
+bool setContractType(uint8_t type, void *out) {
+  switch (type) {
+  case ACCOUNTCREATECONTRACT:
+    strcpy(out, "Account Create");
+    break;
+  case VOTEASSETCONTRACT:
+    strcpy(out, "Vote Asset");
+    break;
+  case WITNESSCREATECONTRACT:
+    strcpy(out, "Witness Create");
+    break;
+  case ASSETISSUECONTRACT:
+    strcpy(out, "Asset Issue");
+    break;
+  case WITNESSUPDATECONTRACT:
+    strcpy(out, "Witness Update");
+    break;
+  case PARTICIPATEASSETISSUECONTRACT:
+    strcpy(out, "Participate Asset");
+    break;
+  case ACCOUNTUPDATECONTRACT:
+    strcpy(out, "Account Update");
+    break;
+  case UNFREEZEBALANCECONTRACT:
+    strcpy(out, "Unfreeze Balance");
+    break;
+  case WITHDRAWBALANCECONTRACT:
+    strcpy(out, "Claim Rewards");
+    break;
+  case UNFREEZEASSETCONTRACT:
+    strcpy(out, "Unfreeze Asset");
+    break;
+  case UPDATEASSETCONTRACT:
+    strcpy(out, "Update Asset");
+    break;
+  case PROPOSALCREATECONTRACT:
+    strcpy(out, "Proposal Create");
+    break;
+  case PROPOSALAPPROVECONTRACT:
+    strcpy(out, "Proposal Approve");
+    break;
+  case PROPOSALDELETECONTRACT:
+    strcpy(out, "Proposal Delete");
+    break;
+  default:
+    return false;
+  }
+  return true;
 }
 
-bool setExchangeContractDetail(uint8_t type, void *out){
-    switch (type){
-        case EXCHANGECREATECONTRACT:
-            strcpy(out,"create");
-            break;
-        case EXCHANGEINJECTCONTRACT:
-            strcpy(out,"inject");
-            break;
-        case EXCHANGEWITHDRAWCONTRACT:
-            strcpy(out,"withdraw");
-            break;
-        case EXCHANGETRANSACTIONCONTRACT:
-            strcpy(out,"transaction");
-            break;
-        default: 
-        return false;
-    }
-    return true;
+bool setExchangeContractDetail(uint8_t type, void *out) {
+  switch (type) {
+  case EXCHANGECREATECONTRACT:
+    strcpy(out, "create");
+    break;
+  case EXCHANGEINJECTCONTRACT:
+    strcpy(out, "inject");
+    break;
+  case EXCHANGEWITHDRAWCONTRACT:
+    strcpy(out, "withdraw");
+    break;
+  case EXCHANGETRANSACTIONCONTRACT:
+    strcpy(out, "transaction");
+    break;
+  default:
+    return false;
+  }
+  return true;
 }
-
 
 #include "../proto/core/Contract.pb.h"
 #include "../proto/core/Tron.pb.h"
@@ -208,7 +208,8 @@ bool setExchangeContractDetail(uint8_t type, void *out){
 // ALLOW SAME NAME TOKEN
 // CHECK SIGNATURE(ID+NAME+PRECISION)
 // Parse token Name and Signature
-bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *content) {
+bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength,
+                    txContent_t *content) {
   TokenDetails details = {};
 
   pb_istream_t stream = pb_istream_from_buffer(data, dataLength);
@@ -266,10 +267,10 @@ static bool set_token_info(txContent_t *content, unsigned int token_index,
 }
 
 // Exchange Token ID + Name
-// CHECK SIGNATURE(EXCHANGEID+TOKEN1ID+NAME1+PRECISION1+TOKEN2ID+NAME2+PRECISION2)
+// CHECK
+// SIGNATURE(EXCHANGEID+TOKEN1ID+NAME1+PRECISION1+TOKEN2ID+NAME2+PRECISION2)
 // Parse token Name and Signature
-bool parseExchange(const uint8_t *data,
-                    size_t length, txContent_t *content) {
+bool parseExchange(const uint8_t *data, size_t length, txContent_t *content) {
   ExchangeDetails details;
   char buffer[90];
 
@@ -308,9 +309,8 @@ bool parseExchange(const uint8_t *data,
   msg_size += strlen(details.token1Id) + strlen(details.token1Name) + 1;
   msg_size += strlen(details.token2Id) + strlen(details.token2Name) + 1;
 
-  if (!verifyExchangeID((uint8_t *)buffer, msg_size,
-                        details.signature.bytes, details.signature.size,
-                        content->publicKeyContext)) {
+  if (!verifyExchangeID((uint8_t *)buffer, msg_size, details.signature.bytes,
+                        details.signature.size, content->publicKeyContext)) {
     return false;
   }
 
@@ -338,12 +338,12 @@ bool parseExchange(const uint8_t *data,
 }
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
-    memset(context, 0, sizeof(txContext_t));
-    memset(content, 0, sizeof(txContent_t));
-    context->sha2 = sha2;
-    context->initialized = true;
-    content->contractType = INVALID_CONTRACT;
-    cx_sha256_init(sha2); //init sha
+  memset(context, 0, sizeof(txContext_t));
+  memset(content, 0, sizeof(txContent_t));
+  context->sha2 = sha2;
+  context->initialized = true;
+  content->contractType = INVALID_CONTRACT;
+  cx_sha256_init(sha2); // init sha
 }
 
 #define COPY_ADDRESS(a, b) memcpy((a), (b), ADDRESS_SIZE)
@@ -482,6 +482,18 @@ static bool account_update_contract(txContent_t *content,
   COPY_ADDRESS(content->account, &msg.account_update_contract.owner_address);
   return true;
 }
+
+/*
+static bool account_permission_update_contract(txContent_t *content,
+                                    pb_istream_t *stream) {
+  if (!pb_decode(stream, protocol_AccountUpdateContract_fields,
+                 &msg.account_update_contract)) {
+    return false;
+  }
+  COPY_ADDRESS(content->account, &msg.account_update_contract.owner_address);
+  return true;
+}
+*/
 
 static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_TriggerSmartContract_fields,
@@ -627,28 +639,144 @@ static bool exchange_transaction_contract(txContent_t *content,
 }
 
 typedef struct {
-    const uint8_t *buf;
-    size_t size;
-} buffer_t;
+  uint8_t *buf;
+  uint32_t len;
+  bool has_next;
+  uint16_t code;
+} callback_state_t;
 
-bool pb_decode_contract_parameter(pb_istream_t *stream, const pb_field_t *field, void **arg) {
-  PB_UNUSED(field);
-  buffer_t *buffer = *arg;
+bool istream_callback(pb_istream_t *stream, uint8_t *buf, size_t count) {
+  callback_state_t *state = (callback_state_t *)stream->state;
 
-  buffer->buf = stream->state;
-  buffer->size = stream->bytes_left;
+  PRINTF("pb_istream_t callback count=%d len=%d has_next=%c\n", count,
+         state->len, state->has_next & 0xff);
+
+  if (!state->has_next && state->len == 0) {
+    stream->bytes_left = 0;
+    return false;
+  }
+
+  while (state->len > 0 || state->has_next) {
+    if (state->len >= count) {
+      os_memmove((void *)buf, state->buf, count);
+      state->len -= count;
+      state->buf += count;
+      return true;
+    } else if (state->len > 0) {
+      os_memmove((void *)buf, state->buf, state->len);
+      count -= state->len;
+      buf += state->len;
+      state->len = 0;
+    }
+
+    if (state->has_next && state->len == 0) {
+      volatile unsigned int rx = 0;
+      volatile unsigned int flags = 0;
+
+      G_io_apdu_buffer[rx] = 0x90;
+      G_io_apdu_buffer[rx + 1] = 0x00;
+      rx += 2;
+
+      while (true) {
+        rx = io_exchange(CHANNEL_APDU | flags, rx);
+
+        if (rx == 0) {
+          state->code = 0x6982;
+          return false;
+        }
+        break;
+      }
+
+      state->buf = G_io_apdu_buffer + 5;               // OFFSET_CDATA
+      state->len = G_io_apdu_buffer[4];                // OFFSET_LC
+      state->has_next = (G_io_apdu_buffer[2] != 0x90); // P1 == P1_LAST
+    }
+  }
+
   return true;
 }
 
-bool pb_get_tx_data_size(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+bool pb_get_tx_data_size(pb_istream_t *stream, const pb_field_t *field,
+                         void **arg) {
   PB_UNUSED(field);
   uint64_t *data_size = *arg;
   *data_size = (uint64_t)stream->bytes_left;
   return true;
 }
 
-parserStatus_e processTx(uint8_t *buffer, uint32_t length,
-                         txContent_t *content) {
+typedef struct {
+  protocol_Transaction_raw *transaction;
+  txContent_t *content;
+  uint16_t code;
+} parameter_callback_data_t;
+
+bool pb_decode_contract_parameter_callback(pb_istream_t *stream,
+                                           const pb_field_t *field,
+                                           void **arg) {
+  PB_UNUSED(field);
+  parameter_callback_data_t *data = (parameter_callback_data_t *)*arg;
+
+  txContent_t *content = data->content;
+  bool ret;
+
+  switch (data->transaction->contract->type) {
+  case protocol_Transaction_Contract_ContractType_TransferContract:
+    ret = transfer_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_TransferAssetContract:
+    ret = transfer_asset_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_VoteWitnessContract:
+    ret = vote_witness_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
+    ret = freeze_balance_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_UnfreezeBalanceContract:
+    ret = unfreeze_balance_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_WithdrawBalanceContract:
+    ret = withdraw_balance_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalCreateContract:
+    ret = proposal_create_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalApproveContract:
+    ret = proposal_approve_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ProposalDeleteContract:
+    ret = proposal_delete_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
+    ret = account_update_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
+    ret = trigger_smart_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
+    ret = exchange_create_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
+    ret = exchange_inject_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
+    ret = exchange_withdraw_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
+    ret = exchange_transaction_contract(content, stream);
+    break;
+  case protocol_Transaction_Contract_ContractType_AccountPermissionUpdateContract:
+    ret = true;
+    data->code = 0x6a89;
+    break;
+  default:
+    return USTREAM_FAULT;
+  }
+  return ret ? true : false;
+}
+
+uint16_t processTx(uint8_t *buffer, uint32_t length, bool has_next,
+                   txContent_t *content) {
   protocol_Transaction_raw transaction;
 
   if (length == 0) {
@@ -658,7 +786,10 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   memset(&transaction, 0, sizeof(transaction));
   memset(&msg, 0, sizeof(msg));
 
-  pb_istream_t stream = pb_istream_from_buffer(buffer, length);
+  // pb_istream_t stream = pb_istream_from_buffer(buffer, length);
+
+  callback_state_t stream_callback_state = {buffer, length, has_next, 0x9000};
+  pb_istream_t stream = {&istream_callback, &stream_callback_state, SIZE_MAX};
 
   /* Set callbacks to retrieve "Contract" message bounds.
    * This is required because contract type is not necessarily parsed at the
@@ -666,10 +797,10 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
    * and deserializing the nested contract inside the message requires too much
    * stack for Nano S
    */
-  buffer_t contract_buffer;
+  parameter_callback_data_t callback_data = {&transaction, content, 0x9000};
   transaction.contract->parameter.value.funcs.decode =
-      pb_decode_contract_parameter;
-  transaction.contract->parameter.value.arg = &contract_buffer;
+      pb_decode_contract_parameter_callback;
+  transaction.contract->parameter.value.arg = &callback_data;
 
   /* Set callback to determine if transaction contains custom data.
    * This allows to retrieve the size of arbitrary data. */
@@ -677,78 +808,20 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   transaction.data.arg = &content->dataBytes;
 
   if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
-    return USTREAM_FAULT;
+
+    if (callback_data.code != 0x9000) {
+      return callback_data.code;
+    }
+    if (stream_callback_state.code != 0x9000) {
+      return stream_callback_state.code;
+    }
+
+    return 0x6a83;
   }
 
   if (!dataAllowed && content->dataBytes != 0) {
-    THROW(0x6a80);
-  }
-  
-
-  /* Parse contract parameters if any...
-     and it may come in different message chunk
-     so test if chunk has the contract
-   */
-  if (transaction.contract->has_parameter) {
-    content->permission_id = transaction.contract->Permission_id;
-    content->contractType = (contractType_e)transaction.contract->type;
-
-    pb_istream_t tx_stream =
-        pb_istream_from_buffer(contract_buffer.buf, contract_buffer.size);
-    bool ret;
-
-    switch (transaction.contract->type) {
-      case protocol_Transaction_Contract_ContractType_TransferContract:
-        ret = transfer_contract(content, &tx_stream);
-        break;
-
-      case protocol_Transaction_Contract_ContractType_TransferAssetContract:
-        ret = transfer_asset_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_VoteWitnessContract:
-        ret = vote_witness_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_FreezeBalanceContract:
-        ret = freeze_balance_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_UnfreezeBalanceContract:
-        ret = unfreeze_balance_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_WithdrawBalanceContract:
-        ret = withdraw_balance_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ProposalCreateContract:
-        ret = proposal_create_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ProposalApproveContract:
-        ret = proposal_approve_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ProposalDeleteContract:
-        ret = proposal_delete_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_AccountUpdateContract:
-        ret = account_update_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_TriggerSmartContract:
-        ret = trigger_smart_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ExchangeCreateContract:
-        ret = exchange_create_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ExchangeInjectContract:
-        ret = exchange_inject_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ExchangeWithdrawContract:
-        ret = exchange_withdraw_contract(content, &tx_stream);
-        break;
-      case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
-        ret = exchange_transaction_contract(content, &tx_stream);
-        break;
-      default:
-        return USTREAM_FAULT;
-    }
-    return ret ? USTREAM_PROCESSING : USTREAM_FAULT;
+    THROW(0x6a88);
   }
 
-  return USTREAM_PROCESSING;
+  return USTREAM_FINISHED;
 }
