@@ -44,3 +44,6 @@ protocol.ExchangeWithdrawContract.token_id          max_size: 8
 
 protocol.ExchangeTransactionContract.owner_address  max_size: 21, fixed_length: true
 protocol.ExchangeTransactionContract.token_id       max_size: 8
+
+protocol.AccountPermissionUpdateContract.owner_address  max_size: 21, fixed_length: true
+protocol.AccountPermissionUpdateContract.actives        max_count: 2  # Assume 2 max actives

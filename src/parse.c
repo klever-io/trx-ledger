@@ -631,7 +631,8 @@ static bool account_update_permission_contract(txContent_t *content, pb_istream_
                  &msg.account_update_permission_contract)) {
     return false;
   }
-
+  
+  COPY_ADDRESS(content->account, &msg.account_update_permission_contract.owner_address);
   // TODO: Update tx content
   return true;
 }
