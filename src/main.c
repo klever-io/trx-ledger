@@ -1686,7 +1686,7 @@ static const bagl_element_t const ui_approval_pgp_ecdh_blue[] = {
 
 #if defined(HAVE_UX_FLOW)
 
-void display_settings(void);
+void display_settings(const ux_flow_step_t* const);
 void switch_settings_contract_data();
 void switch_settings_custom_contracts();
 void switch_settings_truncate_address();
@@ -1710,7 +1710,7 @@ UX_STEP_NOCB(
 UX_STEP_VALID(
     ux_idle_flow_3_step,
     pb,
-    display_settings(),
+    display_settings(NULL),
     {
       &C_icon_coggle,
       "Settings",
@@ -1815,32 +1815,32 @@ UX_DEF(ux_settings_flow,
   &ux_settings_flow_4_step
 );
 
-void display_settings() {
+void display_settings(const ux_flow_step_t* const start_step) {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
   strcpy(addressSummary + 20, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
   strcpy(addressSummary + 40, (N_storage.truncateAddress ? "Yes" : "No"));
-  ux_flow_init(0, ux_settings_flow, NULL);
+  ux_flow_init(0, ux_settings_flow, start_step);
 }
 
 void switch_settings_contract_data() {
   uint8_t value = (N_storage.dataAllowed ? 0 : 1);
   dataAllowed = value;
   nvm_write((void*)&N_storage.dataAllowed, (void*)&value, sizeof(uint8_t));
-  display_settings();
+  display_settings(&ux_settings_flow_1_step); // same effect as NULL
 }
 
 void switch_settings_custom_contracts() {
   uint8_t value = (N_storage.customContract ? 0 : 1);
   customContract = value;
   nvm_write((void*)&N_storage.customContract, (void*)&value, sizeof(uint8_t));
-  display_settings();
+  display_settings(&ux_settings_flow_2_step);
 }
 
 void switch_settings_truncate_address() {
   uint8_t value = (N_storage.truncateAddress ? 0 : 1);
   truncateAddress = value;
   nvm_write((void*)&N_storage.truncateAddress, (void*)&value, sizeof(uint8_t));
-  display_settings();
+  display_settings(&ux_settings_flow_3_step);
 }
 
 //////////////////////////////////////////////////////////////////////
