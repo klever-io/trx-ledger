@@ -149,11 +149,11 @@ message Permission {
     Witness = 1;
     Active = 2;
   }
-  PermissionType type = 1;
+  PermissionType type = 1 [(nanopb).type = FT_IGNORE];
   int32 id = 2 [(nanopb).int_size = IS_8]; // Owner id=0, Witness id=1, Active id start by 2
   string permission_name = 3 [(nanopb).type = FT_IGNORE];
   int64 threshold = 4 [(nanopb).int_size = IS_8];
   int32 parent_id = 5 [(nanopb).type = FT_IGNORE];
   bytes operations = 6 [(nanopb).type = FT_IGNORE]; // 1 bit for 1 contract
-  repeated Key keys = 7 [(nanopb).max_count = 3];
+  repeated Key keys = 7 [(nanopb).max_count = 2];
 }

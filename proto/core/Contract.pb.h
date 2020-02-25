@@ -29,6 +29,10 @@ typedef struct _protocol_AccountCreateContract {
 
 typedef struct _protocol_AccountPermissionUpdateContract {
     pb_byte_t owner_address[21];
+    bool has_owner;
+    protocol_Permission owner;
+    pb_size_t actives_count;
+    protocol_Permission actives[2];
 } protocol_AccountPermissionUpdateContract;
 
 typedef struct _protocol_AccountUpdateContract {
@@ -234,7 +238,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ExchangeInjectContract_init_default {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_default {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeTransactionContract_init_default {{0}, 0, {0, {0}}, 0, 0}
-#define protocol_AccountPermissionUpdateContract_init_default {{0}}
+#define protocol_AccountPermissionUpdateContract_init_default {{0}, false, protocol_Permission_init_default, 0, {protocol_Permission_init_default, protocol_Permission_init_default}}
 #define protocol_AccountCreateContract_init_zero {{0}, {0}, _protocol_AccountType_MIN}
 #define protocol_AccountUpdateContract_init_zero {{{NULL}, NULL}, {0}}
 #define protocol_TransferContract_init_zero      {{0}, {0}, 0}
@@ -262,13 +266,15 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ExchangeInjectContract_init_zero {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeWithdrawContract_init_zero {{0}, 0, {0, {0}}, 0}
 #define protocol_ExchangeTransactionContract_init_zero {{0}, 0, {0, {0}}, 0, 0}
-#define protocol_AccountPermissionUpdateContract_init_zero {{0}}
+#define protocol_AccountPermissionUpdateContract_init_zero {{0}, false, protocol_Permission_init_zero, 0, {protocol_Permission_init_zero, protocol_Permission_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_AccountCreateContract_owner_address_tag 1
 #define protocol_AccountCreateContract_account_address_tag 2
 #define protocol_AccountCreateContract_type_tag  3
 #define protocol_AccountPermissionUpdateContract_owner_address_tag 1
+#define protocol_AccountPermissionUpdateContract_owner_tag 2
+#define protocol_AccountPermissionUpdateContract_actives_tag 4
 #define protocol_AccountUpdateContract_account_name_tag 1
 #define protocol_AccountUpdateContract_owner_address_tag 2
 #define protocol_AssetIssueContract_owner_address_tag 1
@@ -547,9 +553,13 @@ X(a, STATIC,   SINGULAR, INT64,    expected,          5)
 #define protocol_ExchangeTransactionContract_DEFAULT NULL
 
 #define protocol_AccountPermissionUpdateContract_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1)
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  owner,             2) \
+X(a, STATIC,   REPEATED, MESSAGE,  actives,           4)
 #define protocol_AccountPermissionUpdateContract_CALLBACK NULL
 #define protocol_AccountPermissionUpdateContract_DEFAULT NULL
+#define protocol_AccountPermissionUpdateContract_owner_MSGTYPE protocol_Permission
+#define protocol_AccountPermissionUpdateContract_actives_MSGTYPE protocol_Permission
 
 extern const pb_msgdesc_t protocol_AccountCreateContract_msg;
 extern const pb_msgdesc_t protocol_AccountUpdateContract_msg;
@@ -638,7 +648,7 @@ extern const pb_msgdesc_t protocol_AccountPermissionUpdateContract_msg;
 #define protocol_ExchangeInjectContract_size     55
 #define protocol_ExchangeWithdrawContract_size   55
 #define protocol_ExchangeTransactionContract_size 66
-#define protocol_AccountPermissionUpdateContract_size 23
+#define protocol_AccountPermissionUpdateContract_size 311
 
 #ifdef __cplusplus
 } /* extern "C" */

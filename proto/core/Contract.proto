@@ -206,7 +206,7 @@ message ExchangeTransactionContract {
 
 message AccountPermissionUpdateContract {
     bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
-    Permission owner = 2 [(nanopb).type = FT_IGNORE]; // Empty is invalidate
+    Permission owner = 2; // Empty is invalidate
     Permission witness = 3 [(nanopb).type = FT_IGNORE]; // Can be empty
-    repeated Permission actives = 4 [(nanopb).type = FT_IGNORE]; // Empty is invalidate
+    repeated Permission actives = 4 [(nanopb).max_count = 2]; // Empty is invalidate
   }

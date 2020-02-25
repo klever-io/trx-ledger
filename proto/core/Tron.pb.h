@@ -133,11 +133,10 @@ typedef struct _protocol_authority {
 } protocol_authority;
 
 typedef struct _protocol_Permission {
-    protocol_Permission_PermissionType type;
     int8_t id;
     int8_t threshold;
     pb_size_t keys_count;
-    protocol_Key keys[3];
+    protocol_Key keys[2];
 } protocol_Permission;
 
 typedef struct _protocol_Transaction_raw {
@@ -184,7 +183,7 @@ typedef struct _protocol_Transaction {
 #define protocol_Transaction_Result_init_default {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
 #define protocol_Transaction_raw_init_default    {{{NULL}, NULL}, {protocol_Transaction_Contract_init_default}}
 #define protocol_Key_init_default                {{0}, 0}
-#define protocol_Permission_init_default         {_protocol_Permission_PermissionType_MIN, 0, 0, 0, {protocol_Key_init_default, protocol_Key_init_default, protocol_Key_init_default}}
+#define protocol_Permission_init_default         {0, 0, 0, {protocol_Key_init_default, protocol_Key_init_default}}
 #define protocol_Exchange_init_zero              {0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0}
 #define protocol_AccountId_init_zero             {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_authority_init_zero             {false, protocol_AccountId_init_zero, {{NULL}, NULL}}
@@ -193,7 +192,7 @@ typedef struct _protocol_Transaction {
 #define protocol_Transaction_Result_init_zero    {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
 #define protocol_Transaction_raw_init_zero       {{{NULL}, NULL}, {protocol_Transaction_Contract_init_zero}}
 #define protocol_Key_init_zero                   {{0}, 0}
-#define protocol_Permission_init_zero            {_protocol_Permission_PermissionType_MIN, 0, 0, 0, {protocol_Key_init_zero, protocol_Key_init_zero, protocol_Key_init_zero}}
+#define protocol_Permission_init_zero            {0, 0, 0, {protocol_Key_init_zero, protocol_Key_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_AccountId_name_tag              1
@@ -222,7 +221,6 @@ typedef struct _protocol_Transaction {
 #define protocol_Transaction_Result_exchange_id_tag 21
 #define protocol_authority_account_tag           1
 #define protocol_authority_permission_name_tag   2
-#define protocol_Permission_type_tag             1
 #define protocol_Permission_id_tag               2
 #define protocol_Permission_threshold_tag        4
 #define protocol_Permission_keys_tag             7
@@ -302,7 +300,6 @@ X(a, STATIC,   SINGULAR, INT64,    weight,            2)
 #define protocol_Key_DEFAULT NULL
 
 #define protocol_Permission_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UENUM,    type,              1) \
 X(a, STATIC,   SINGULAR, INT32,    id,                2) \
 X(a, STATIC,   SINGULAR, INT64,    threshold,         4) \
 X(a, STATIC,   REPEATED, MESSAGE,  keys,              7)
@@ -340,7 +337,7 @@ extern const pb_msgdesc_t protocol_Permission_msg;
 /* protocol_Transaction_Result_size depends on runtime parameters */
 /* protocol_Transaction_raw_size depends on runtime parameters */
 #define protocol_Key_size                        34
-#define protocol_Permission_size                 132
+#define protocol_Permission_size                 94
 
 #ifdef __cplusplus
 } /* extern "C" */
