@@ -2794,6 +2794,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(tx);
     uint256_t uint256;
 
+    if (p2 != 0x00) {
+        THROW(0x6B00);
+    }
+
+    // initialize context
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
         if (ret < 0) {
@@ -2848,9 +2853,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         THROW(0x6B00);
     }
 
-    if (p2 != 0) {
-        THROW(0x6B00);
-    }
     // Context must be initialized first
     if (!txContext.initialized) {
         PRINTF("Context not initialized\n");
@@ -2876,6 +2878,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             PRINTF("Unexpected parser status\n");
             THROW(txResult);
     }
+
     // Last data hash
     cx_hash((cx_hash_t *)txContext.sha2, CX_LAST, workBuffer,
             0, transactionContext.hash, 32);
