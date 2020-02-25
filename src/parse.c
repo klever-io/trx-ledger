@@ -145,7 +145,7 @@ bool setContractType(uint8_t type, void *out){
             break;
         case WITNESSUPDATECONTRACT:
             strcpy(out,"Witness Update");
-            break; 
+            break;
         case PARTICIPATEASSETISSUECONTRACT:
             strcpy(out,"Participate Asset");
             break;
@@ -173,7 +173,10 @@ bool setContractType(uint8_t type, void *out){
         case PROPOSALDELETECONTRACT:
             strcpy(out,"Proposal Delete");
             break;
-        default: 
+        case ACCOUNTPERMISSIONUPDATECONTRACT:
+            strcpy(out, "Permission Update");
+            break;
+        default:
             return false;
     }
     return true;
@@ -193,7 +196,7 @@ bool setExchangeContractDetail(uint8_t type, void *out){
         case EXCHANGETRANSACTIONCONTRACT:
             strcpy(out,"transaction");
             break;
-        default: 
+        default:
         return false;
     }
     return true;
@@ -626,13 +629,13 @@ static bool exchange_transaction_contract(txContent_t *content,
   return true;
 }
 
-static bool account_update_permission_contract(txContent_t *content, pb_istream_t *stream) {
+static bool account_permission_update_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_AccountPermissionUpdateContract_fields,
-                 &msg.account_update_permission_contract)) {
+                 &msg.account_permission_update_contract)) {
     return false;
   }
-  
-  COPY_ADDRESS(content->account, &msg.account_update_permission_contract.owner_address);
+
+  COPY_ADDRESS(content->account, &msg.account_permission_update_contract.owner_address);
   // TODO: Update tx content
   return true;
 }
@@ -694,7 +697,7 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   if (!dataAllowed && content->dataBytes != 0) {
     THROW(0x6a80);
   }
-  
+
 
   /* Parse contract parameters if any...
      and it may come in different message chunk
@@ -756,7 +759,8 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
         ret = exchange_transaction_contract(content, &tx_stream);
         break;
       case protocol_Transaction_Contract_ContractType_AccountPermissionUpdateContract:
-        ret = account_update_permission_contract(content, &tx_stream);
+        ret = account_permission_update_contract(content, &tx_stream);
+        break;
       default:
         return USTREAM_FAULT;
     }
