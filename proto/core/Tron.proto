@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/any.proto";
 // import "core/Discover.proto";
+import "nanopb.proto";
 
 package protocol;
 
@@ -22,7 +23,8 @@ message Exchange {
   int64 second_token_balance = 9;
 }
 
-// AccountId, (name, address) use name, (null, address) use address, (name, null) use name,
+// AccountId, (name, address) use name, (null, address) use address, (name,
+// null) use name,
 message AccountId {
   bytes name = 1;
   bytes address = 2;
@@ -74,8 +76,8 @@ message Transaction {
     }
     ContractType type = 1;
     google.protobuf.Any parameter = 2;
-    bytes provider = 3;
-    bytes ContractName = 4;
+    bytes provider = 3 [ (nanopb).type = FT_IGNORE ];
+    bytes ContractName = 4 [ (nanopb).type = FT_IGNORE ];
     int32 Permission_id = 5;
   }
 
@@ -115,30 +117,30 @@ message Transaction {
   }
 
   message raw {
-    bytes ref_block_bytes = 1;
-    int64 ref_block_num = 3;
-    bytes ref_block_hash = 4;
-    int64 expiration = 8;
-    repeated authority auths = 9;
+    bytes ref_block_bytes = 1 [(nanopb).type = FT_IGNORE];
+    int64 ref_block_num = 3 [(nanopb).type = FT_IGNORE];
+    bytes ref_block_hash = 4 [(nanopb).type = FT_IGNORE];
+    int64 expiration = 8 [(nanopb).type = FT_IGNORE];
+    repeated authority auths = 9 [(nanopb).type = FT_IGNORE];
     // data not used
     bytes data = 10;
-    //only support size = 1,  repeated list here for extension
-    repeated Contract contract = 11;
+    // only support size = 1, repeated list here for extension
+    repeated Contract contract = 11 [(nanopb).max_count = 1, (nanopb).fixed_count = true];
     // scripts not used
-    bytes scripts = 12;
-    int64 timestamp = 14;
-    int64 fee_limit = 18;
+    bytes scripts = 12 [(nanopb).type = FT_IGNORE];
+    int64 timestamp = 14 [(nanopb).type = FT_IGNORE];
+    int64 fee_limit = 18 [(nanopb).type = FT_IGNORE];
   }
 
   raw raw_data = 1;
-  // only support size = 1,  repeated list here for muti-sig extension
+  // only support size = 1, repeated list here for muti-sig extension
   repeated bytes signature = 2;
   repeated Result ret = 5;
 }
 
 message Key {
-  bytes address = 1;
-  int64 weight = 2;
+  bytes address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+  int64 weight = 2 [(nanopb).int_size = IS_8];
 }
 
 message Permission {
@@ -148,10 +150,10 @@ message Permission {
     Active = 2;
   }
   PermissionType type = 1;
-  int32 id = 2;     //Owner id=0, Witness id=1, Active id start by 2
-  string permission_name = 3;
-  int64 threshold = 4;
-  int32 parent_id = 5;
-  bytes operations = 6;   //1 bit 1 contract
-  repeated Key keys = 7;
+  int32 id = 2 [(nanopb).int_size = IS_8]; // Owner id=0, Witness id=1, Active id start by 2
+  string permission_name = 3 [(nanopb).type = FT_IGNORE];
+  int64 threshold = 4 [(nanopb).int_size = IS_8];
+  int32 parent_id = 5 [(nanopb).type = FT_IGNORE];
+  bytes operations = 6 [(nanopb).type = FT_IGNORE]; // 1 bit for 1 contract
+  repeated Key keys = 7 [(nanopb).max_count = 3];
 }

@@ -103,15 +103,13 @@ typedef struct _protocol_Exchange {
 
 typedef struct _protocol_Key {
     pb_byte_t address[21];
-    int64_t weight;
+    int8_t weight;
 } protocol_Key;
 
 typedef struct _protocol_Transaction_Contract {
     protocol_Transaction_Contract_ContractType type;
     bool has_parameter;
     google_protobuf_Any parameter;
-    pb_callback_t provider;
-    pb_callback_t ContractName;
     int32_t Permission_id;
 } protocol_Transaction_Contract;
 
@@ -136,27 +134,15 @@ typedef struct _protocol_authority {
 
 typedef struct _protocol_Permission {
     protocol_Permission_PermissionType type;
-    int32_t id;
-    pb_callback_t permission_name;
-    int64_t threshold;
-    int32_t parent_id;
-    pb_byte_t operations[32];
+    int8_t id;
+    int8_t threshold;
     pb_size_t keys_count;
     protocol_Key keys[3];
 } protocol_Permission;
 
 typedef struct _protocol_Transaction_raw {
-    pb_callback_t ref_block_bytes;
-    int64_t ref_block_num;
-    pb_callback_t ref_block_hash;
-    int64_t expiration;
-    pb_callback_t auths;
     pb_callback_t data;
-    pb_size_t contract_count;
     protocol_Transaction_Contract contract[1];
-    pb_callback_t scripts;
-    int64_t timestamp;
-    int64_t fee_limit;
 } protocol_Transaction_raw;
 
 typedef struct _protocol_Transaction {
@@ -194,20 +180,20 @@ typedef struct _protocol_Transaction {
 #define protocol_AccountId_init_default          {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_authority_init_default          {false, protocol_AccountId_init_default, {{NULL}, NULL}}
 #define protocol_Transaction_init_default        {false, protocol_Transaction_raw_init_default, {{NULL}, NULL}, {{NULL}, NULL}}
-#define protocol_Transaction_Contract_init_default {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_default, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define protocol_Transaction_Contract_init_default {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_default, 0}
 #define protocol_Transaction_Result_init_default {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
-#define protocol_Transaction_raw_init_default    {{{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_default}, {{NULL}, NULL}, 0, 0}
+#define protocol_Transaction_raw_init_default    {{{NULL}, NULL}, {protocol_Transaction_Contract_init_default}}
 #define protocol_Key_init_default                {{0}, 0}
-#define protocol_Permission_init_default         {_protocol_Permission_PermissionType_MIN, 0, {{NULL}, NULL}, 0, 0, {0}, 0, {protocol_Key_init_default, protocol_Key_init_default, protocol_Key_init_default}}
+#define protocol_Permission_init_default         {_protocol_Permission_PermissionType_MIN, 0, 0, 0, {protocol_Key_init_default, protocol_Key_init_default, protocol_Key_init_default}}
 #define protocol_Exchange_init_zero              {0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0}
 #define protocol_AccountId_init_zero             {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_authority_init_zero             {false, protocol_AccountId_init_zero, {{NULL}, NULL}}
 #define protocol_Transaction_init_zero           {false, protocol_Transaction_raw_init_zero, {{NULL}, NULL}, {{NULL}, NULL}}
-#define protocol_Transaction_Contract_init_zero  {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_zero, {{NULL}, NULL}, {{NULL}, NULL}, 0}
+#define protocol_Transaction_Contract_init_zero  {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_zero, 0}
 #define protocol_Transaction_Result_init_zero    {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
-#define protocol_Transaction_raw_init_zero       {{{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_zero}, {{NULL}, NULL}, 0, 0}
+#define protocol_Transaction_raw_init_zero       {{{NULL}, NULL}, {protocol_Transaction_Contract_init_zero}}
 #define protocol_Key_init_zero                   {{0}, 0}
-#define protocol_Permission_init_zero            {_protocol_Permission_PermissionType_MIN, 0, {{NULL}, NULL}, 0, 0, {0}, 0, {protocol_Key_init_zero, protocol_Key_init_zero, protocol_Key_init_zero}}
+#define protocol_Permission_init_zero            {_protocol_Permission_PermissionType_MIN, 0, 0, 0, {protocol_Key_init_zero, protocol_Key_init_zero, protocol_Key_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define protocol_AccountId_name_tag              1
@@ -223,8 +209,6 @@ typedef struct _protocol_Transaction {
 #define protocol_Key_weight_tag                  2
 #define protocol_Transaction_Contract_type_tag   1
 #define protocol_Transaction_Contract_parameter_tag 2
-#define protocol_Transaction_Contract_provider_tag 3
-#define protocol_Transaction_Contract_ContractName_tag 4
 #define protocol_Transaction_Contract_Permission_id_tag 5
 #define protocol_Transaction_Result_fee_tag      1
 #define protocol_Transaction_Result_ret_tag      2
@@ -240,21 +224,10 @@ typedef struct _protocol_Transaction {
 #define protocol_authority_permission_name_tag   2
 #define protocol_Permission_type_tag             1
 #define protocol_Permission_id_tag               2
-#define protocol_Permission_permission_name_tag  3
 #define protocol_Permission_threshold_tag        4
-#define protocol_Permission_parent_id_tag        5
-#define protocol_Permission_operations_tag       6
 #define protocol_Permission_keys_tag             7
-#define protocol_Transaction_raw_ref_block_bytes_tag 1
-#define protocol_Transaction_raw_ref_block_num_tag 3
-#define protocol_Transaction_raw_ref_block_hash_tag 4
-#define protocol_Transaction_raw_expiration_tag  8
-#define protocol_Transaction_raw_auths_tag       9
 #define protocol_Transaction_raw_data_tag        10
 #define protocol_Transaction_raw_contract_tag    11
-#define protocol_Transaction_raw_scripts_tag     12
-#define protocol_Transaction_raw_timestamp_tag   14
-#define protocol_Transaction_raw_fee_limit_tag   18
 #define protocol_Transaction_raw_data_tag        1
 #define protocol_Transaction_signature_tag       2
 #define protocol_Transaction_ret_tag             5
@@ -296,10 +269,8 @@ X(a, CALLBACK, REPEATED, MESSAGE,  ret,               5)
 #define protocol_Transaction_Contract_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    type,              1) \
 X(a, STATIC,   OPTIONAL, MESSAGE,  parameter,         2) \
-X(a, CALLBACK, SINGULAR, BYTES,    provider,          3) \
-X(a, CALLBACK, SINGULAR, BYTES,    ContractName,      4) \
 X(a, STATIC,   SINGULAR, INT32,    Permission_id,     5)
-#define protocol_Transaction_Contract_CALLBACK pb_default_field_callback
+#define protocol_Transaction_Contract_CALLBACK NULL
 #define protocol_Transaction_Contract_DEFAULT NULL
 #define protocol_Transaction_Contract_parameter_MSGTYPE google_protobuf_Any
 
@@ -318,19 +289,10 @@ X(a, STATIC,   SINGULAR, INT64,    exchange_id,      21)
 #define protocol_Transaction_Result_DEFAULT NULL
 
 #define protocol_Transaction_raw_FIELDLIST(X, a) \
-X(a, CALLBACK, SINGULAR, BYTES,    ref_block_bytes,   1) \
-X(a, STATIC,   SINGULAR, INT64,    ref_block_num,     3) \
-X(a, CALLBACK, SINGULAR, BYTES,    ref_block_hash,    4) \
-X(a, STATIC,   SINGULAR, INT64,    expiration,        8) \
-X(a, CALLBACK, REPEATED, MESSAGE,  auths,             9) \
 X(a, CALLBACK, SINGULAR, BYTES,    data,             10) \
-X(a, STATIC,   REPEATED, MESSAGE,  contract,         11) \
-X(a, CALLBACK, SINGULAR, BYTES,    scripts,          12) \
-X(a, STATIC,   SINGULAR, INT64,    timestamp,        14) \
-X(a, STATIC,   SINGULAR, INT64,    fee_limit,        18)
+X(a, STATIC,   FIXARRAY, MESSAGE,  contract,         11)
 #define protocol_Transaction_raw_CALLBACK pb_default_field_callback
 #define protocol_Transaction_raw_DEFAULT NULL
-#define protocol_Transaction_raw_auths_MSGTYPE protocol_authority
 #define protocol_Transaction_raw_contract_MSGTYPE protocol_Transaction_Contract
 
 #define protocol_Key_FIELDLIST(X, a) \
@@ -342,12 +304,9 @@ X(a, STATIC,   SINGULAR, INT64,    weight,            2)
 #define protocol_Permission_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    type,              1) \
 X(a, STATIC,   SINGULAR, INT32,    id,                2) \
-X(a, CALLBACK, SINGULAR, STRING,   permission_name,   3) \
 X(a, STATIC,   SINGULAR, INT64,    threshold,         4) \
-X(a, STATIC,   SINGULAR, INT32,    parent_id,         5) \
-X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, operations,        6) \
 X(a, STATIC,   REPEATED, MESSAGE,  keys,              7)
-#define protocol_Permission_CALLBACK pb_default_field_callback
+#define protocol_Permission_CALLBACK NULL
 #define protocol_Permission_DEFAULT NULL
 #define protocol_Permission_keys_MSGTYPE protocol_Key
 
@@ -377,11 +336,11 @@ extern const pb_msgdesc_t protocol_Permission_msg;
 /* protocol_AccountId_size depends on runtime parameters */
 /* protocol_authority_size depends on runtime parameters */
 /* protocol_Transaction_size depends on runtime parameters */
-/* protocol_Transaction_Contract_size depends on runtime parameters */
+#define protocol_Transaction_Contract_size       (19 + google_protobuf_Any_size)
 /* protocol_Transaction_Result_size depends on runtime parameters */
 /* protocol_Transaction_raw_size depends on runtime parameters */
 #define protocol_Key_size                        34
-/* protocol_Permission_size depends on runtime parameters */
+#define protocol_Permission_size                 132
 
 #ifdef __cplusplus
 } /* extern "C" */

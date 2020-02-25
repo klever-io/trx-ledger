@@ -22,35 +22,36 @@ option java_outer_classname = "Contract"; //Specify the class name of the genera
 option go_package = "github.com/tronprotocol/grpc-gateway/core";
 
 import "core/Tron.proto";
+import "nanopb.proto";
 
 message AccountCreateContract {
-    bytes owner_address = 1;
-    bytes account_address = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes account_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     AccountType type = 3;
 }
 
 // Update account name. Account name is not unique now.
 message AccountUpdateContract {
-    bytes account_name = 1;
-    bytes owner_address = 2;
+    bytes account_name = 1; // MAX_LEN 200
+    bytes owner_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 }
 
 message TransferContract {
-    bytes owner_address = 1;
-    bytes to_address = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes to_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 amount = 3;
 }
 
 message TransferAssetContract {
-    bytes asset_name = 1;
-    bytes owner_address = 2;
-    bytes to_address = 3;
+    bytes asset_name = 1 [(nanopb).max_size = 8]; // used as asset id str as bytes, LEN = 7 bytes
+    bytes owner_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes to_address = 3 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 amount = 4;
 }
 
 
 message VoteAssetContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     repeated bytes vote_address = 2;
     bool support = 3;
     int32 count = 5;
@@ -58,21 +59,21 @@ message VoteAssetContract {
 
 message VoteWitnessContract {
     message Vote {
-        bytes vote_address = 1;
+        bytes vote_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
         int64 vote_count = 2;
     }
-    bytes owner_address = 1;
-    repeated Vote votes = 2;
-    bool support = 3;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    repeated Vote votes = 2 [(nanopb).max_count = 5];
+    bool support = 3 [(nanopb).type = FT_IGNORE]; // not used
 }
 
 message WitnessCreateContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     bytes url = 2;
 }
 
 message WitnessUpdateContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     bytes update_url = 12;
 }
 
@@ -81,33 +82,33 @@ message AssetIssueContract {
         int64 frozen_amount = 1;
         int64 frozen_days = 2;
     }
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size=21, (nanopb).fixed_length=true];
     bytes name = 2;
     bytes abbr = 3;
     int64 total_supply = 4;
-    repeated FrozenSupply frozen_supply = 5;
-    int32 trx_num = 6;
-    int32 num = 8;
-    int64 start_time = 9;
-    int64 end_time = 10;
-    int32 vote_score = 16;
-    bytes description = 20;
-    bytes url = 21;
-    int64 free_asset_net_limit = 22;
-    int64 public_free_asset_net_limit = 23;
-    int64 public_free_asset_net_usage = 24;
-    int64 public_latest_free_net_time = 25;
+    repeated FrozenSupply frozen_supply = 5 [(nanopb).type = FT_IGNORE];
+    int32 trx_num = 6 [(nanopb).type = FT_IGNORE];
+    int32 num = 8 [(nanopb).type = FT_IGNORE];
+    int64 start_time = 9 [(nanopb).type = FT_IGNORE];
+    int64 end_time = 10 [(nanopb).type = FT_IGNORE];
+    int32 vote_score = 16 [(nanopb).type = FT_IGNORE];
+    bytes description = 20 [(nanopb).type = FT_IGNORE];
+    bytes url = 21 [(nanopb).type = FT_IGNORE];
+    int64 free_asset_net_limit = 22 [(nanopb).type = FT_IGNORE];
+    int64 public_free_asset_net_limit = 23 [(nanopb).type = FT_IGNORE];
+    int64 public_free_asset_net_usage = 24 [(nanopb).type = FT_IGNORE];
+    int64 public_latest_free_net_time = 25 [(nanopb).type = FT_IGNORE];
 }
 
 message ParticipateAssetIssueContract {
-    bytes owner_address = 1;
-    bytes to_address = 2;
-    bytes asset_name = 3; // the name of target asset
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes to_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes asset_name = 3; // the asset id str as bytes
     int64 amount = 4; // the amount of drops
 }
 
 message DeployContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     bytes script = 2;
 }
 
@@ -117,31 +118,31 @@ enum ResourceCode {
 }
 
 message FreezeBalanceContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 frozen_balance = 2;
     int64 frozen_duration = 3;
 
     ResourceCode resource = 10;
-    bytes receiver_address = 15;
+    bytes receiver_address = 15 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 }
 
 message UnfreezeBalanceContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 
     ResourceCode resource = 10;
-    bytes receiver_address = 15;
+    bytes receiver_address = 15 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 }
 
 message UnfreezeAssetContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 }
 
 message WithdrawBalanceContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
 }
 
 message UpdateAssetContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     bytes description = 2;
     bytes url = 3;
     int64 new_limit = 4;
@@ -149,63 +150,63 @@ message UpdateAssetContract {
 }
 
 message ProposalCreateContract {
-    bytes owner_address = 1;
-    map<int64, int64> parameters = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    map<int64, int64> parameters = 2; // refer Contract.options
 }
 
 message ProposalApproveContract {
-    bytes owner_address = 1;
-    int64 proposal_id = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    int64 proposal_id = 2 [(nanopb).int_size = IS_16];
     bool is_add_approval = 3; // add or remove approval
 }
 
 message ProposalDeleteContract {
-    bytes owner_address = 1;
-    int64 proposal_id = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    int64 proposal_id = 2 [(nanopb).int_size = IS_16];
 }
 
 message TriggerSmartContract {
-    bytes owner_address = 1;
-    bytes contract_address = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes contract_address = 2 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 call_value = 3;
-    bytes data = 4;
+    bytes data = 4 [(nanopb).max_size = 72];
     int64 call_token_value = 5;
-    int64 token_id = 6;
+    int64 token_id = 6 [(nanopb).int_size = IS_32]; // token id as int
 }
 
 message ExchangeCreateContract {
-    bytes owner_address = 1;
-    bytes first_token_id = 2;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    bytes first_token_id = 2 [(nanopb).max_size = 8];
     int64 first_token_balance = 3;
-    bytes second_token_id = 4;
+    bytes second_token_id = 4 [(nanopb).max_size = 8];
     int64 second_token_balance = 5;
 }
 
 message ExchangeInjectContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 exchange_id = 2;
-    bytes token_id = 3;
+    bytes token_id = 3 [(nanopb).max_size = 8];
     int64 quant = 4;
 }
 
 message ExchangeWithdrawContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 exchange_id = 2;
-    bytes token_id = 3;
+    bytes token_id = 3 [(nanopb).max_size = 8];
     int64 quant = 4;
 }
 
 message ExchangeTransactionContract {
-    bytes owner_address = 1;
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
     int64 exchange_id = 2;
-    bytes token_id = 3;
+    bytes token_id = 3 [(nanopb).max_size = 8];
     int64 quant = 4;
     int64 expected = 5;
 }
 
 message AccountPermissionUpdateContract {
-    bytes owner_address = 1;
-    Permission owner = 2; // Empty is invalidate
-    Permission witness = 3; // Can be empty
-    repeated Permission actives = 4; // Empty is invalidate
+    bytes owner_address = 1 [(nanopb).max_size = 21, (nanopb).fixed_length = true];
+    Permission owner = 2 [(nanopb).type = FT_IGNORE]; // Empty is invalidate
+    Permission witness = 3 [(nanopb).type = FT_IGNORE]; // Can be empty
+    repeated Permission actives = 4 [(nanopb).type = FT_IGNORE]; // Empty is invalidate
   }
