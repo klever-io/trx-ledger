@@ -33,14 +33,6 @@
 
 #include "tokens.h"
 
-extern bool fidoActivated;
-
-bagl_element_t tmp_element;
-unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
-
-uint32_t set_result_get_publicKey(void);
-
-
 // Define command events
 #define CLA 0xE0                        // Start byte for any communications
 
@@ -70,6 +62,9 @@ uint32_t set_result_get_publicKey(void);
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
 
+bagl_element_t tmp_element;
+unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
+
 publicKeyContext_t publicKeyContext;
 transactionContext_t transactionContext;
 txContent_t txContent;
@@ -93,7 +88,6 @@ volatile char exchangeContractDetail[50];
 static const char const SIGN_MAGIC[] = "\x19TRON Signed Message:\n";
 
 bagl_element_t tmp_element;
-
 
 const internalStorage_t N_storage_real;
 
@@ -122,6 +116,19 @@ void fillVoteAddressSlot(void *destination, const char * from, uint8_t index) {
 void fillVoteAmountSlot(void *destination, uint64_t value, uint8_t index) {
     print_amount(value,destination+voteSlot(index, VOTE_AMOUNT),VOTE_AMOUNT_SIZE, 0);
     PRINTF("Amount: %d - %s\n", index, destination+(voteSlot(index, VOTE_AMOUNT)));
+}
+
+uint32_t set_result_get_publicKey() {
+    uint32_t tx = 0;
+    uint32_t addressLength = BASE58CHECK_ADDRESS_SIZE;
+    G_io_apdu_buffer[tx++] = 65;
+    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.publicKey.W, 65);
+    tx += 65;
+    G_io_apdu_buffer[tx++] = addressLength;
+    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.address58,
+               addressLength);
+    tx += addressLength;
+    return tx;
 }
 
 void ui_idle(void);
@@ -2677,20 +2684,6 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
         THROW(INVALID_PARAMETER);
     }
     return 0;
-}
-
-
-uint32_t set_result_get_publicKey() {
-    uint32_t tx = 0;
-    uint32_t addressLength = BASE58CHECK_ADDRESS_SIZE;
-    G_io_apdu_buffer[tx++] = 65;
-    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.publicKey.W, 65);
-    tx += 65;
-    G_io_apdu_buffer[tx++] = addressLength;
-    os_memmove(G_io_apdu_buffer + tx, publicKeyContext.address58,
-               addressLength);
-    tx += addressLength;
-    return tx;
 }
 
 off_t read_bip32_path(const uint8_t *buffer, size_t length,

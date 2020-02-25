@@ -82,11 +82,6 @@ typedef enum contractType_e {
     INVALID_CONTRACT = 255
 } contractType_e;
 
-typedef struct stage_t {
-    uint16_t total;
-    uint16_t count;
-} stage_t;
-
 typedef struct txContext_t {
     cx_sha256_t *sha2;
     bool initialized;
