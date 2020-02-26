@@ -3181,7 +3181,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         case ACCOUNTPERMISSIONUPDATECONTRACT:
-            if (signByHash == 0) {
+            if (signByHash != 0x01) {
               THROW(0x6985); // reject
             }
             // Write fullHash
@@ -3203,7 +3203,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6B00); // Contract not initialized
         break;
         default:
-            if (signByHash == 0) {
+            if (signByHash != 0x01) {
               THROW(0x6985); // reject
             }
             // Write fullHash

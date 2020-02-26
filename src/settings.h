@@ -9,10 +9,10 @@ extern volatile uint8_t truncateAddress;
 extern volatile uint8_t signByHash;
 
 typedef struct internalStorage_t {
-  unsigned char dataAllowed;
-  unsigned char customContract;
-  unsigned char truncateAddress;
-  unsigned char signByHash;
+  uint8_t dataAllowed;
+  uint8_t customContract;
+  uint8_t truncateAddress;
+  uint8_t signByHash;
   uint8_t initialized;
 } internalStorage_t;
 
