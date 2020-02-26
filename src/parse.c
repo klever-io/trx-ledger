@@ -350,18 +350,18 @@ void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
 
 #define COPY_ADDRESS(a, b) memcpy((a), (b), ADDRESS_SIZE)
 
-contract_t msg;
+contract_t g_contract_msg;
 
 static bool transfer_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_TransferContract_fields,
-                 &msg.transfer_contract)) {
+                 &g_contract_msg.transfer_contract)) {
     return false;
   }
 
-  content->amount[0] = msg.transfer_contract.amount;
+  content->amount[0] = g_contract_msg.transfer_contract.amount;
 
-  COPY_ADDRESS(content->account, &msg.transfer_contract.owner_address);
-  COPY_ADDRESS(content->destination, &msg.transfer_contract.to_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.transfer_contract.owner_address);
+  COPY_ADDRESS(content->destination, &g_contract_msg.transfer_contract.to_address);
 
   content->tokenNamesLength[0] = 4;
   strcpy((char *)content->tokenNames[0], "TRX");
@@ -371,163 +371,163 @@ static bool transfer_contract(txContent_t *content, pb_istream_t *stream) {
 static bool transfer_asset_contract(txContent_t *content,
                                     pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_TransferAssetContract_fields,
-                 &msg.transfer_asset_contract)) {
+                 &g_contract_msg.transfer_asset_contract)) {
     return false;
   }
-  content->amount[0] = msg.transfer_asset_contract.amount;
+  content->amount[0] = g_contract_msg.transfer_asset_contract.amount;
 
   if (!printTokenFromID((char *)content->tokenNames[0],
-                        msg.transfer_asset_contract.asset_name.bytes,
-                        msg.transfer_asset_contract.asset_name.size)) {
+                        g_contract_msg.transfer_asset_contract.asset_name.bytes,
+                        g_contract_msg.transfer_asset_contract.asset_name.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  COPY_ADDRESS(content->account, &msg.transfer_asset_contract.owner_address);
-  COPY_ADDRESS(content->destination, &msg.transfer_asset_contract.to_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.transfer_asset_contract.owner_address);
+  COPY_ADDRESS(content->destination, &g_contract_msg.transfer_asset_contract.to_address);
   return true;
 }
 
 static bool vote_witness_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_VoteWitnessContract_fields,
-                 &msg.vote_witness_contract)) {
+                 &g_contract_msg.vote_witness_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &msg.vote_witness_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.vote_witness_contract.owner_address);
   return true;
 }
 
 static bool freeze_balance_contract(txContent_t *content,
                                     pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_FreezeBalanceContract_fields,
-                 &msg.freeze_balance_contract)) {
+                 &g_contract_msg.freeze_balance_contract)) {
     return false;
   }
   /* Tron only accepts 3 days freezing */
-  if (msg.freeze_balance_contract.frozen_duration != 3) {
+  if (g_contract_msg.freeze_balance_contract.frozen_duration != 3) {
     return false;
   }
-  COPY_ADDRESS(content->account, &msg.freeze_balance_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.freeze_balance_contract.owner_address);
   COPY_ADDRESS(content->destination,
-               &msg.freeze_balance_contract.receiver_address);
-  content->amount[0] = msg.freeze_balance_contract.frozen_balance;
-  content->resource = msg.freeze_balance_contract.resource;
+               &g_contract_msg.freeze_balance_contract.receiver_address);
+  content->amount[0] = g_contract_msg.freeze_balance_contract.frozen_balance;
+  content->resource = g_contract_msg.freeze_balance_contract.resource;
   return true;
 }
 
 static bool unfreeze_balance_contract(txContent_t *content,
                                       pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_UnfreezeBalanceContract_fields,
-                 &msg.unfreeze_balance_contract)) {
+                 &g_contract_msg.unfreeze_balance_contract)) {
     return false;
   }
-  content->resource = msg.unfreeze_balance_contract.resource;
+  content->resource = g_contract_msg.unfreeze_balance_contract.resource;
 
-  COPY_ADDRESS(content->account, &msg.unfreeze_balance_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.unfreeze_balance_contract.owner_address);
   COPY_ADDRESS(content->destination,
-               &msg.unfreeze_balance_contract.receiver_address);
+               &g_contract_msg.unfreeze_balance_contract.receiver_address);
   return true;
 }
 
 static bool withdraw_balance_contract(txContent_t *content,
                                       pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_WithdrawBalanceContract_fields,
-                 &msg.withdraw_balance_contract)) {
+                 &g_contract_msg.withdraw_balance_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &msg.withdraw_balance_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.withdraw_balance_contract.owner_address);
   return true;
 }
 
 static bool proposal_create_contract(txContent_t *content,
                                      pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ProposalCreateContract_fields,
-                 &msg.proposal_create_contract)) {
+                 &g_contract_msg.proposal_create_contract)) {
     return false;
   }
 
-  content->amount[0] = msg.proposal_create_contract.parameters_count;
-  COPY_ADDRESS(content->account, &msg.proposal_create_contract.owner_address);
+  content->amount[0] = g_contract_msg.proposal_create_contract.parameters_count;
+  COPY_ADDRESS(content->account, &g_contract_msg.proposal_create_contract.owner_address);
   return true;
 }
 
 static bool proposal_approve_contract(txContent_t *content,
                                       pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ProposalApproveContract_fields,
-                 &msg.proposal_approve_contract)) {
+                 &g_contract_msg.proposal_approve_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &msg.proposal_approve_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.proposal_approve_contract.owner_address);
   return true;
 }
 
 static bool proposal_delete_contract(txContent_t *content,
                                      pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ProposalDeleteContract_fields,
-                 &msg.proposal_delete_contract)) {
+                 &g_contract_msg.proposal_delete_contract)) {
     return false;
   }
 
-  content->exchangeID = msg.proposal_delete_contract.proposal_id;
-  COPY_ADDRESS(content->account, &msg.proposal_delete_contract.owner_address);
+  content->exchangeID = g_contract_msg.proposal_delete_contract.proposal_id;
+  COPY_ADDRESS(content->account, &g_contract_msg.proposal_delete_contract.owner_address);
   return true;
 }
 
 static bool account_update_contract(txContent_t *content,
                                     pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_AccountUpdateContract_fields,
-                 &msg.account_update_contract)) {
+                 &g_contract_msg.account_update_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &msg.account_update_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.account_update_contract.owner_address);
   return true;
 }
 
 static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_TriggerSmartContract_fields,
-                 &msg.trigger_smart_contract)) {
+                 &g_contract_msg.trigger_smart_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.trigger_smart_contract.owner_address);
   COPY_ADDRESS(content->contractAddress,
-               &msg.trigger_smart_contract.contract_address);
-  content->amount[0] = msg.trigger_smart_contract.call_value;
+               &g_contract_msg.trigger_smart_contract.contract_address);
+  content->amount[0] = g_contract_msg.trigger_smart_contract.call_value;
 
   // Parse smart contract
-  if (msg.trigger_smart_contract.data.size < 4) {
+  if (g_contract_msg.trigger_smart_contract.data.size < 4) {
     return false;
   }
 
-  if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0) {
+  if (memcmp(g_contract_msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0) {
     content->TRC20Method = 1; // check if transfer(address, uint256) function
-  } else if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
+  } else if (memcmp(g_contract_msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
              0) {
     content->TRC20Method = 2; // check if approve(address, uint256) function
   } else {
     // Processing custom contracts
     // TODO: add switch to disable support for custom contracts
-    if ((msg.trigger_smart_contract.data.size - 4) % 32 != 0) {
+    if ((g_contract_msg.trigger_smart_contract.data.size - 4) % 32 != 0) {
       return false;
     }
     content->TRC20Method = 0;
-    content->customSelector = U4BE(msg.trigger_smart_contract.data.bytes, 0);
+    content->customSelector = U4BE(g_contract_msg.trigger_smart_contract.data.bytes, 0);
     return true;
   }
 
   // check if DATA field size matchs TRC20 Transfer/Approve
-  if (msg.trigger_smart_contract.data.size != TRC20_DATA_FIELD_SIZE) {
+  if (g_contract_msg.trigger_smart_contract.data.size != TRC20_DATA_FIELD_SIZE) {
     return false;
   }
   // TO Address
-  memcpy(content->destination, msg.trigger_smart_contract.data.bytes + 15,
+  memcpy(content->destination, g_contract_msg.trigger_smart_contract.data.bytes + 15,
          ADDRESS_SIZE);
   // set MainNet PREFIX
   content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
   // Amount
-  memmove(content->TRC20Amount, msg.trigger_smart_contract.data.bytes + 36, 32);
+  memmove(content->TRC20Amount, g_contract_msg.trigger_smart_contract.data.bytes + 36, 32);
   tokenDefinition_t *TRC20 = getKnownToken(content);
   if (TRC20 == NULL) {
     return false;
@@ -541,100 +541,100 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
 static bool exchange_create_contract(txContent_t *content,
                                      pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ExchangeCreateContract_fields,
-                 &msg.exchange_create_contract)) {
+                 &g_contract_msg.exchange_create_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &msg.exchange_create_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.exchange_create_contract.owner_address);
 
   if (!printTokenFromID((char *)content->tokenNames[0],
-                        msg.exchange_create_contract.first_token_id.bytes,
-                        msg.exchange_create_contract.first_token_id.size)) {
+                        g_contract_msg.exchange_create_contract.first_token_id.bytes,
+                        g_contract_msg.exchange_create_contract.first_token_id.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
   if (!printTokenFromID((char *)content->tokenNames[1],
-                        msg.exchange_create_contract.second_token_id.bytes,
-                        msg.exchange_create_contract.second_token_id.size)) {
+                        g_contract_msg.exchange_create_contract.second_token_id.bytes,
+                        g_contract_msg.exchange_create_contract.second_token_id.size)) {
     return false;
   }
   content->tokenNamesLength[1] = strlen((char *)content->tokenNames[1]);
 
-  content->amount[0] = msg.exchange_create_contract.first_token_balance;
-  content->amount[1] = msg.exchange_create_contract.second_token_balance;
+  content->amount[0] = g_contract_msg.exchange_create_contract.first_token_balance;
+  content->amount[1] = g_contract_msg.exchange_create_contract.second_token_balance;
   return true;
 }
 
 static bool exchange_inject_contract(txContent_t *content,
                                      pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ExchangeInjectContract_fields,
-                 &msg.exchange_inject_contract)) {
+                 &g_contract_msg.exchange_inject_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &msg.exchange_inject_contract.owner_address);
-  content->exchangeID = msg.exchange_inject_contract.exchange_id;
+  COPY_ADDRESS(content->account, &g_contract_msg.exchange_inject_contract.owner_address);
+  content->exchangeID = g_contract_msg.exchange_inject_contract.exchange_id;
 
   if (!printTokenFromID((char *)content->tokenNames[0],
-                        msg.exchange_inject_contract.token_id.bytes,
-                        msg.exchange_inject_contract.token_id.size)) {
+                        g_contract_msg.exchange_inject_contract.token_id.bytes,
+                        g_contract_msg.exchange_inject_contract.token_id.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount[0] = msg.exchange_inject_contract.quant;
+  content->amount[0] = g_contract_msg.exchange_inject_contract.quant;
   return true;
 }
 
 static bool exchange_withdraw_contract(txContent_t *content,
                                        pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ExchangeWithdrawContract_fields,
-                 &msg.exchange_withdraw_contract)) {
+                 &g_contract_msg.exchange_withdraw_contract)) {
     return false;
   }
-  COPY_ADDRESS(content->account, &msg.exchange_withdraw_contract.owner_address);
-  content->exchangeID = msg.exchange_withdraw_contract.exchange_id;
+  COPY_ADDRESS(content->account, &g_contract_msg.exchange_withdraw_contract.owner_address);
+  content->exchangeID = g_contract_msg.exchange_withdraw_contract.exchange_id;
 
   if (!printTokenFromID((char *)content->tokenNames[0],
-                        msg.exchange_withdraw_contract.token_id.bytes,
-                        msg.exchange_withdraw_contract.token_id.size)) {
+                        g_contract_msg.exchange_withdraw_contract.token_id.bytes,
+                        g_contract_msg.exchange_withdraw_contract.token_id.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount[0] = msg.exchange_withdraw_contract.quant;
+  content->amount[0] = g_contract_msg.exchange_withdraw_contract.quant;
   return true;
 }
 
 static bool exchange_transaction_contract(txContent_t *content,
                                           pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_ExchangeTransactionContract_fields,
-                 &msg.exchange_transaction_contract)) {
+                 &g_contract_msg.exchange_transaction_contract)) {
     return false;
   }
   COPY_ADDRESS(content->account,
-               &msg.exchange_transaction_contract.owner_address);
-  content->exchangeID = msg.exchange_transaction_contract.exchange_id;
+               &g_contract_msg.exchange_transaction_contract.owner_address);
+  content->exchangeID = g_contract_msg.exchange_transaction_contract.exchange_id;
 
   if (!printTokenFromID((char *)content->tokenNames[0],
-                        msg.exchange_transaction_contract.token_id.bytes,
-                        msg.exchange_transaction_contract.token_id.size)) {
+                        g_contract_msg.exchange_transaction_contract.token_id.bytes,
+                        g_contract_msg.exchange_transaction_contract.token_id.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen((char *)content->tokenNames[0]);
 
-  content->amount[0] = msg.exchange_transaction_contract.quant;
-  content->amount[1] = msg.exchange_transaction_contract.expected;
+  content->amount[0] = g_contract_msg.exchange_transaction_contract.quant;
+  content->amount[1] = g_contract_msg.exchange_transaction_contract.expected;
   return true;
 }
 
 static bool account_permission_update_contract(txContent_t *content, pb_istream_t *stream) {
   if (!pb_decode(stream, protocol_AccountPermissionUpdateContract_fields,
-                 &msg.account_permission_update_contract)) {
+                 &g_contract_msg.account_permission_update_contract)) {
     return false;
   }
 
-  COPY_ADDRESS(content->account, &msg.account_permission_update_contract.owner_address);
+  COPY_ADDRESS(content->account, &g_contract_msg.account_permission_update_contract.owner_address);
   // TODO: Update tx content
   return true;
 }
@@ -669,7 +669,7 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   }
 
   memset(&transaction, 0, sizeof(transaction));
-  memset(&msg, 0, sizeof(msg));
+  memset(&g_contract_msg, 0, sizeof(g_contract_msg));
 
   pb_istream_t stream = pb_istream_from_buffer(buffer, length);
 

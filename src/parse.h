@@ -42,7 +42,7 @@ typedef union {
   protocol_AccountPermissionUpdateContract  account_permission_update_contract;
 } contract_t;
 
-extern contract_t msg;
+extern contract_t g_contract_msg;
 
 typedef enum parserStatus_e {
     USTREAM_PROCESSING,

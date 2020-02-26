@@ -3016,7 +3016,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         break;
         case VOTEWITNESSCONTRACT: {
             // vote for SR
-            protocol_VoteWitnessContract *contract = &msg.vote_witness_contract;
+            protocol_VoteWitnessContract *contract = &g_contract_msg.vote_witness_contract;
 
             PRINTF("Voting!!\n");
             PRINTF("Count: %d\n", contract->votes_count);
