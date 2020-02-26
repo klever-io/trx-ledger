@@ -1,0 +1,10 @@
+---
+# We'll use defaults from the LLVM style, but with 4 columns indentation.
+BasedOnStyle: LLVM
+ColumnLimit: 120
+---
+Language: Cpp
+---
+Language: Proto
+IndentWidth: 4
+SpacesInContainerLiterals: false
