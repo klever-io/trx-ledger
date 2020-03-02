@@ -4603,6 +4603,11 @@ off_t read_bip32_path(const uint8_t *buffer, size_t length,
 
 #ifndef HAVE_WALLET_ID_SDK
 
+unsigned int const U_os_perso_seed_cookie[] = {
+  0xda7aba5e,
+  0xc1a551c5,
+};
+
 void handleGetWalletId(volatile unsigned int *tx) {
   unsigned char t[64];
   cx_ecfp_256_private_key_t priv;
