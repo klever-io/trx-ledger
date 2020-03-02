@@ -58,6 +58,9 @@ uint32_t set_result_get_publicKey(void);
 #define P1_TRC10_NAME 0xA0
 #define P1_SIGN 0x10
 
+#define COMMON_CLA 0xB0
+#define COMMON_INS_GET_WALLET_ID 0x04
+
 #define OFFSET_CLA 0
 #define OFFSET_INS 1
 #define OFFSET_P1 2
