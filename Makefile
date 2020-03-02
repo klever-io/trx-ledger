@@ -22,14 +22,20 @@ include $(BOLOS_SDK)/Makefile.defines
 
 APPNAME = Tron
 APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
+# Samsung temporary implementation for wallet ID on 0xda7aba5e/0xc1a551c5
+APP_LOAD_PARAMS += --path "1517992542'/1101353413'"
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-APPVERSION = $(file < VERSION)
+#APPVERSION = $(file < VERSION)
+APPVERSION = 0.1.7
 
-APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
-APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
-APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
+#APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
+#APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
+#APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
+APPVERSION_M = 0
+APPVERSION_N = 1
+APPVERSION_P = 7
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
@@ -140,6 +146,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOS)
 	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux/src/ux_flow_engine.c)" ""
 		SDK_SOURCE_PATH  += lib_ux
 		DEFINES		       += HAVE_UX_FLOW
+		DEFINES += HAVE_WALLET_ID_SDK
 	endif
 
 endif

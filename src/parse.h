@@ -95,6 +95,8 @@ typedef struct publicKeyContext_t {
     cx_ecfp_public_key_t publicKey;
     uint8_t address[ADDRESS_SIZE];
     uint8_t address58[BASE58CHECK_ADDRESS_SIZE];
+    uint8_t chainCode[32];
+    bool getChaincode;
 } publicKeyContext_t;
 
 typedef struct {
