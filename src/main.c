@@ -75,6 +75,8 @@ cx_sha256_t sha2;
 volatile uint8_t dataAllowed;
 volatile uint8_t customContract;
 volatile uint8_t truncateAddress;
+volatile uint8_t signByHash;
+
 volatile uint8_t customContractField;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
@@ -1690,6 +1692,7 @@ void display_settings(const ux_flow_step_t* const);
 void switch_settings_contract_data();
 void switch_settings_custom_contracts();
 void switch_settings_truncate_address();
+void switch_settings_sign_by_hash();
 
 //////////////////////////////////////////////////////////////////////
 UX_STEP_NOCB(
@@ -1740,7 +1743,7 @@ UX_STEP_VALID(
     bnnn_paging,
     switch_settings_contract_data(),
     {
-      .title = "Transactions data",
+      .title = "Transactions Data",
       .text = addressSummary,
     });
 
@@ -1749,8 +1752,8 @@ UX_STEP_VALID(
     bnnn_paging,
     switch_settings_custom_contracts(),
     {
-      .title = "Custom contracts",
-      .text = addressSummary + 20
+      .title = "Custom Contracts",
+      .text = addressSummary + 12
     });
 
 UX_STEP_VALID(
@@ -1759,7 +1762,16 @@ UX_STEP_VALID(
     switch_settings_truncate_address(),
     {
       .title = "Truncate Address",
-      .text = addressSummary + 40
+      .text = addressSummary + 24
+    });
+
+UX_STEP_VALID(
+    ux_settings_flow_4_step,
+    bnnn_paging,
+    switch_settings_sign_by_hash(),
+    {
+      .title = "Sign by Hash",
+      .text = addressSummary + 28
     });
 
 #else
@@ -1783,7 +1795,7 @@ UX_STEP_VALID(
       "Custom contracts",
       "Allow unverified",
       "contracts",
-      addressSummary + 20
+      addressSummary + 12
     });
 
 UX_STEP_VALID(
@@ -1791,16 +1803,27 @@ UX_STEP_VALID(
     bnnn,
     switch_settings_truncate_address(),
     {
-      "Truncate address",
-      "Truncate display",
-      "address",
-      addressSummary + 40
+      "Truncate Address",
+      "Display truncated",
+      "addresses",
+      addressSummary + 24
+    });
+
+UX_STEP_VALID(
+    ux_settings_flow_4_step,
+    bnnn,
+    switch_settings_sign_by_hash(),
+    {
+      "Sign by Hash",
+      "Allow hash-only",
+      "transactions",
+      addressSummary + 28
     });
 
 #endif
 
 UX_STEP_VALID(
-    ux_settings_flow_4_step,
+    ux_settings_flow_5_step,
     pb,
     ui_idle(),
     {
@@ -1812,13 +1835,16 @@ UX_DEF(ux_settings_flow,
   &ux_settings_flow_1_step,
   &ux_settings_flow_2_step,
   &ux_settings_flow_3_step,
-  &ux_settings_flow_4_step
+  &ux_settings_flow_4_step,
+  &ux_settings_flow_5_step
 );
 
 void display_settings(const ux_flow_step_t* const start_step) {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 20, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 40, (N_storage.truncateAddress ? "Yes" : "No"));
+  strcpy(addressSummary + 12, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 24, (N_storage.truncateAddress ? "Yes" : "No"));
+  // FIXME: accessing an array outside of its bounds
+  strcpy(addressSummary + 28, (N_storage.signByHash ? "Allowed" : "NOT Allowed"));
   ux_flow_init(0, ux_settings_flow, start_step);
 }
 
@@ -1841,6 +1867,13 @@ void switch_settings_truncate_address() {
   truncateAddress = value;
   nvm_write((void*)&N_storage.truncateAddress, (void*)&value, sizeof(uint8_t));
   display_settings(&ux_settings_flow_3_step);
+}
+
+void switch_settings_sign_by_hash() {
+  uint8_t value = (N_storage.signByHash ? 0 : 1);
+  signByHash = value;
+  nvm_write((void*)&N_storage.signByHash, (void*)&value, sizeof(uint8_t));
+  display_settings(&ux_settings_flow_4_step);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -3141,6 +3174,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         case ACCOUNTPERMISSIONUPDATECONTRACT:
+            if (signByHash != 0x01) {
+              THROW(0x6985); // reject
+            }
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
@@ -3160,6 +3196,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6B00); // Contract not initialized
         break;
         default:
+            if (signByHash != 0x01) {
+              THROW(0x6985); // reject
+            }
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
@@ -3195,6 +3234,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     G_io_apdu_buffer[0] |= (N_storage.dataAllowed<<0);
     G_io_apdu_buffer[0] |= (N_storage.customContract<<1);
     G_io_apdu_buffer[0] |= (N_storage.truncateAddress<<2);
+    G_io_apdu_buffer[0] |= (N_storage.signByHash<<3);
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -3598,12 +3638,14 @@ __attribute__((section(".boot"))) int main(void) {
                   storage.dataAllowed = 0x00;
                   storage.customContract = 0x00;
                   storage.truncateAddress = 0x00;
+                  storage.signByHash = 0x00;
                   storage.initialized = 0x01;
                   nvm_write((void*)&N_storage, (void*)&storage, sizeof(internalStorage_t));
                 }
                 dataAllowed = N_storage.dataAllowed;
                 customContract = N_storage.customContract;
                 truncateAddress = N_storage.truncateAddress;
+                signByHash = N_storage.signByHash;
 
                 USB_power(1);
                 ui_idle();
