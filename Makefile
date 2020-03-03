@@ -27,15 +27,11 @@ APP_LOAD_PARAMS += --path "1517992542'/1101353413'"
 
 splitVersion=$(word $2, $(subst ., , $1))
 
-#APPVERSION = $(file < VERSION)
-APPVERSION = 0.1.7
+APPVERSION = $(file < VERSION)
 
-#APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
-#APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
-#APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
-APPVERSION_M = 0
-APPVERSION_N = 1
-APPVERSION_P = 7
+APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
+APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
+APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
