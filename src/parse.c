@@ -488,6 +488,7 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
                  &msg.trigger_smart_contract)) {
     return false;
   }
+  tokenDefinition_t *TRC20 = getKnownToken(content);
 
   COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
   COPY_ADDRESS(content->contractAddress,
@@ -499,10 +500,10 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
     return false;
   }
 
-  if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0) {
+  if ((TRC20 != NULL) && (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0)) {
     content->TRC20Method = 1; // check if transfer(address, uint256) function
-  } else if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
-             0) {
+  } else if ((TRC20 != NULL) && (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
+             0)) {
     content->TRC20Method = 2; // check if approve(address, uint256) function
   } else {
     // Processing custom contracts
@@ -526,10 +527,6 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
   // Amount
   memmove(content->TRC20Amount, msg.trigger_smart_contract.data.bytes + 36, 32);
-  tokenDefinition_t *TRC20 = getKnownToken(content);
-  if (TRC20 == NULL) {
-    return false;
-  }
   content->decimals[0] = TRC20->decimals;
   content->tokenNamesLength[0] = strlen((const char *)TRC20->ticker) + 1;
   memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
