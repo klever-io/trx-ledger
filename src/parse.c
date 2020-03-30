@@ -485,56 +485,80 @@ static bool account_update_contract(txContent_t *content,
   return true;
 }
 
+bool pb_decode_trigger_smart_contract_data(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+  if (stream->bytes_left < 4) {
+    return false;
+  }
+
+  txContent_t* content = *arg;
+  uint8_t buf[32];  // a single encoded TVM value
+
+  // method selector
+  if (!pb_read(stream, buf, 4)) {
+    return false;
+  }
+
+  content->customSelector = U4BE(buf, 0);
+
+  if (memcmp(buf, SELECTOR[0], 4) == 0) {
+    content->TRC20Method = 1;  // a9059cbb -> transfer(address,uint256)
+  } else if (memcmp(buf, SELECTOR[1], 4) == 0) {
+    content->TRC20Method = 2;  // 095ea7b3 -> approve(address,uint256)
+  } else {
+    // arbitrary contracts
+    if (stream->bytes_left % 32 != 0) {
+      return false;
+    }
+    content->TRC20Method = 0;
+    // consume this field
+    return pb_read(stream, NULL, stream->bytes_left);
+  }
+
+  // TRC20 data size check: 32 + 32
+  if (stream->bytes_left != 32 + 32) {
+    return false;
+  }
+
+  // to address
+  if (!pb_read(stream, buf, 32)) {
+    return false;
+  }
+  memcpy(content->destination, buf + (32 - 21), ADDRESS_SIZE);
+  // fix address prefix 0x41: mainnet
+  content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
+
+  // amount
+  if (!pb_read(stream, buf, 32)) {
+    return false;
+  }
+
+  memmove(content->TRC20Amount, buf, 32);
+  tokenDefinition_t *trc20 = getKnownToken(content);
+  if (trc20 == NULL) {
+    // treat unknown TRC20 token as arbitrary contract
+    content->TRC20Method = 0;
+    return true;
+  }
+
+  content->decimals[0] = trc20->decimals;
+  content->tokenNamesLength[0] = strlen((const char *)trc20->ticker) + 1;
+  memmove(content->tokenNames[0], trc20->ticker, content->tokenNamesLength[0]);
+
+  return true;
+}
+
 static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
-  if (!pb_decode(stream, protocol_TriggerSmartContract_fields,
-                 &msg.trigger_smart_contract)) {
+  msg.trigger_smart_contract.data.funcs.decode = pb_decode_trigger_smart_contract_data;
+  msg.trigger_smart_contract.data.arg = content;
+
+  if (!pb_decode(stream, protocol_TriggerSmartContract_fields, &msg.trigger_smart_contract)) {
     return false;
   }
 
   COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
-  COPY_ADDRESS(content->contractAddress,
-               &msg.trigger_smart_contract.contract_address);
+  COPY_ADDRESS(content->contractAddress, &msg.trigger_smart_contract.contract_address);
   content->amount[0] = msg.trigger_smart_contract.call_value;
 
-  // Parse smart contract
-  if (msg.trigger_smart_contract.data.size < 4) {
-    return false;
-  }
-
-  if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0) {
-    content->TRC20Method = 1; // check if transfer(address, uint256) function
-  } else if (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
-             0) {
-    content->TRC20Method = 2; // check if approve(address, uint256) function
-  } else {
-    // Processing custom contracts
-    // TODO: add switch to disable support for custom contracts
-    if ((msg.trigger_smart_contract.data.size - 4) % 32 != 0) {
-      return false;
-    }
-    content->TRC20Method = 0;
-    content->customSelector = U4BE(msg.trigger_smart_contract.data.bytes, 0);
-    return true;
-  }
-
-  // check if DATA field size matchs TRC20 Transfer/Approve
-  if (msg.trigger_smart_contract.data.size != TRC20_DATA_FIELD_SIZE) {
-    return false;
-  }
-  // TO Address
-  memcpy(content->destination, msg.trigger_smart_contract.data.bytes + 15,
-         ADDRESS_SIZE);
-  // set MainNet PREFIX
-  content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
-  // Amount
-  memmove(content->TRC20Amount, msg.trigger_smart_contract.data.bytes + 36, 32);
-  tokenDefinition_t *TRC20 = getKnownToken(content);
-  if (TRC20 == NULL) {
-    return false;
-  }
-  content->decimals[0] = TRC20->decimals;
-  content->tokenNamesLength[0] = strlen((const char *)TRC20->ticker) + 1;
-  memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
   return true;
 }
 
