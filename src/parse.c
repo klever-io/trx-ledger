@@ -535,7 +535,7 @@ bool pb_decode_trigger_smart_contract_data(pb_istream_t *stream, const pb_field_
   memmove(content->TRC20Amount, buf, 32);
   tokenDefinition_t *trc20 = getKnownToken(content);
   if (trc20 == NULL) {
-    // treat unknown TRC10 token as arbitrary contract
+    // treat unknown TRC20 token as arbitrary contract
     content->TRC20Method = 0;
     return true;
   }
