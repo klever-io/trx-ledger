@@ -30,7 +30,7 @@ protocol.ProposalDeleteContract.owner_address       max_size: 21, fixed_length: 
 
 protocol.TriggerSmartContract.owner_address         max_size: 21, fixed_length: true
 protocol.TriggerSmartContract.contract_address      max_size: 21, fixed_length: true
-protocol.TriggerSmartContract.data                  max_size: 72
+protocol.TriggerSmartContract.data                  type: FT_CALLBACK
 
 protocol.ExchangeCreateContract.owner_address       max_size: 21, fixed_length: true
 protocol.ExchangeCreateContract.first_token_id      max_size: 8
