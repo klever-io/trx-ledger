@@ -549,7 +549,7 @@ bool pb_decode_trigger_smart_contract_data(pb_istream_t *stream, const pb_field_
 
 static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   msg.trigger_smart_contract.data.funcs.decode = pb_decode_trigger_smart_contract_data;
-  msg.trigger_smart_contract.data.arg = &content;
+  msg.trigger_smart_contract.data.arg = content;
 
   if (!pb_decode(stream, protocol_TriggerSmartContract_fields, &msg.trigger_smart_contract)) {
     return false;
