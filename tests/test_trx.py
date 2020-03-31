@@ -748,5 +748,20 @@ class TestTRX:
         assert(validSignature == True)
 
 
+    def test_trx_unknown_trc20_send(self, app):
+        tx = app.packContract(
+            tron.Transaction.Contract.TriggerSmartContract,
+            contract.TriggerSmartContract(
+                owner_address=bytes.fromhex(app.getAccount(0)['addressHex']),
+                contract_address=bytes.fromhex(app.address_hex("TVGLX58e3uBx1fmmwLCENkrgKqmpEjhtfG")),
+                data=bytes.fromhex("a9059cbb000000000000000000000000364b03e0815687edaf90b81ff58e496dea7383d700000000000000000000000000000000000000000000000000000000000f4240")
+            )
+        )
+
+        data, status = app.sign(app.getAccount(0)['path'], tx)
+        validSignature, txID = validateSignature.validate(tx,data[0:65],app.getAccount(0)['publicKey'][2:])
+        assert(validSignature == True)
+
+
 def pytest_generate_tests(metafunc):
     metafunc.parametrize('app', [App()], scope='class')
