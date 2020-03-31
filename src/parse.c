@@ -342,6 +342,7 @@ bool parseExchange(const uint8_t *data,
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
     memset(context, 0, sizeof(txContext_t));
+    memset(content, 0, sizeof(txContent_t));
     context->sha2 = sha2;
     context->initialized = true;
     content->contractType = INVALID_CONTRACT;
@@ -716,11 +717,6 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   if (!pb_decode(&stream, protocol_Transaction_raw_fields, &transaction)) {
     return USTREAM_FAULT;
   }
-
-  if (!dataAllowed && content->dataBytes != 0) {
-    THROW(0x6a80);
-  }
-
 
   /* Parse contract parameters if any...
      and it may come in different message chunk

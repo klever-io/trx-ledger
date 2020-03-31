@@ -3,11 +3,6 @@
 
 #include <stdint.h>
 
-extern volatile uint8_t dataAllowed;
-extern volatile uint8_t customContract;
-extern volatile uint8_t truncateAddress;
-extern volatile uint8_t signByHash;
-
 typedef struct internalStorage_t {
   uint8_t dataAllowed;
   uint8_t customContract;

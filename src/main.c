@@ -85,12 +85,11 @@ volatile uint8_t signByHash;
 volatile uint8_t customContractField;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID
 volatile char toAddress[BASE58CHECK_ADDRESS_SIZE+1];
-volatile char addressSummary[35];
+volatile char addressSummary[40];
 volatile char fullContract[MAX_TOKEN_LENGTH];
 volatile char TRC20Action[9];
 volatile char TRC20ActionSendAllow[8];
 volatile char fullHash[HASH_SIZE*2+1];
-volatile char exchangeContractDetail[50];
 
 static const char const SIGN_MAGIC[] = "\x19TRON Signed Message:\n";
 
@@ -1424,7 +1423,7 @@ void ui_approval_exchange_withdraw_inject_blue_init(void) {
     ui_approval_blue_ok = (bagl_element_callback_t)io_seproxyhal_touch_tx_ok;
     ui_approval_blue_cancel =
         (bagl_element_callback_t)io_seproxyhal_touch_cancel;
-    ui_approval_blue_values[0] = (const char*)exchangeContractDetail;
+    ui_approval_blue_values[0] = (const char*)G_io_apdu_buffer+100;
     ui_approval_blue_values[1] = (const char*)toAddress;
     ui_approval_blue_values[2] = (const char*)fullContract;
     ui_approval_blue_values[3] = (const char*)G_io_apdu_buffer;
@@ -1836,7 +1835,6 @@ void display_settings(const ux_flow_step_t* const start_step) {
   strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
   strcpy(addressSummary + 12, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
   strcpy(addressSummary + 24, (N_storage.truncateAddress ? "Yes" : "No"));
-  // FIXME: accessing an array outside of its bounds
   strcpy(addressSummary + 28, (N_storage.signByHash ? "Allowed" : "NOT Allowed"));
   ux_flow_init(0, ux_settings_flow, start_step);
 }
@@ -2346,7 +2344,7 @@ UX_STEP_NOCB(
     bnnn_paging,
     {
       .title = "Action",
-      .text = exchangeContractDetail
+      .text = G_io_apdu_buffer+100
     });
 UX_STEP_NOCB(
     ux_approval_exchange_wi_3_step,
@@ -2893,7 +2891,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     }
     // hash data
     cx_hash((cx_hash_t *)txContext.sha2, 0, workBuffer, dataLength, NULL, 32);
-    txContent.bandwidth+=dataLength;
 
     // process buffer
     uint16_t txResult = processTx(workBuffer, dataLength, &txContent);
@@ -2910,6 +2907,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         default:
             PRINTF("Unexpected parser status\n");
             THROW(txResult);
+    }
+
+    if (!dataAllowed && txContent.dataBytes != 0) {
+        PRINTF("Data not allowed: %d\n", dataAllowed);
+        THROW(0x6a80);
     }
 
     // Last data hash
@@ -3005,8 +3007,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             os_memmove((void *)toAddress, txContent.tokenNames[1], txContent.tokenNamesLength[1]+1);
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             print_amount(txContent.amount[1],(void *)G_io_apdu_buffer+100,100, (strncmp((const char *)txContent.tokenNames[1], "TRX", 3)==0)?SUN_DIG:txContent.decimals[1]);
-            // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_CREATE;
@@ -3022,9 +3022,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
-            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
+            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer, 100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
+            if (!setExchangeContractDetail(txContent.contractType, (void*)(G_io_apdu_buffer+100))) THROW(0x6A80);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
@@ -3042,8 +3042,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, txContent.decimals[0]);
             print_amount(txContent.amount[1],(void *)G_io_apdu_buffer+100,100, txContent.decimals[1]);
-            // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, (void*)exchangeContractDetail)) THROW(0x6A80);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_TRANSACTION;
