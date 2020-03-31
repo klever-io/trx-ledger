@@ -3,21 +3,32 @@
 
 #include <stdint.h>
 
-extern volatile uint8_t dataAllowed;
-extern volatile uint8_t customContract;
-extern volatile uint8_t truncateAddress;
-extern volatile uint8_t signByHash;
+typedef uint8_t internal_storage_t;
 
-typedef struct internalStorage_t {
-  uint8_t dataAllowed;
-  uint8_t customContract;
-  uint8_t truncateAddress;
-  uint8_t signByHash;
-  uint8_t initialized;
-} internalStorage_t;
+#define N_settings (*(volatile internal_storage_t *)PIC(&N_storage_real))
 
-#define N_storage (*(volatile internalStorage_t *)PIC(&N_storage_real))
+// the settings, stored in NVRAM. Initializer is ignored by ledger.
+extern const internal_storage_t N_storage_real;
 
-extern const internalStorage_t N_storage_real;
+// flip a bit k = 0 to 7 for u8
+#define _FLIP_BIT(n, k)  (((n) ^ (1 << (k))))
+
+// toggle a setting item
+#define SETTING_TOGGLE(_set) do {\
+    internal_storage_t _temp_settings = _FLIP_BIT(N_settings, _set); \
+    nvm_write((void*)&N_settings, (void*)&_temp_settings, sizeof(internal_storage_t)); \
+  } while(0)
+
+// check a setting item
+#define HAS_SETTING(k)  ((N_settings & (1 << (k))) >> (k))
+
+
+#define S_DATA_ALLOWED     0
+#define S_CUSTOM_CONTRACT  1
+#define S_TRUNCATE_ADDRESS 2
+#define S_SIGN_BY_HASH     3
+
+#define S_INITIALIZED      7
+
 
 #endif

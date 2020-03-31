@@ -717,7 +717,7 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
     return USTREAM_FAULT;
   }
 
-  if (!dataAllowed && content->dataBytes != 0) {
+  if (!HAS_SETTING(S_DATA_ALLOWED) && content->dataBytes != 0) {
     THROW(0x6a80);
   }
 

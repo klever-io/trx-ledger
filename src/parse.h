@@ -1,6 +1,7 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
+#include "core/Contract.pb.h"
 
 #ifndef PARSE_H
 #define PARSE_H
@@ -21,8 +22,6 @@
 #define MAX_RAW_SIGNATURE 65
 #define MAX_TOKEN_LENGTH 67
 
-#include "../proto/core/Contract.pb.h"
-
 typedef union {
   protocol_TransferContract transfer_contract;
   protocol_TransferAssetContract transfer_asset_contract;
@@ -38,8 +37,8 @@ typedef union {
   protocol_ProposalDeleteContract proposal_delete_contract;
   protocol_WithdrawBalanceContract withdraw_balance_contract;
   protocol_FreezeBalanceContract freeze_balance_contract;
-  protocol_UnfreezeBalanceContract  unfreeze_balance_contract;
-  protocol_AccountPermissionUpdateContract  account_permission_update_contract;
+  protocol_UnfreezeBalanceContract unfreeze_balance_contract;
+  protocol_AccountPermissionUpdateContract account_permission_update_contract;
 } contract_t;
 
 extern contract_t msg;
