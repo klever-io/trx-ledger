@@ -1,4 +1,11 @@
 protocol.Transaction.raw.contract           max_count: 1
+protocol.Transaction.raw.ref_block_bytes    type: FT_IGNORE
+protocol.Transaction.raw.ref_block_num      type: FT_IGNORE
+protocol.Transaction.raw.ref_block_hash     type: FT_IGNORE
+protocol.Transaction.raw.expiration         type: FT_IGNORE
+protocol.Transaction.raw.auths              type: FT_IGNORE
+protocol.Transaction.raw.scripts            type: FT_IGNORE
+protocol.Transaction.raw.timestamp          type: FT_IGNORE
 
 protocol.Key.address                        max_size: 21, fixed_length: true
 

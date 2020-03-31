@@ -33,9 +33,7 @@
 
 #include "tokens.h"
 
-extern bool fidoActivated;
 
-bagl_element_t tmp_element;
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 uint32_t set_result_get_publicKey(void);
@@ -70,17 +68,15 @@ uint32_t set_result_get_publicKey(void);
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
 
+// The settings, stored in NVRAM.
+const internal_storage_t N_storage_real;
+
 publicKeyContext_t publicKeyContext;
 transactionContext_t transactionContext;
 txContent_t txContent;
 txContext_t txContext;
 
 cx_sha256_t sha2;
-
-volatile uint8_t dataAllowed;
-volatile uint8_t customContract;
-volatile uint8_t truncateAddress;
-volatile uint8_t signByHash;
 
 volatile uint8_t customContractField;
 volatile char fromAddress[BASE58CHECK_ADDRESS_SIZE+1+5]; // 5 extra bytes used to inform MultSign ID
@@ -95,9 +91,6 @@ volatile char exchangeContractDetail[50];
 static const char const SIGN_MAGIC[] = "\x19TRON Signed Message:\n";
 
 bagl_element_t tmp_element;
-
-
-const internalStorage_t N_storage_real;
 
 unsigned int io_seproxyhal_touch_settings(const bagl_element_t *e);
 unsigned int io_seproxyhal_touch_exit(const bagl_element_t *e);
@@ -274,9 +267,7 @@ unsigned int ui_idle_blue_button(unsigned int button_mask,
 #if defined(TARGET_BLUE)
 const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
   // swap setting and request redraw of settings elements
-  uint8_t setting = N_storage.dataAllowed?0:1;
-  dataAllowed = setting;
-  nvm_write((void*)&N_storage.dataAllowed, (void*)&setting, sizeof(uint8_t));
+  SETTING_TOGGLE(S_DATA_ALLOWED);
 
   // only refresh settings mutable drawn elements
   UX_REDISPLAY_IDX(7);
@@ -287,9 +278,7 @@ const bagl_element_t * ui_settings_blue_toggle_data(const bagl_element_t * e) {
 
 const bagl_element_t * ui_settings_blue_toggle_custom(const bagl_element_t * e) {
   // swap setting and request redraw of settings elements
-  uint8_t setting = N_storage.customContract?0:1;
-  customContract = setting;
-  nvm_write((void*)&N_storage.customContract, (void*)&setting, sizeof(uint8_t));
+  SETTING_TOGGLE(CUSTOM_CONTRACT);
 
   // only refresh settings mutable drawn elements
   UX_REDISPLAY_IDX(7);
@@ -377,7 +366,7 @@ const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
         switch (e->component.userid) {
             case 0x01:
                 // swap icon content
-                if (N_storage.dataAllowed) {
+                if (HAS_SETTING(S_DATA_ALLOWED)) {
                     tmp_element.text = &C_icon_toggle_set;
                 }
                 else {
@@ -386,7 +375,7 @@ const bagl_element_t *ui_settings_blue_prepro(const bagl_element_t *e) {
                 break;
             case 0x02:
                 // swap icon content
-                if (N_storage.customContract) {
+                if (HAS_SETTING(S_CUSTOM_CONTRACT)) {
                     tmp_element.text = &C_icon_toggle_set;
                 }
                 else {
@@ -1833,39 +1822,31 @@ UX_DEF(ux_settings_flow,
 );
 
 void display_settings(const ux_flow_step_t* const start_step) {
-  strcpy(addressSummary, (N_storage.dataAllowed ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 12, (N_storage.customContract ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 24, (N_storage.truncateAddress ? "Yes" : "No"));
+  strcpy(addressSummary, (HAS_SETTING(S_DATA_ALLOWED) ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 12, (HAS_SETTING(S_CUSTOM_CONTRACT) ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 24, (HAS_SETTING(S_TRUNCATE_ADDRESS) ? "Yes" : "No"));
   // FIXME: accessing an array outside of its bounds
-  strcpy(addressSummary + 28, (N_storage.signByHash ? "Allowed" : "NOT Allowed"));
+  strcpy(addressSummary + 28, (HAS_SETTING(S_SIGN_BY_HASH) ? "Allowed" : "NOT Allowed"));
   ux_flow_init(0, ux_settings_flow, start_step);
 }
 
 void switch_settings_contract_data() {
-  uint8_t value = (N_storage.dataAllowed ? 0 : 1);
-  dataAllowed = value;
-  nvm_write((void*)&N_storage.dataAllowed, (void*)&value, sizeof(uint8_t));
+  SETTING_TOGGLE(S_DATA_ALLOWED);
   display_settings(&ux_settings_flow_1_step); // same effect as NULL
 }
 
 void switch_settings_custom_contracts() {
-  uint8_t value = (N_storage.customContract ? 0 : 1);
-  customContract = value;
-  nvm_write((void*)&N_storage.customContract, (void*)&value, sizeof(uint8_t));
+  SETTING_TOGGLE(S_CUSTOM_CONTRACT);
   display_settings(&ux_settings_flow_2_step);
 }
 
 void switch_settings_truncate_address() {
-  uint8_t value = (N_storage.truncateAddress ? 0 : 1);
-  truncateAddress = value;
-  nvm_write((void*)&N_storage.truncateAddress, (void*)&value, sizeof(uint8_t));
+  SETTING_TOGGLE(S_TRUNCATE_ADDRESS);
   display_settings(&ux_settings_flow_3_step);
 }
 
 void switch_settings_sign_by_hash() {
-  uint8_t value = (N_storage.signByHash ? 0 : 1);
-  signByHash = value;
-  nvm_write((void*)&N_storage.signByHash, (void*)&value, sizeof(uint8_t));
+  SETTING_TOGGLE(S_SIGN_BY_HASH);
   display_settings(&ux_settings_flow_4_step);
 }
 
@@ -2919,10 +2900,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     if (txContent.permission_id>0){
         PRINTF("Set permission_id...\n");
         snprintf((char*)fromAddress, 5, "P%d - ",txContent.permission_id);
-        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2, truncateAddress);
+        getBase58FromAddress(txContent.account, (void *)(fromAddress+4), &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
     } else {
         PRINTF("Regular transaction...\n");
-        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2, truncateAddress);
+        getBase58FromAddress(txContent.account, (void *)fromAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
     }
 
     switch (txContent.contractType){
@@ -2938,10 +2919,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     os_memmove((void *)TRC20ActionSendAllow, "Allow\0", 8);
                     os_memmove((void *)TRC20Action, "Approve\0", 8);
                 }else {
-                    if (!customContract) THROW(0x6B00);
+                    if (!HAS_SETTING(S_CUSTOM_CONTRACT)) THROW(0x6B00);
                     customContractField = 1;
 
-                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2, truncateAddress);
+                    getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
                     snprintf((char *)TRC20Action, sizeof(TRC20Action), "%08x", txContent.customSelector);
                     G_io_apdu_buffer[0]='\0';
                     G_io_apdu_buffer[100]='\0';
@@ -2984,7 +2965,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
             getBase58FromAddress(txContent.destination, (uint8_t *)toAddress,
-                                 &sha2, truncateAddress);
+                                 &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
 
             // get token name if any
             os_memmove((void *)fullContract, txContent.tokenNames[0], txContent.tokenNamesLength[0]+1);
@@ -3067,7 +3048,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             for (int i = 0; i < contract->votes_count; i++) {
               getBase58FromAddress(contract->votes[i].vote_address,
-                                   (uint8_t *)fullContract, &sha2, truncateAddress);
+                                   (uint8_t *)fullContract, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
 
             #if defined(TARGET_BLUE)
                 total_votes += (unsigned int)contract->votes[i].vote_count;
@@ -3130,10 +3111,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,0, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
-                    (uint8_t *)toAddress, &sha2, truncateAddress);
+                    (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
             } else {
                 getBase58FromAddress(txContent.account,
-                    (uint8_t *)toAddress, &sha2, truncateAddress);
+                    (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
             }
 
             #if defined(TARGET_BLUE)
@@ -3152,10 +3133,10 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
 
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
-                    (uint8_t *)toAddress, &sha2, truncateAddress);
+                    (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
             } else {
                 getBase58FromAddress(txContent.account,
-                    (uint8_t *)toAddress, &sha2, truncateAddress);
+                    (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
             }
 
             #if defined(TARGET_BLUE)
@@ -3169,7 +3150,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         break;
         case WITHDRAWBALANCECONTRACT: // Claim Rewards
             getBase58FromAddress(txContent.account,
-                (uint8_t *)toAddress, &sha2, truncateAddress);
+                (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_WITHDRAWBALANCE_TRANSACTION;
@@ -3181,7 +3162,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         case ACCOUNTPERMISSIONUPDATECONTRACT:
-            if (signByHash != 0x01) {
+            if (!HAS_SETTING(S_SIGN_BY_HASH)) {
               THROW(0x6985); // reject
             }
             // Write fullHash
@@ -3203,7 +3184,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             THROW(0x6B00); // Contract not initialized
         break;
         default:
-            if (signByHash != 0x01) {
+            if (!HAS_SETTING(S_SIGN_BY_HASH)) {
               THROW(0x6985); // reject
             }
             // Write fullHash
@@ -3237,11 +3218,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     UNUSED(dataLength);
     UNUSED(flags);
     //Add info to buffer
-    G_io_apdu_buffer[0] = 0x00;
-    G_io_apdu_buffer[0] |= (N_storage.dataAllowed<<0);
-    G_io_apdu_buffer[0] |= (N_storage.customContract<<1);
-    G_io_apdu_buffer[0] |= (N_storage.truncateAddress<<2);
-    G_io_apdu_buffer[0] |= (N_storage.signByHash<<3);
+    G_io_apdu_buffer[0] = N_settings & 0x0f;
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -3640,19 +3617,11 @@ __attribute__((section(".boot"))) int main(void) {
                 G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
                 #endif // TARGET_NANOX
 
-                if (N_storage.initialized != 0x01) {
-                  internalStorage_t storage;
-                  storage.dataAllowed = 0x00;
-                  storage.customContract = 0x00;
-                  storage.truncateAddress = 0x00;
-                  storage.signByHash = 0x00;
-                  storage.initialized = 0x01;
-                  nvm_write((void*)&N_storage, (void*)&storage, sizeof(internalStorage_t));
+                if (!HAS_SETTING(S_INITIALIZED)) {
+                  internal_storage_t storage = 0x00;
+                  storage |= 0x80;
+                  nvm_write((void*)&N_settings, (void*)&storage, sizeof(internal_storage_t));
                 }
-                dataAllowed = N_storage.dataAllowed;
-                customContract = N_storage.customContract;
-                truncateAddress = N_storage.truncateAddress;
-                signByHash = N_storage.signByHash;
 
                 USB_power(1);
                 ui_idle();
