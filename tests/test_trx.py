@@ -242,7 +242,7 @@ class TestTRX:
     def test_trx_get_version(self, app):    
         pack = app.apduMessage(0x06,0x00,0x00,"FF")
         data, status = app.exchange(pack)
-        assert(data[1:].hex() == "000105")
+        assert(data[1:].hex() == "000200")
 
 
     def test_trx_get_addresses(self, app):
