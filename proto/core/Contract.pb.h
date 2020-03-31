@@ -208,7 +208,6 @@ typedef struct _protocol_VoteWitnessContract {
     pb_byte_t owner_address[21];
     pb_size_t votes_count;
     protocol_VoteWitnessContract_Vote votes[5];
-    bool support;
 } protocol_VoteWitnessContract;
 
 
@@ -224,7 +223,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_TransferContract_init_default   {{0}, {0}, 0}
 #define protocol_TransferAssetContract_init_default {{0, {0}}, {0}, {0}, 0}
 #define protocol_VoteAssetContract_init_default  {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_VoteWitnessContract_init_default {{0}, 0, {protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default}, 0}
+#define protocol_VoteWitnessContract_init_default {{0}, 0, {protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default, protocol_VoteWitnessContract_Vote_init_default}}
 #define protocol_VoteWitnessContract_Vote_init_default {{0}, 0}
 #define protocol_WitnessCreateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_WitnessUpdateContract_init_default {{{NULL}, NULL}, {{NULL}, NULL}}
@@ -252,7 +251,7 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_TransferContract_init_zero      {{0}, {0}, 0}
 #define protocol_TransferAssetContract_init_zero {{0, {0}}, {0}, {0}, 0}
 #define protocol_VoteAssetContract_init_zero     {{{NULL}, NULL}, {{NULL}, NULL}, 0, 0}
-#define protocol_VoteWitnessContract_init_zero   {{0}, 0, {protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero}, 0}
+#define protocol_VoteWitnessContract_init_zero   {{0}, 0, {protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero, protocol_VoteWitnessContract_Vote_init_zero}}
 #define protocol_VoteWitnessContract_Vote_init_zero {{0}, 0}
 #define protocol_WitnessCreateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_WitnessUpdateContract_init_zero {{{NULL}, NULL}, {{NULL}, NULL}}
@@ -374,7 +373,6 @@ typedef struct _protocol_VoteWitnessContract {
 #define protocol_ProposalCreateContract_parameters_tag 2
 #define protocol_VoteWitnessContract_owner_address_tag 1
 #define protocol_VoteWitnessContract_votes_tag   2
-#define protocol_VoteWitnessContract_support_tag 3
 
 /* Struct field encoding specification for nanopb */
 #define protocol_AccountCreateContract_FIELDLIST(X, a) \
@@ -415,8 +413,7 @@ X(a, STATIC,   SINGULAR, INT32,    count,             5)
 
 #define protocol_VoteWitnessContract_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, owner_address,     1) \
-X(a, STATIC,   REPEATED, MESSAGE,  votes,             2) \
-X(a, STATIC,   SINGULAR, BOOL,     support,           3)
+X(a, STATIC,   REPEATED, MESSAGE,  votes,             2)
 #define protocol_VoteWitnessContract_CALLBACK NULL
 #define protocol_VoteWitnessContract_DEFAULT NULL
 #define protocol_VoteWitnessContract_votes_MSGTYPE protocol_VoteWitnessContract_Vote
@@ -655,7 +652,7 @@ extern const pb_msgdesc_t protocol_AccountPermissionUpdateContract_msg;
 #define protocol_TransferContract_size           57
 #define protocol_TransferAssetContract_size      75
 /* protocol_VoteAssetContract_size depends on runtime parameters */
-#define protocol_VoteWitnessContract_size        205
+#define protocol_VoteWitnessContract_size        203
 #define protocol_VoteWitnessContract_Vote_size   34
 /* protocol_WitnessCreateContract_size depends on runtime parameters */
 /* protocol_WitnessUpdateContract_size depends on runtime parameters */

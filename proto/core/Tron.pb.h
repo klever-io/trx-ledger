@@ -146,16 +146,9 @@ typedef struct _protocol_Permission {
 } protocol_Permission;
 
 typedef struct _protocol_Transaction_raw {
-    pb_callback_t ref_block_bytes;
-    int64_t ref_block_num;
-    pb_callback_t ref_block_hash;
-    int64_t expiration;
-    pb_callback_t auths;
     pb_callback_t data;
     pb_size_t contract_count;
     protocol_Transaction_Contract contract[1];
-    pb_callback_t scripts;
-    int64_t timestamp;
     int64_t fee_limit;
 } protocol_Transaction_raw;
 
@@ -196,7 +189,7 @@ typedef struct _protocol_Transaction {
 #define protocol_Transaction_init_default        {false, protocol_Transaction_raw_init_default, {{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_Transaction_Contract_init_default {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_default, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define protocol_Transaction_Result_init_default {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
-#define protocol_Transaction_raw_init_default    {{{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_default}, {{NULL}, NULL}, 0, 0}
+#define protocol_Transaction_raw_init_default    {{{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_default}, 0}
 #define protocol_Key_init_default                {{0}, 0}
 #define protocol_Permission_init_default         {_protocol_Permission_PermissionType_MIN, 0, {{NULL}, NULL}, 0, 0, {0}, 0, {protocol_Key_init_default, protocol_Key_init_default, protocol_Key_init_default}}
 #define protocol_Exchange_init_zero              {0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, 0}
@@ -205,7 +198,7 @@ typedef struct _protocol_Transaction {
 #define protocol_Transaction_init_zero           {false, protocol_Transaction_raw_init_zero, {{NULL}, NULL}, {{NULL}, NULL}}
 #define protocol_Transaction_Contract_init_zero  {_protocol_Transaction_Contract_ContractType_MIN, false, google_protobuf_Any_init_zero, {{NULL}, NULL}, {{NULL}, NULL}, 0}
 #define protocol_Transaction_Result_init_zero    {0, _protocol_Transaction_Result_code_MIN, _protocol_Transaction_Result_contractResult_MIN, {{NULL}, NULL}, 0, 0, 0, 0, 0, 0}
-#define protocol_Transaction_raw_init_zero       {{{NULL}, NULL}, 0, {{NULL}, NULL}, 0, {{NULL}, NULL}, {{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_zero}, {{NULL}, NULL}, 0, 0}
+#define protocol_Transaction_raw_init_zero       {{{NULL}, NULL}, 0, {protocol_Transaction_Contract_init_zero}, 0}
 #define protocol_Key_init_zero                   {{0}, 0}
 #define protocol_Permission_init_zero            {_protocol_Permission_PermissionType_MIN, 0, {{NULL}, NULL}, 0, 0, {0}, 0, {protocol_Key_init_zero, protocol_Key_init_zero, protocol_Key_init_zero}}
 
@@ -245,15 +238,8 @@ typedef struct _protocol_Transaction {
 #define protocol_Permission_parent_id_tag        5
 #define protocol_Permission_operations_tag       6
 #define protocol_Permission_keys_tag             7
-#define protocol_Transaction_raw_ref_block_bytes_tag 1
-#define protocol_Transaction_raw_ref_block_num_tag 3
-#define protocol_Transaction_raw_ref_block_hash_tag 4
-#define protocol_Transaction_raw_expiration_tag  8
-#define protocol_Transaction_raw_auths_tag       9
 #define protocol_Transaction_raw_data_tag        10
 #define protocol_Transaction_raw_contract_tag    11
-#define protocol_Transaction_raw_scripts_tag     12
-#define protocol_Transaction_raw_timestamp_tag   14
 #define protocol_Transaction_raw_fee_limit_tag   18
 #define protocol_Transaction_raw_data_tag        1
 #define protocol_Transaction_signature_tag       2
@@ -318,19 +304,11 @@ X(a, STATIC,   SINGULAR, INT64,    exchange_id,      21)
 #define protocol_Transaction_Result_DEFAULT NULL
 
 #define protocol_Transaction_raw_FIELDLIST(X, a) \
-X(a, CALLBACK, SINGULAR, BYTES,    ref_block_bytes,   1) \
-X(a, STATIC,   SINGULAR, INT64,    ref_block_num,     3) \
-X(a, CALLBACK, SINGULAR, BYTES,    ref_block_hash,    4) \
-X(a, STATIC,   SINGULAR, INT64,    expiration,        8) \
-X(a, CALLBACK, REPEATED, MESSAGE,  auths,             9) \
 X(a, CALLBACK, SINGULAR, BYTES,    data,             10) \
 X(a, STATIC,   REPEATED, MESSAGE,  contract,         11) \
-X(a, CALLBACK, SINGULAR, BYTES,    scripts,          12) \
-X(a, STATIC,   SINGULAR, INT64,    timestamp,        14) \
 X(a, STATIC,   SINGULAR, INT64,    fee_limit,        18)
 #define protocol_Transaction_raw_CALLBACK pb_default_field_callback
 #define protocol_Transaction_raw_DEFAULT NULL
-#define protocol_Transaction_raw_auths_MSGTYPE protocol_authority
 #define protocol_Transaction_raw_contract_MSGTYPE protocol_Transaction_Contract
 
 #define protocol_Key_FIELDLIST(X, a) \
