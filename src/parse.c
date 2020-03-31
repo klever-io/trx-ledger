@@ -342,6 +342,7 @@ bool parseExchange(const uint8_t *data,
 
 void initTx(txContext_t *context, cx_sha256_t *sha2, txContent_t *content) {
     memset(context, 0, sizeof(txContext_t));
+    memset(content, 0, sizeof(txContent_t));
     context->sha2 = sha2;
     context->initialized = true;
     content->contractType = INVALID_CONTRACT;
