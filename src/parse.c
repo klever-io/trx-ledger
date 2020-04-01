@@ -532,18 +532,7 @@ bool pb_decode_trigger_smart_contract_data(pb_istream_t *stream, const pb_field_
   if (!pb_read(stream, buf, 32)) {
     return false;
   }
-
   memmove(content->TRC20Amount, buf, 32);
-  tokenDefinition_t *trc20 = getKnownToken(content);
-  if (trc20 == NULL) {
-    // treat unknown TRC20 token as arbitrary contract
-    content->TRC20Method = 0;
-    return true;
-  }
-
-  content->decimals[0] = trc20->decimals;
-  content->tokenNamesLength[0] = strlen((const char *)trc20->ticker) + 1;
-  memmove(content->tokenNames[0], trc20->ticker, content->tokenNamesLength[0]);
 
   return true;
 }
@@ -559,6 +548,18 @@ static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
   COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
   COPY_ADDRESS(content->contractAddress, &msg.trigger_smart_contract.contract_address);
   content->amount[0] = msg.trigger_smart_contract.call_value;
+
+  tokenDefinition_t *trc20 = getKnownToken(content);
+
+  if (trc20 == NULL) {
+    // treat unknown TRC20 token as arbitrary contract
+    content->TRC20Method = 0;
+    return true;
+  }
+
+  content->decimals[0] = trc20->decimals;
+  content->tokenNamesLength[0] = strlen((const char *)trc20->ticker) + 1;
+  memmove(content->tokenNames[0], trc20->ticker, content->tokenNamesLength[0]);
 
   return true;
 }
