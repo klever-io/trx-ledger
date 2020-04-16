@@ -145,7 +145,7 @@ bool setContractType(uint8_t type, void *out){
             break;
         case WITNESSUPDATECONTRACT:
             strcpy(out,"Witness Update");
-            break; 
+            break;
         case PARTICIPATEASSETISSUECONTRACT:
             strcpy(out,"Participate Asset");
             break;
@@ -173,7 +173,10 @@ bool setContractType(uint8_t type, void *out){
         case PROPOSALDELETECONTRACT:
             strcpy(out,"Proposal Delete");
             break;
-        default: 
+        case ACCOUNTPERMISSIONUPDATECONTRACT:
+            strcpy(out, "Permission Update");
+            break;
+        default:
             return false;
     }
     return true;
@@ -193,7 +196,7 @@ bool setExchangeContractDetail(uint8_t type, void *out){
         case EXCHANGETRANSACTIONCONTRACT:
             strcpy(out,"transaction");
             break;
-        default: 
+        default:
         return false;
     }
     return true;
@@ -483,53 +486,81 @@ static bool account_update_contract(txContent_t *content,
   return true;
 }
 
-static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
-  if (!pb_decode(stream, protocol_TriggerSmartContract_fields,
-                 &msg.trigger_smart_contract)) {
-    return false;
-  }
-  tokenDefinition_t *TRC20 = getKnownToken(content);
-
-  COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
-  COPY_ADDRESS(content->contractAddress,
-               &msg.trigger_smart_contract.contract_address);
-  content->amount[0] = msg.trigger_smart_contract.call_value;
-
-  // Parse smart contract
-  if (msg.trigger_smart_contract.data.size < 4) {
+bool pb_decode_trigger_smart_contract_data(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+  if (stream->bytes_left < 4) {
     return false;
   }
 
-  if ((TRC20 != NULL) && (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[0], 4) == 0)) {
-    content->TRC20Method = 1; // check if transfer(address, uint256) function
-  } else if ((TRC20 != NULL) && (memcmp(msg.trigger_smart_contract.data.bytes, SELECTOR[1], 4) ==
-             0)) {
-    content->TRC20Method = 2; // check if approve(address, uint256) function
+  txContent_t* content = *arg;
+  uint8_t buf[32];  // a single encoded TVM value
+
+  // method selector
+  if (!pb_read(stream, buf, 4)) {
+    return false;
+  }
+
+  content->customSelector = U4BE(buf, 0);
+
+  if (memcmp(buf, SELECTOR[0], 4) == 0) {
+    content->TRC20Method = 1;  // a9059cbb -> transfer(address,uint256)
+  } else if (memcmp(buf, SELECTOR[1], 4) == 0) {
+    content->TRC20Method = 2;  // 095ea7b3 -> approve(address,uint256)
   } else {
-    // Processing custom contracts
-    // TODO: add switch to disable support for custom contracts
-    if ((msg.trigger_smart_contract.data.size - 4) % 32 != 0) {
+    // arbitrary contracts
+    if (stream->bytes_left % 32 != 0) {
       return false;
     }
     content->TRC20Method = 0;
-    content->customSelector = U4BE(msg.trigger_smart_contract.data.bytes, 0);
+    // consume this field
+    return pb_read(stream, NULL, stream->bytes_left);
+  }
+
+  // TRC20 data size check: 32 + 32
+  if (stream->bytes_left != 32 + 32) {
+    return false;
+  }
+
+  // to address
+  if (!pb_read(stream, buf, 32)) {
+    return false;
+  }
+  memcpy(content->destination, buf + (32 - 21), ADDRESS_SIZE);
+  // fix address prefix 0x41: mainnet
+  content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
+
+  // amount
+  if (!pb_read(stream, buf, 32)) {
+    return false;
+  }
+  memmove(content->TRC20Amount, buf, 32);
+
+  return true;
+}
+
+static bool trigger_smart_contract(txContent_t *content, pb_istream_t *stream) {
+  msg.trigger_smart_contract.data.funcs.decode = pb_decode_trigger_smart_contract_data;
+  msg.trigger_smart_contract.data.arg = content;
+
+  if (!pb_decode(stream, protocol_TriggerSmartContract_fields, &msg.trigger_smart_contract)) {
+    return false;
+  }
+
+  COPY_ADDRESS(content->account, &msg.trigger_smart_contract.owner_address);
+  COPY_ADDRESS(content->contractAddress, &msg.trigger_smart_contract.contract_address);
+  content->amount[0] = msg.trigger_smart_contract.call_value;
+
+  tokenDefinition_t *trc20 = getKnownToken(content);
+
+  if (trc20 == NULL) {
+    // treat unknown TRC20 token as arbitrary contract
+    content->TRC20Method = 0;
     return true;
   }
 
-  // check if DATA field size matchs TRC20 Transfer/Approve
-  if (msg.trigger_smart_contract.data.size != TRC20_DATA_FIELD_SIZE) {
-    return false;
-  }
-  // TO Address
-  memcpy(content->destination, msg.trigger_smart_contract.data.bytes + 15,
-         ADDRESS_SIZE);
-  // set MainNet PREFIX
-  content->destination[0] = ADD_PRE_FIX_BYTE_MAINNET;
-  // Amount
-  memmove(content->TRC20Amount, msg.trigger_smart_contract.data.bytes + 36, 32);
-  content->decimals[0] = TRC20->decimals;
-  content->tokenNamesLength[0] = strlen((const char *)TRC20->ticker) + 1;
-  memmove(content->tokenNames[0], TRC20->ticker, content->tokenNamesLength[0]);
+  content->decimals[0] = trc20->decimals;
+  content->tokenNamesLength[0] = strlen((const char *)trc20->ticker) + 1;
+  memmove(content->tokenNames[0], trc20->ticker, content->tokenNamesLength[0]);
+
   return true;
 }
 
@@ -623,6 +654,17 @@ static bool exchange_transaction_contract(txContent_t *content,
   return true;
 }
 
+static bool account_permission_update_contract(txContent_t *content, pb_istream_t *stream) {
+  if (!pb_decode(stream, protocol_AccountPermissionUpdateContract_fields,
+                 &msg.account_permission_update_contract)) {
+    return false;
+  }
+
+  COPY_ADDRESS(content->account, &msg.account_permission_update_contract.owner_address);
+  // TODO: Update tx content
+  return true;
+}
+
 typedef struct {
     const uint8_t *buf;
     size_t size;
@@ -677,10 +719,10 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
     return USTREAM_FAULT;
   }
 
-  if (!dataAllowed && content->dataBytes != 0) {
+  if (!HAS_SETTING(S_DATA_ALLOWED) && content->dataBytes != 0) {
     THROW(0x6a80);
   }
-  
+
 
   /* Parse contract parameters if any...
      and it may come in different message chunk
@@ -740,6 +782,9 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
         break;
       case protocol_Transaction_Contract_ContractType_ExchangeTransactionContract:
         ret = exchange_transaction_contract(content, &tx_stream);
+        break;
+      case protocol_Transaction_Contract_ContractType_AccountPermissionUpdateContract:
+        ret = account_permission_update_contract(content, &tx_stream);
         break;
       default:
         return USTREAM_FAULT;

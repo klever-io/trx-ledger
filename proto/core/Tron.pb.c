@@ -27,6 +27,13 @@ PB_BIND(protocol_Transaction_Result, protocol_Transaction_Result, AUTO)
 PB_BIND(protocol_Transaction_raw, protocol_Transaction_raw, AUTO)
 
 
+PB_BIND(protocol_Key, protocol_Key, AUTO)
+
+
+PB_BIND(protocol_Permission, protocol_Permission, AUTO)
+
+
+
 
 
 
