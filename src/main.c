@@ -1547,6 +1547,7 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     explicit_bzero(&privateKey, sizeof(privateKey));
     explicit_bzero(privateKeyData, sizeof(privateKeyData));
 
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2611,6 +2612,7 @@ unsigned int io_seproxyhal_touch_exit(const bagl_element_t *e) {
 
 unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
     uint32_t tx = set_result_get_publicKey();
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2639,6 +2641,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     // send to output buffer
     os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
     tx=transactionContext.signatureLength;
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2657,6 +2660,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     // send to output buffer
     os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
     tx=transactionContext.signatureLength;
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
