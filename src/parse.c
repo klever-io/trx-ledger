@@ -15,13 +15,15 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include "parse.h"
-#include <misc/TronApp.pb.h>
-#include <pb.h>
 #include <string.h>
 
+#include "pb.h"
+#include "misc/TronApp.pb.h"
+
+#include "parse.h"
 #include "settings.h"
 #include "tokens.h"
+#include "errors.h"
 
 tokenDefinition_t* getKnownToken(txContent_t *context) {
     uint16_t i;
@@ -112,7 +114,7 @@ unsigned short print_amount(uint64_t amount, uint8_t *out,
         numDigits++;
     }
     if (numDigits > sizeof(tmp) - 1) {
-        THROW(0x6a80);
+        THROW(E_INCORRECT_LENGTH);
     }
     base /= 10;
     for (i = 0; i < numDigits; i++) {
@@ -720,7 +722,7 @@ parserStatus_e processTx(uint8_t *buffer, uint32_t length,
   }
 
   if (!HAS_SETTING(S_DATA_ALLOWED) && content->dataBytes != 0) {
-    THROW(0x6a80);
+    THROW(E_MISSING_SETTING_DATA_ALLOWED);
   }
 
 
