@@ -178,6 +178,9 @@ bool setContractType(uint8_t type, void *out){
         case ACCOUNTPERMISSIONUPDATECONTRACT:
             strcpy(out, "Permission Update");
             break;
+        case UNKNOWN_CONTRACT:
+            strcpy(out, "Unknown Type");
+            break;
         default:
             return false;
     }
