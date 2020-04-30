@@ -42,7 +42,8 @@ uint32_t set_result_get_publicKey(void);
 
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
-#define INS_GET_APP_CONFIGURATION 0x06  // version
+#define INS_SIGN_TXN_HASH 0x05  // unsafe
+#define INS_GET_APP_CONFIGURATION 0x06  // version and settings
 #define INS_SIGN_PERSONAL_MESSAGE 0x08
 #define INS_GET_ECDH_SECRET 0x0A
 
@@ -2764,6 +2765,27 @@ void handleGetWalletId(volatile unsigned int *tx) {
 
 #endif
 
+void initPublicKeyContext(bip32_path_t *bip32_path) {
+    uint8_t privateKeyData[33];
+    cx_ecfp_private_key_t privateKey;
+
+    // Get private key
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path->indices, bip32_path->length, privateKeyData, NULL);
+
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey, &privateKey, 1);
+
+    // Clear tmp buffer data
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    // Get address from PK
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
+
+    // Get base58check
+    getBase58FromAddress(publicKeyContext.address, publicKeyContext.address58, &sha2, false);
+}
+
 // APDU public key
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
                         uint16_t dataLength, volatile unsigned int *flags,
@@ -3238,7 +3260,55 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     *flags |= IO_ASYNCH_REPLY;
 }
 
-// // APDU App Config and Version
+// APDU Sign by transaction hash
+void handleSignByHash(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+                uint16_t dataLength, volatile unsigned int *flags,
+                volatile unsigned int *tx) {
+
+    UNUSED(tx);
+
+    if (p1 != 0x00 || p2 != 0x00) {
+        THROW(E_INCORRECT_P1_P2);
+    }
+
+    if (!HAS_SETTING(S_SIGN_BY_HASH)) {
+        THROW(E_MISSING_SETTING_SIGN_BY_HASH);
+    }
+
+    off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+    if (ret < 0) {
+        THROW(E_INCORRECT_BIP32_PATH);
+    }
+    workBuffer += ret;
+    dataLength -= ret;
+
+    // fromAddress
+    initPublicKeyContext(&transactionContext.bip32_path);
+    os_memmove((void *)fromAddress, publicKeyContext.address58, 34);
+    fromAddress[34] = '\0';
+
+    // Transaction hash
+    if (dataLength != 32) {
+        THROW(E_INCORRECT_LENGTH);
+    }
+    os_memmove((void*)transactionContext.hash, workBuffer, 32);
+    // Write fullHash
+    array_hexstr((char *)fullHash, transactionContext.hash, 32);
+
+    // Contract Type = Unknown Type
+    setContractType(UNKNOWN_CONTRACT, (void*)fullContract);
+
+    #if defined(TARGET_BLUE)
+        G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+        ui_approval_simple_transaction_blue_init();
+    #elif defined(HAVE_UX_FLOW)
+        ux_flow_init(0, ux_approval_st_flow, NULL);
+    #endif
+
+    *flags |= IO_ASYNCH_REPLY;
+}
+
+// APDU App Config and Version
 void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                uint16_t dataLength,
                                volatile unsigned int *flags,
@@ -3441,6 +3511,16 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
             case INS_SIGN:
                 // Request Signature
                 handleSign(G_io_apdu_buffer[OFFSET_P1],
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
+                break;
+
+            case INS_SIGN_TXN_HASH:
+                // Request signature via transaction id
+                handleSignByHash(
+                    G_io_apdu_buffer[OFFSET_P1],
                     G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC],
