@@ -1874,8 +1874,8 @@ UX_STEP_VALID(
     io_seproxyhal_touch_tx_ok(NULL),
     {
       &C_icon_validate_14,
-      "Accept",
-      "and send",
+      "Sign",
+      "transaction",
     });
 
 UX_STEP_VALID(
@@ -1884,7 +1884,8 @@ UX_STEP_VALID(
     io_seproxyhal_touch_cancel(NULL),
     {
       &C_icon_crossmark,
-      "Reject",
+      "Cancel",
+      "signature",
     });
 
 //////////////////////////////////////////////////////////////////////
@@ -1894,7 +1895,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Verify",
-      "address",
+      "Address",
     });
 UX_STEP_NOCB(
     ux_display_public_flow_2_step,
@@ -1960,9 +1961,9 @@ UX_STEP_NOCB(
     ux_approval_tx_1_step,
     pnn,
     {
-      &C_icon_eye,
+      &C_icon_certificate,
       "Review",
-      "transfer",
+      "Transaction",
     });
 UX_STEP_NOCB(
     ux_approval_tx_2_step,
@@ -1990,8 +1991,8 @@ UX_DEF(ux_approval_tx_flow,
   &ux_approval_tx_1_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
-  &ux_approval_tx_4_step,
   &ux_approval_from_address_step,
+  &ux_approval_tx_4_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -2001,8 +2002,8 @@ UX_DEF(ux_approval_tx_data_warning_flow,
   &ux_approval_tx_data_warning_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
-  &ux_approval_tx_4_step,
   &ux_approval_from_address_step,
+  &ux_approval_tx_4_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -2086,7 +2087,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "votes",
+      "Votes",
     });
 UX_STEP_NOCB(
     ux_approval_vote_flow_2_step,
@@ -2135,7 +2136,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "freeze",
+      "Freeze",
     });
 UX_STEP_NOCB(
     ux_approval_freeze_flow_2_step,
@@ -2187,7 +2188,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "unfreeze",
+      "Unfreeze",
     });
 UX_STEP_NOCB(
     ux_approval_unfreeze_flow_2_step,
@@ -2232,7 +2233,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Claim",
-      "rewards",
+      "Rewards",
     });
 
 UX_DEF(ux_approval_withdraw_balance_flow,
@@ -2258,7 +2259,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "transaction",
+      "Transaction",
     });
 UX_STEP_NOCB(
     ux_approval_exchange_transaction_2_step,
@@ -2433,7 +2434,7 @@ UX_STEP_NOCB(
     {
       &C_icon_certificate,
       "Sign",
-      "message",
+      "Message",
     });
 UX_STEP_NOCB(
     ux_sign_flow_2_step,
@@ -2484,7 +2485,7 @@ UX_STEP_NOCB(
     pnn,
     {
       &C_icon_eye,
-      "Custom",
+      "Review",
       "Contract",
     });
 UX_STEP_NOCB(
@@ -2505,7 +2506,7 @@ UX_STEP_NOCB(
     ux_approval_custom_contract_4_step,
     bnnn_paging,
     {
-      .title = "Token",
+      .title = "Pay Token",
       .text = toAddress,
     });
 UX_STEP_NOCB(
@@ -2520,8 +2521,8 @@ UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     pnn,
     {
       &C_icon_warning,
-      "This contract",
-      "is not verified",
+      "Warning:",
+      "Unverified Contract",
     });
 
 UX_DEF(ux_approval_custom_contract_flow,
