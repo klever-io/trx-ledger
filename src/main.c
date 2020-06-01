@@ -3513,8 +3513,6 @@ void tron_main(void) {
     volatile unsigned int tx = 0;
     volatile unsigned int flags = 0;
 
-    USBD_Device.dev_state = USBD_STATE_CONFIGURED;
-
     // DESIGN NOTE: the bootloader ignores the way APDU are fetched. The only
     // goal is to retrieve APDU.
     // When APDU are to be fetched from multiple IOs, like NFC+USB+BLE, make
