@@ -15,24 +15,22 @@
  *  limitations under the License.
  ********************************************************************************/
 
-#include "os.h"
-#include "cx.h"
 #include <stdbool.h>
 #include <sys/types.h>
-#include "helpers.h"
+#include <string.h>
 
+#include "os.h"
+#include "cx.h"
 #include "os_io_seproxyhal.h"
-#include "string.h"
 
 #include "glyphs.h"
 
+#include "helpers.h"
 #include "settings.h"
-
 #include "parse.h"
 #include "uint256.h"
-
 #include "tokens.h"
-
+#include "errors.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -44,7 +42,8 @@ uint32_t set_result_get_publicKey(void);
 
 #define INS_GET_PUBLIC_KEY 0x02
 #define INS_SIGN 0x04
-#define INS_GET_APP_CONFIGURATION 0x06  // version
+#define INS_SIGN_TXN_HASH 0x05  // unsafe
+#define INS_GET_APP_CONFIGURATION 0x06  // version and settings
 #define INS_SIGN_PERSONAL_MESSAGE 0x08
 #define INS_GET_ECDH_SECRET 0x0A
 
@@ -1549,6 +1548,7 @@ unsigned int io_seproxyhal_touch_ecdh_ok(const bagl_element_t *e) {
     explicit_bzero(&privateKey, sizeof(privateKey));
     explicit_bzero(privateKeyData, sizeof(privateKeyData));
 
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -1874,8 +1874,8 @@ UX_STEP_VALID(
     io_seproxyhal_touch_tx_ok(NULL),
     {
       &C_icon_validate_14,
-      "Accept",
-      "and send",
+      "Sign",
+      "transaction",
     });
 
 UX_STEP_VALID(
@@ -1884,7 +1884,8 @@ UX_STEP_VALID(
     io_seproxyhal_touch_cancel(NULL),
     {
       &C_icon_crossmark,
-      "Reject",
+      "Cancel",
+      "signature",
     });
 
 //////////////////////////////////////////////////////////////////////
@@ -1894,7 +1895,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Verify",
-      "address",
+      "Address",
     });
 UX_STEP_NOCB(
     ux_display_public_flow_2_step,
@@ -1960,9 +1961,9 @@ UX_STEP_NOCB(
     ux_approval_tx_1_step,
     pnn,
     {
-      &C_icon_eye,
+      &C_icon_certificate,
       "Review",
-      "transfer",
+      "Transaction",
     });
 UX_STEP_NOCB(
     ux_approval_tx_2_step,
@@ -1990,8 +1991,8 @@ UX_DEF(ux_approval_tx_flow,
   &ux_approval_tx_1_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
-  &ux_approval_tx_4_step,
   &ux_approval_from_address_step,
+  &ux_approval_tx_4_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -2001,8 +2002,8 @@ UX_DEF(ux_approval_tx_data_warning_flow,
   &ux_approval_tx_data_warning_step,
   &ux_approval_tx_2_step,
   &ux_approval_tx_3_step,
-  &ux_approval_tx_4_step,
   &ux_approval_from_address_step,
+  &ux_approval_tx_4_step,
   &ux_approval_confirm_step,
   &ux_approval_reject_step
 );
@@ -2086,7 +2087,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "votes",
+      "Votes",
     });
 UX_STEP_NOCB(
     ux_approval_vote_flow_2_step,
@@ -2135,7 +2136,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "freeze",
+      "Freeze",
     });
 UX_STEP_NOCB(
     ux_approval_freeze_flow_2_step,
@@ -2187,7 +2188,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "unfreeze",
+      "Unfreeze",
     });
 UX_STEP_NOCB(
     ux_approval_unfreeze_flow_2_step,
@@ -2232,7 +2233,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Claim",
-      "rewards",
+      "Rewards",
     });
 
 UX_DEF(ux_approval_withdraw_balance_flow,
@@ -2258,7 +2259,7 @@ UX_STEP_NOCB(
     {
       &C_icon_eye,
       "Review",
-      "transaction",
+      "Transaction",
     });
 UX_STEP_NOCB(
     ux_approval_exchange_transaction_2_step,
@@ -2433,7 +2434,7 @@ UX_STEP_NOCB(
     {
       &C_icon_certificate,
       "Sign",
-      "message",
+      "Message",
     });
 UX_STEP_NOCB(
     ux_sign_flow_2_step,
@@ -2484,7 +2485,7 @@ UX_STEP_NOCB(
     pnn,
     {
       &C_icon_eye,
-      "Custom",
+      "Review",
       "Contract",
     });
 UX_STEP_NOCB(
@@ -2505,7 +2506,7 @@ UX_STEP_NOCB(
     ux_approval_custom_contract_4_step,
     bnnn_paging,
     {
-      .title = "Token",
+      .title = "Pay Token",
       .text = toAddress,
     });
 UX_STEP_NOCB(
@@ -2520,8 +2521,8 @@ UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     pnn,
     {
       &C_icon_warning,
-      "This contract",
-      "is not verified",
+      "Warning:",
+      "Unverified Contract",
     });
 
 UX_DEF(ux_approval_custom_contract_flow,
@@ -2613,6 +2614,7 @@ unsigned int io_seproxyhal_touch_exit(const bagl_element_t *e) {
 
 unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
     uint32_t tx = set_result_get_publicKey();
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2624,6 +2626,7 @@ unsigned int io_seproxyhal_touch_address_ok(const bagl_element_t *e) {
 }
 
 unsigned int io_seproxyhal_touch_cancel(const bagl_element_t *e) {
+    // E_CONDITIONS_OF_USE_NOT_SATISFIED
     G_io_apdu_buffer[0] = 0x69;
     G_io_apdu_buffer[1] = 0x85;
     // Send back the response, do not restart the event loop
@@ -2640,6 +2643,7 @@ unsigned int io_seproxyhal_touch_signMessage_ok(const bagl_element_t *e) {
     // send to output buffer
     os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
     tx=transactionContext.signatureLength;
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2658,6 +2662,7 @@ unsigned int io_seproxyhal_touch_tx_ok(const bagl_element_t *e) {
     // send to output buffer
     os_memmove(G_io_apdu_buffer, transactionContext.signature, transactionContext.signatureLength);
     tx=transactionContext.signatureLength;
+    // E_OK
     G_io_apdu_buffer[tx++] = 0x90;
     G_io_apdu_buffer[tx++] = 0x00;
 
@@ -2756,10 +2761,31 @@ void handleGetWalletId(volatile unsigned int *tx) {
   // ! cookie !
   os_memmove(G_io_apdu_buffer, t, 64);
   *tx = 64;
-  THROW(0x9000);
+  THROW(E_OK);
 }
 
 #endif
+
+void initPublicKeyContext(bip32_path_t *bip32_path) {
+    uint8_t privateKeyData[33];
+    cx_ecfp_private_key_t privateKey;
+
+    // Get private key
+    os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path->indices, bip32_path->length, privateKeyData, NULL);
+
+    cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
+    cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey, &privateKey, 1);
+
+    // Clear tmp buffer data
+    os_memset(&privateKey, 0, sizeof(privateKey));
+    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+
+    // Get address from PK
+    getAddressFromKey(&publicKeyContext.publicKey, publicKeyContext.address);
+
+    // Get base58check
+    getBase58FromAddress(publicKeyContext.address, publicKeyContext.address58, &sha2, false);
+}
 
 // APDU public key
 void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
@@ -2773,10 +2799,10 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     uint8_t p2Chain = p2 & 0x3F;
 
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
     if ((p2Chain != P2_CHAINCODE) && (p2Chain != P2_NO_CHAINCODE)) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
 
     publicKeyContext.getChaincode = (p2Chain == P2_CHAINCODE);
@@ -2784,7 +2810,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
     // Add requested BIP path to tmp array
     if (read_bip32_path(dataBuffer, dataLength, &bip32_path) < 0) {
         PRINTF("read_bip32_path failed\n");
-        THROW(0x6A80);
+        THROW(E_INCORRECT_BIP32_PATH);
     }
 
     // Get private key
@@ -2811,7 +2837,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     if (p1 == P1_NON_CONFIRM) {
         *tx=set_result_get_publicKey();
-        THROW(0x9000);
+        THROW(E_OK);
     } else {
 
     // prepare for a UI based reply
@@ -2842,14 +2868,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     uint256_t uint256;
 
     if (p2 != 0x00) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
 
     // initialize context
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
         if (ret < 0) {
-            THROW(0x6a80);
+            THROW(E_INCORRECT_BIP32_PATH);
         }
         workBuffer += ret;
         dataLength -= ret;
@@ -2865,14 +2891,14 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             case EXCHANGECREATECONTRACT:
                 // Max 2 Tokens Name
                 if ((p1&0x07)>1)
-                    THROW(0x6A80);
+                    THROW(E_INCORRECT_P1_P2);
                 // Decode Token name and validate signature
                 if (!parseTokenName((p1&0x07),workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6802);
+                    THROW(E_INCORRECT_DATA);
                 }
                 // if not last token name, return
-                if (!(p1&0x08)) THROW(0x9000);
+                if (!(p1&0x08)) THROW(E_OK);
                 dataLength = 0;
 
                 break;
@@ -2881,29 +2907,30 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             case EXCHANGETRANSACTIONCONTRACT:
                 // Max 1 pair set
                 if ((p1&0x07)>0)
-                    THROW(0x6A80);
+                    THROW(E_INCORRECT_P1_P2);
                 // error if not last
-                if (!(p1&0x08)) THROW(0x6A80);
+                if (!(p1&0x08)) THROW(E_INCORRECT_P1_P2);
                 PRINTF("Decoding Exchange\n");
                 // Decode Token name and validate signature
                 if (!parseExchange(workBuffer, dataLength, &txContent)) {
                     PRINTF("Unexpected parser status\n");
-                    THROW(0x6802);
+                    THROW(E_INCORRECT_DATA);
                 }
                 dataLength = 0;
                 break;
             default:
                 // Error if any other contract
-                THROW(0x6A80);
+                THROW(E_INCORRECT_DATA);
         }
     }else if ((p1 != P1_MORE) && (p1 != P1_LAST)) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
 
     // Context must be initialized first
     if (!txContext.initialized) {
         PRINTF("Context not initialized\n");
-        THROW(0x6985);
+        // NOTE: if txContext is not initialized, then there must be seq errors in P1/P2.
+        THROW(E_INCORRECT_P1_P2);
     }
     // hash data
     cx_hash((cx_hash_t *)txContext.sha2, 0, workBuffer, dataLength, NULL, 32);
@@ -2915,11 +2942,11 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         case USTREAM_PROCESSING:
             // Last data should not return
             if (p1 == P1_LAST || p1 == P1_SIGN) break;
-            THROW(0x9000);
+            THROW(E_OK);
         case USTREAM_FINISHED:
             break;
         case USTREAM_FAULT:
-            THROW(0x6A80);
+            THROW(E_INCORRECT_DATA);
         default:
             PRINTF("Unexpected parser status\n");
             THROW(txResult);
@@ -2951,7 +2978,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     os_memmove((void *)TRC20ActionSendAllow, "Allow\0", 8);
                     os_memmove((void *)TRC20Action, "Approve\0", 8);
                 }else {
-                    if (!HAS_SETTING(S_CUSTOM_CONTRACT)) THROW(0x6B00);
+                    if (!HAS_SETTING(S_CUSTOM_CONTRACT)) THROW(E_MISSING_SETTING_CUSTOM_CONTRACT);
                     customContractField = 1;
 
                     getBase58FromAddress(txContent.contractAddress, (uint8_t *)fullContract, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
@@ -2959,7 +2986,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                     G_io_apdu_buffer[0]='\0';
                     G_io_apdu_buffer[100]='\0';
                     toAddress[0]='\0';
-                    if (txContent.amount[0]>0 && txContent.amount[1]>0) THROW(0x6A80);
+                    if (txContent.amount[0]>0 && txContent.amount[1]>0) THROW(E_INCORRECT_DATA);
                     // call has value
                     if (txContent.amount[0]>0) {
                         os_memmove((void *)toAddress, "TRX\0", 4);
@@ -2992,7 +3019,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                 convertUint256BE(txContent.TRC20Amount, 32, &uint256);
                 tostring256(&uint256, 10, (char *)G_io_apdu_buffer+100, 100);
                 if (!adjustDecimals((char *)G_io_apdu_buffer+100, strlen((const char *)G_io_apdu_buffer+100), (char *)G_io_apdu_buffer, 100, txContent.decimals[0]))
-                    THROW(0x6B00);
+                    THROW(E_INCORRECT_LENGTH);
             }else
                 print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,100, (txContent.contractType==TRANSFERCONTRACT)?SUN_DIG:txContent.decimals[0]);
 
@@ -3035,7 +3062,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer, 100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, (void*)(G_io_apdu_buffer+100))) THROW(0x6A80);
+            if (!setExchangeContractDetail(txContent.contractType, (void*)(G_io_apdu_buffer+100))) THROW(E_INCORRECT_DATA);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
@@ -3191,12 +3218,12 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
         break;
         case ACCOUNTPERMISSIONUPDATECONTRACT:
             if (!HAS_SETTING(S_SIGN_BY_HASH)) {
-              THROW(0x6985); // reject
+              THROW(E_MISSING_SETTING_SIGN_BY_HASH); // reject
             }
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
+            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(E_INCORRECT_DATA);
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
                 ui_approval_simple_transaction_blue_init();
@@ -3209,16 +3236,16 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             #endif // #if TARGET_ID
         break;
         case INVALID_CONTRACT:
-            THROW(0x6B00); // Contract not initialized
+            THROW(E_INCORRECT_DATA); // Contract not initialized
         break;
         default:
             if (!HAS_SETTING(S_SIGN_BY_HASH)) {
-              THROW(0x6985); // reject
+              THROW(E_MISSING_SETTING_SIGN_BY_HASH); // reject
             }
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(0x6A80);
+            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(E_INCORRECT_DATA);
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
@@ -3234,7 +3261,55 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     *flags |= IO_ASYNCH_REPLY;
 }
 
-// // APDU App Config and Version
+// APDU Sign by transaction hash
+void handleSignByHash(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
+                uint16_t dataLength, volatile unsigned int *flags,
+                volatile unsigned int *tx) {
+
+    UNUSED(tx);
+
+    if (p1 != 0x00 || p2 != 0x00) {
+        THROW(E_INCORRECT_P1_P2);
+    }
+
+    if (!HAS_SETTING(S_SIGN_BY_HASH)) {
+        THROW(E_MISSING_SETTING_SIGN_BY_HASH);
+    }
+
+    off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
+    if (ret < 0) {
+        THROW(E_INCORRECT_BIP32_PATH);
+    }
+    workBuffer += ret;
+    dataLength -= ret;
+
+    // fromAddress
+    initPublicKeyContext(&transactionContext.bip32_path);
+    os_memmove((void *)fromAddress, publicKeyContext.address58, 34);
+    fromAddress[34] = '\0';
+
+    // Transaction hash
+    if (dataLength != 32) {
+        THROW(E_INCORRECT_LENGTH);
+    }
+    os_memmove((void*)transactionContext.hash, workBuffer, 32);
+    // Write fullHash
+    array_hexstr((char *)fullHash, transactionContext.hash, 32);
+
+    // Contract Type = Unknown Type
+    setContractType(UNKNOWN_CONTRACT, (void*)fullContract);
+
+    #if defined(TARGET_BLUE)
+        G_ui_approval_blue_state = APPROVAL_TRANSACTION;
+        ui_approval_simple_transaction_blue_init();
+    #elif defined(HAVE_UX_FLOW)
+        ux_flow_init(0, ux_approval_st_flow, NULL);
+    #endif
+
+    *flags |= IO_ASYNCH_REPLY;
+}
+
+// APDU App Config and Version
 void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                                uint16_t dataLength,
                                volatile unsigned int *flags,
@@ -3251,7 +3326,7 @@ void handleGetAppConfiguration(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
     *tx = 4;        // Set return size
-    THROW(0x9000);  //Return OK
+    THROW(E_OK);
 }
 
 // APDU Sign
@@ -3264,18 +3339,18 @@ void handleECDHSecret(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     cx_ecfp_private_key_t privateKey;
 
     if ((p1 != 0x00) || (p2 != 0x01) ) {
-            THROW(0x6B00);
+            THROW(E_INCORRECT_P1_P2);
     }
 
     off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
     if (ret < 0) {
-        THROW(0x6a80);
+        THROW(E_INCORRECT_BIP32_PATH);
     }
     workBuffer += ret;
     dataLength -= ret;
     if (dataLength != 65) {
         PRINTF("Public key length error!");
-        THROW(0x6700);
+        THROW(E_INCORRECT_LENGTH);
     }
 
     // Load raw Data
@@ -3327,7 +3402,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
     if ((p1 == P1_FIRST) || (p1 == P1_SIGN)) {
         off_t ret = read_bip32_path(workBuffer, dataLength, &transactionContext.bip32_path);
         if (ret < 0) {
-          THROW(0x6a80);
+          THROW(E_INCORRECT_BIP32_PATH);
         }
         workBuffer += ret;
         dataLength -= ret;
@@ -3347,14 +3422,14 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         cx_hash((cx_hash_t *)&sha3, 0, (const uint8_t *)tmp, strlen(tmp), NULL,32);
 
     } else if (p1 != P1_MORE) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
 
     if (p2 != 0) {
-        THROW(0x6B00);
+        THROW(E_INCORRECT_P1_P2);
     }
     if (dataLength > txContent.dataBytes) {
-        THROW(0x6A80);
+        THROW(E_INCORRECT_LENGTH);
     }
 
     cx_hash((cx_hash_t *)&sha3, 0, workBuffer, dataLength, NULL,32);
@@ -3400,7 +3475,7 @@ void handleSignPersonalMessage(uint8_t p1, uint8_t p2, uint8_t *workBuffer, uint
         *flags |= IO_ASYNCH_REPLY;
 
     } else {
-        THROW(0x9000);
+        THROW(E_OK);
     }
 }
 
@@ -3421,7 +3496,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
 #endif
 
             if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
-                THROW(0x6E00);
+                THROW(E_CLA_NOT_SUPPORTED);
             }
 
             switch (G_io_apdu_buffer[OFFSET_INS]) {
@@ -3437,6 +3512,16 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
             case INS_SIGN:
                 // Request Signature
                 handleSign(G_io_apdu_buffer[OFFSET_P1],
+                    G_io_apdu_buffer[OFFSET_P2],
+                    G_io_apdu_buffer + OFFSET_CDATA,
+                    G_io_apdu_buffer[OFFSET_LC],
+                    flags, tx);
+                break;
+
+            case INS_SIGN_TXN_HASH:
+                // Request signature via transaction id
+                handleSignByHash(
+                    G_io_apdu_buffer[OFFSET_P1],
                     G_io_apdu_buffer[OFFSET_P2],
                     G_io_apdu_buffer + OFFSET_CDATA,
                     G_io_apdu_buffer[OFFSET_LC],
@@ -3471,7 +3556,7 @@ void handleApdu(volatile unsigned int *flags, volatile unsigned int *tx) {
                 break;
 
             default:
-                THROW(0x6D00);
+                THROW(E_INS_NOT_SUPPORTED);
                 break;
             }
         }
@@ -3533,7 +3618,7 @@ void tron_main(void) {
                 // no apdu received, well, reset the session, and reset the
                 // bootloader configuration
                 if (rx == 0) {
-                    THROW(0x6982);
+                    THROW(E_SECURITY_STATUS_NOT_SATISFIED);
                 }
 
 		PRINTF("New APDU received:\n%.*H\n", rx, G_io_apdu_buffer);
