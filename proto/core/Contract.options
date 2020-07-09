@@ -12,6 +12,7 @@ protocol.TransferAssetContract.to_address           max_size: 21, fixed_length: 
 protocol.VoteWitnessContract.owner_address          max_size: 21, fixed_length: true
 protocol.VoteWitnessContract.votes                  max_count: 5  # Assume 5 votes max
 protocol.VoteWitnessContract.Vote.vote_address      max_size: 21, fixed_length: true
+protocol.VoteWitnessContract.support                type: FT_IGNORE
 
 protocol.FreezeBalanceContract.owner_address        max_size: 21, fixed_length: true
 protocol.FreezeBalanceContract.receiver_address     max_size: 21, fixed_length: true
@@ -30,7 +31,7 @@ protocol.ProposalDeleteContract.owner_address       max_size: 21, fixed_length: 
 
 protocol.TriggerSmartContract.owner_address         max_size: 21, fixed_length: true
 protocol.TriggerSmartContract.contract_address      max_size: 21, fixed_length: true
-protocol.TriggerSmartContract.data                  max_size: 72
+protocol.TriggerSmartContract.data                  type: FT_CALLBACK
 
 protocol.ExchangeCreateContract.owner_address       max_size: 21, fixed_length: true
 protocol.ExchangeCreateContract.first_token_id      max_size: 8
@@ -44,3 +45,8 @@ protocol.ExchangeWithdrawContract.token_id          max_size: 8
 
 protocol.ExchangeTransactionContract.owner_address  max_size: 21, fixed_length: true
 protocol.ExchangeTransactionContract.token_id       max_size: 8
+
+protocol.AccountPermissionUpdateContract.owner_address  max_size: 21, fixed_length: true
+protocol.AccountPermissionUpdateContract.owner          type: FT_IGNORE
+protocol.AccountPermissionUpdateContract.witness        type: FT_IGNORE
+protocol.AccountPermissionUpdateContract.actives        type: FT_IGNORE
