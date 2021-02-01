@@ -23,7 +23,7 @@
 #include "cx.h"
 #include "os_io_seproxyhal.h"
 
-#include "glyphs.h"
+#include "ux.h"
 
 #include "helpers.h"
 #include "settings.h"
