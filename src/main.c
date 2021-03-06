@@ -2815,7 +2815,7 @@ void handleGetPublicKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer,
 
     // Get private key
     os_perso_derive_node_bip32(CX_CURVE_256K1, bip32_path.indices,
-                               bip32_path.length, privateKeyData, NULL);
+                               bip32_path.length, privateKeyData, publicKeyContext.chainCode);
 
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, &publicKeyContext.publicKey,
