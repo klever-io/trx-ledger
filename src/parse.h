@@ -120,7 +120,7 @@ typedef struct txContent_t {
     uint8_t contractAddress[ADDRESS_SIZE];
     uint8_t TRC20Amount[32];
     uint8_t decimals[2];
-    uint8_t tokenNames[2][MAX_TOKEN_LENGTH];
+    char tokenNames[2][MAX_TOKEN_LENGTH];
     uint8_t tokenNamesLength[2];
     uint8_t resource;
     uint8_t TRC20Method;
@@ -137,8 +137,8 @@ bool setExchangeContractDetail(uint8_t type, void * out);
 bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 bool parseExchange(const uint8_t *data, size_t dataLength, txContent_t *context);
 
-unsigned short print_amount(uint64_t amount, uint8_t *out,
-                                uint32_t outlen, uint8_t sun);
+unsigned short print_amount(uint64_t amount, char *out,
+                            uint32_t outlen, uint8_t sun);
 bool adjustDecimals(const char *src, uint32_t srcLength, char *target,
                     uint32_t targetLength, uint8_t decimals);
 

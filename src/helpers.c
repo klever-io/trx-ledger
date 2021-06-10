@@ -80,7 +80,7 @@ void signTransaction(transactionContext_t *transactionContext) {
         CX_CURVE_256K1, transactionContext->bip32_path.indices,
         transactionContext->bip32_path.length, privateKeyData, NULL);
     cx_ecfp_init_private_key(CX_CURVE_256K1, privateKeyData, 32, &privateKey);
-    os_memset(privateKeyData, 0, sizeof(privateKeyData));
+    explicit_bzero(privateKeyData, sizeof(privateKeyData));
     // Sign transaction hash
     io_seproxyhal_io_heartbeat();
     cx_ecdsa_sign(&privateKey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
@@ -88,14 +88,14 @@ void signTransaction(transactionContext_t *transactionContext) {
                       signature, sizeof(signature), &info);
 
     io_seproxyhal_io_heartbeat();
-    os_memset(&privateKey, 0, sizeof(privateKey));
+    explicit_bzero(&privateKey, sizeof(privateKey));
     // recover signature
     rLength = signature[3];
     sLength = signature[4 + rLength + 1];
     rOffset = (rLength == 33 ? 1 : 0);
     sOffset = (sLength == 33 ? 1 : 0);
-    os_memmove(transactionContext->signature, signature + 4 + rOffset, 32);
-    os_memmove(transactionContext->signature + 32, signature + 4 + rLength + 2 + sOffset, 32);
+    memcpy(transactionContext->signature, signature + 4 + rOffset, 32);
+    memcpy(transactionContext->signature + 32, signature + 4 + rLength + 2 + sOffset, 32);
     transactionContext->signature[64] = 0x00;
     if (info & CX_ECCINFO_PARITY_ODD) {
         transactionContext->signature[64] |= 0x01;
