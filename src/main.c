@@ -1826,10 +1826,10 @@ UX_DEF(ux_settings_flow,
 );
 
 void display_settings(const ux_flow_step_t* const start_step) {
-  strcpy(addressSummary, (HAS_SETTING(S_DATA_ALLOWED) ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 12, (HAS_SETTING(S_CUSTOM_CONTRACT) ? "Allowed" : "NOT Allowed"));
-  strcpy(addressSummary + 24, (HAS_SETTING(S_TRUNCATE_ADDRESS) ? "Yes" : "No"));
-  strcpy(addressSummary + 28, (HAS_SETTING(S_SIGN_BY_HASH) ? "Allowed" : "NOT Allowed"));
+  strlcpy(addressSummary, (HAS_SETTING(S_DATA_ALLOWED) ? "Allowed" : "NOT Allowed"), 12);
+  strlcpy(addressSummary + 12, (HAS_SETTING(S_CUSTOM_CONTRACT) ? "Allowed" : "NOT Allowed"), 12);
+  strlcpy(addressSummary + 24, (HAS_SETTING(S_TRUNCATE_ADDRESS) ? "Yes" : "No"), 4);
+  strlcpy(addressSummary + 28, (HAS_SETTING(S_SIGN_BY_HASH) ? "Allowed" : "NOT Allowed"), sizeof(addressSummary) - 28);
   ux_flow_init(0, ux_settings_flow, start_step);
 }
 
@@ -3011,7 +3011,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
                         customContractField |= (1<<0x06);
                     }else{
                         strcpy(toAddress, "-");
-                        strcpy((char *) G_io_apdu_buffer, "0");
+                        strlcpy((char *) G_io_apdu_buffer, "0", sizeof(G_io_apdu_buffer));
                     }
 
                     // approve custom contract
@@ -3073,7 +3073,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             print_amount(txContent.exchangeID,(void *)toAddress,sizeof(toAddress), 0);
             print_amount(txContent.amount[0],(void *)G_io_apdu_buffer, 100, (strncmp((const char *)txContent.tokenNames[0], "TRX", 3)==0)?SUN_DIG:txContent.decimals[0]);
             // write exchange contract type
-            if (!setExchangeContractDetail(txContent.contractType, (void*)(G_io_apdu_buffer+100))) THROW(E_INCORRECT_DATA);
+            if (!setExchangeContractDetail(txContent.contractType, (char *) G_io_apdu_buffer + 100, sizeof(G_io_apdu_buffer) - 100)) {
+                THROW(E_INCORRECT_DATA);
+            }
 
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_EXCHANGE_WITHDRAW_INJECT;
@@ -3238,7 +3240,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(E_INCORRECT_DATA);
+            if (!setContractType(txContent.contractType, fullContract, sizeof(fullContract))) {
+                THROW(E_INCORRECT_DATA);
+            }
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
                 ui_approval_simple_transaction_blue_init();
@@ -3260,8 +3264,9 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             // Write fullHash
             array_hexstr((char *)fullHash, transactionContext.hash, 32);
             // write contract type
-            if (!setContractType(txContent.contractType, (void*)fullContract)) THROW(E_INCORRECT_DATA);
-
+            if (!setContractType(txContent.contractType, fullContract, sizeof(fullContract))) {
+                THROW(E_INCORRECT_DATA);
+            }
             #if defined(TARGET_BLUE)
                 G_ui_approval_blue_state = APPROVAL_TRANSACTION;
                 ui_approval_simple_transaction_blue_init();
@@ -3312,7 +3317,7 @@ void handleSignByHash(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
     array_hexstr((char *)fullHash, transactionContext.hash, 32);
 
     // Contract Type = Unknown Type
-    setContractType(UNKNOWN_CONTRACT, (void*)fullContract);
+    setContractType(UNKNOWN_CONTRACT, fullContract, sizeof(fullContract));
 
     #if defined(TARGET_BLUE)
         G_ui_approval_blue_state = APPROVAL_TRANSACTION;

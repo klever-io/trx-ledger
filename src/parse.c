@@ -124,62 +124,62 @@ unsigned short print_amount(uint64_t amount, char *out,
     tmp[i] = '\0';
     adjustDecimals(tmp, i, tmp2, 25, sun);
     if (strlen(tmp2) < outlen - 1) {
-        strcpy(out, tmp2);
+        strlcpy(out, tmp2, outlen);
     } else {
         out[0] = '\0';
     }
     return strlen(out);
 }
 
-bool setContractType(uint8_t type, void *out){
+bool setContractType(contractType_e type, char *out, size_t outlen){
     switch (type){
         case ACCOUNTCREATECONTRACT:
-            strcpy(out, "Account Create");
+            strlcpy(out, "Account Create", outlen);
             break;
         case VOTEASSETCONTRACT:
-            strcpy(out, "Vote Asset");
+            strlcpy(out, "Vote Asset", outlen);
             break;
         case WITNESSCREATECONTRACT:
-            strcpy(out,"Witness Create");
+            strlcpy(out,"Witness Create", outlen);
             break;
         case ASSETISSUECONTRACT:
-            strcpy(out,"Asset Issue");
+            strlcpy(out,"Asset Issue", outlen);
             break;
         case WITNESSUPDATECONTRACT:
-            strcpy(out,"Witness Update");
+            strlcpy(out,"Witness Update", outlen);
             break;
         case PARTICIPATEASSETISSUECONTRACT:
-            strcpy(out,"Participate Asset");
+            strlcpy(out,"Participate Asset", outlen);
             break;
         case ACCOUNTUPDATECONTRACT:
-            strcpy(out,"Account Update");
+            strlcpy(out,"Account Update", outlen);
             break;
         case UNFREEZEBALANCECONTRACT:
-            strcpy(out,"Unfreeze Balance");
+            strlcpy(out,"Unfreeze Balance", outlen);
             break;
         case WITHDRAWBALANCECONTRACT:
-            strcpy(out,"Claim Rewards");
+            strlcpy(out,"Claim Rewards", outlen);
             break;
         case UNFREEZEASSETCONTRACT:
-            strcpy(out,"Unfreeze Asset");
+            strlcpy(out,"Unfreeze Asset", outlen);
             break;
         case UPDATEASSETCONTRACT:
-            strcpy(out,"Update Asset");
+            strlcpy(out,"Update Asset", outlen);
             break;
         case PROPOSALCREATECONTRACT:
-            strcpy(out,"Proposal Create");
+            strlcpy(out,"Proposal Create", outlen);
             break;
         case PROPOSALAPPROVECONTRACT:
-            strcpy(out,"Proposal Approve");
+            strlcpy(out,"Proposal Approve", outlen);
             break;
         case PROPOSALDELETECONTRACT:
-            strcpy(out,"Proposal Delete");
+            strlcpy(out,"Proposal Delete", outlen);
             break;
         case ACCOUNTPERMISSIONUPDATECONTRACT:
-            strcpy(out, "Permission Update");
+            strlcpy(out, "Permission Update", outlen);
             break;
         case UNKNOWN_CONTRACT:
-            strcpy(out, "Unknown Type");
+            strlcpy(out, "Unknown Type", outlen);
             break;
         default:
             return false;
@@ -187,19 +187,19 @@ bool setContractType(uint8_t type, void *out){
     return true;
 }
 
-bool setExchangeContractDetail(uint8_t type, void *out){
+bool setExchangeContractDetail(contractType_e type, char *out, size_t outlen) {
     switch (type){
         case EXCHANGECREATECONTRACT:
-            strcpy(out,"create");
+            strlcpy(out, "create", outlen);
             break;
         case EXCHANGEINJECTCONTRACT:
-            strcpy(out,"inject");
+            strlcpy(out, "inject", outlen);
             break;
         case EXCHANGEWITHDRAWCONTRACT:
-            strcpy(out,"withdraw");
+            strlcpy(out, "withdraw", outlen);
             break;
         case EXCHANGETRANSACTIONCONTRACT:
-            strcpy(out,"transaction");
+            strlcpy(out, "transaction", outlen);
             break;
         default:
         return false;
@@ -237,12 +237,12 @@ bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txCont
   snprintf(tmp, MAX_TOKEN_LENGTH, "%s[%s]", details.name,
            content->tokenNames[token_id]);
   content->tokenNamesLength[token_id] = strlen((const char *)tmp);
-  strcpy((char *)content->tokenNames[token_id], tmp);
+  strlcpy(content->tokenNames[token_id], tmp, MAX_TOKEN_LENGTH);
   content->decimals[token_id] = details.precision;
   return true;
 }
 
-static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
+static bool printTokenFromID(char *out, size_t outlen, const uint8_t *data, size_t size) {
   if (size != TOKENID_SIZE && size != 1) {
     return false;
   }
@@ -251,10 +251,10 @@ static bool printTokenFromID(char *out, const uint8_t *data, size_t size) {
     if (data[0] != '_') {
       return false;
     }
-    strcpy(out, "TRX");
+    strlcpy(out, "TRX", outlen);
     return true;
   }
-  strcpy(out, (char *)data);
+  strlcpy(out, (char *)data, outlen);
   return true;
 }
 
@@ -382,7 +382,7 @@ static bool transfer_asset_contract(txContent_t *content,
   }
   content->amount[0] = msg.transfer_asset_contract.amount;
 
-  if (!printTokenFromID((char *)content->tokenNames[0],
+  if (!printTokenFromID(content->tokenNames[0], MAX_TOKEN_LENGTH,
                         msg.transfer_asset_contract.asset_name.bytes,
                         msg.transfer_asset_contract.asset_name.size)) {
     return false;
@@ -580,14 +580,14 @@ static bool exchange_create_contract(txContent_t *content,
 
   COPY_ADDRESS(content->account, &msg.exchange_create_contract.owner_address);
 
-  if (!printTokenFromID(content->tokenNames[0],
+  if (!printTokenFromID(content->tokenNames[0], MAX_TOKEN_LENGTH,
                         msg.exchange_create_contract.first_token_id.bytes,
                         msg.exchange_create_contract.first_token_id.size)) {
     return false;
   }
   content->tokenNamesLength[0] = strlen(content->tokenNames[0]);
 
-  if (!printTokenFromID(content->tokenNames[1],
+  if (!printTokenFromID(content->tokenNames[1], MAX_TOKEN_LENGTH,
                         msg.exchange_create_contract.second_token_id.bytes,
                         msg.exchange_create_contract.second_token_id.size)) {
     return false;
@@ -608,7 +608,7 @@ static bool exchange_inject_contract(txContent_t *content,
   COPY_ADDRESS(content->account, &msg.exchange_inject_contract.owner_address);
   content->exchangeID = msg.exchange_inject_contract.exchange_id;
 
-  if (!printTokenFromID(content->tokenNames[0],
+  if (!printTokenFromID(content->tokenNames[0], MAX_TOKEN_LENGTH,
                         msg.exchange_inject_contract.token_id.bytes,
                         msg.exchange_inject_contract.token_id.size)) {
     return false;
@@ -628,7 +628,7 @@ static bool exchange_withdraw_contract(txContent_t *content,
   COPY_ADDRESS(content->account, &msg.exchange_withdraw_contract.owner_address);
   content->exchangeID = msg.exchange_withdraw_contract.exchange_id;
 
-  if (!printTokenFromID(content->tokenNames[0],
+  if (!printTokenFromID(content->tokenNames[0], MAX_TOKEN_LENGTH,
                         msg.exchange_withdraw_contract.token_id.bytes,
                         msg.exchange_withdraw_contract.token_id.size)) {
     return false;
@@ -649,7 +649,7 @@ static bool exchange_transaction_contract(txContent_t *content,
                &msg.exchange_transaction_contract.owner_address);
   content->exchangeID = msg.exchange_transaction_contract.exchange_id;
 
-  if (!printTokenFromID(content->tokenNames[0],
+  if (!printTokenFromID(content->tokenNames[0], MAX_TOKEN_LENGTH,
                         msg.exchange_transaction_contract.token_id.bytes,
                         msg.exchange_transaction_contract.token_id.size)) {
     return false;

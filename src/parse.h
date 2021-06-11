@@ -131,8 +131,8 @@ typedef struct txContent_t {
     publicKeyContext_t *publicKeyContext;
 } txContent_t;
 
-bool setContractType(uint8_t type, void * out);
-bool setExchangeContractDetail(uint8_t type, void * out);
+bool setContractType(contractType_e type, char *out, size_t outlen);
+bool setExchangeContractDetail(contractType_e type, char *out, size_t outlen);
 
 bool parseTokenName(uint8_t token_id, uint8_t *data, uint32_t dataLength, txContent_t *context);
 bool parseExchange(const uint8_t *data, size_t dataLength, txContent_t *context);
