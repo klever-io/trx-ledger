@@ -38,7 +38,7 @@ endif
 
 CC       := $(CLANGPATH)clang
 
-CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
+CFLAGS   += -O3 -Os -Isrc/include
 
 AS     := $(GCCPATH)arm-none-eabi-gcc
 
@@ -108,9 +108,6 @@ else
 DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
 endif
 
-# nanopb
-DEFINES   += PB_NO_ERRMSG=1
-
 # Enabling debug PRINTF
 DEBUG = 0
 ifneq ($(DEBUG),0)
@@ -128,7 +125,7 @@ endif
 include $(BOLOS_SDK)/Makefile.glyphs
 
 ### computed variables
-APP_SOURCE_PATH  += src proto extra/nanopb
+APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
@@ -151,6 +148,28 @@ endif
 DEFINES   += U2F_PROXY_MAGIC=\"TRX\"
 DEFINES   += HAVE_IO_U2F HAVE_U2F
 DEFINES   += U2F_REQUEST_TIMEOUT=28000 # 28 seconds
+
+all: proto
+proto:
+	$(MAKE) -C $@
+
+.PHONY: all proto
+
+# nanopb
+include nanopb/extra/nanopb.mk
+
+CFLAGS += "-I$(NANOPB_DIR)" -Iproto
+DEFINES   += PB_NO_ERRMSG=1
+SOURCE_FILES += $(NANOPB_CORE)
+APP_SOURCE_PATH += proto
+
+# target to also clean generated proto c files
+.SILENT : cleanall
+cleanall : clean
+	-@rm -rf \
+		proto/core/*.pb.c proto/core/*.pb.h \
+		proto/google/protobuf/*.pb.c proto/google/protobuf/*.pb.h \
+		proto/misc/*.pb.c proto/misc/*.pb.h
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
