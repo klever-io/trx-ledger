@@ -2522,7 +2522,7 @@ UX_STEP_NOCB(ux_approval_custom_contract_warning_step,
     {
       &C_icon_warning,
       "Warning:",
-      "Unverified Contract",
+      "Custom Contract",
     });
 
 UX_DEF(ux_approval_custom_contract_flow,
