@@ -3179,7 +3179,7 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *workBuffer,
             else
                 strcpy(fullContract, "Energy");
 
-            print_amount(txContent.amount[0],(void *)G_io_apdu_buffer,0, SUN_DIG);
+            print_amount(txContent.amount[0], (char *) G_io_apdu_buffer, 100, SUN_DIG);
             if (strlen((const char *)txContent.destination)>0) {
                 getBase58FromAddress(txContent.destination,
                     (uint8_t *)toAddress, &sha2, HAS_SETTING(S_TRUNCATE_ADDRESS));
