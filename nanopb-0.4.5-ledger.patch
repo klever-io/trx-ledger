@@ -1,0 +1,139 @@
+diff -r -u --no-dereference nanopb-original/extra/FindNanopb.cmake nanopb/extra/FindNanopb.cmake
+--- nanopb-original/extra/FindNanopb.cmake	2021-03-22 15:44:15.000000000 +0100
++++ nanopb/extra/FindNanopb.cmake	2021-06-25 11:26:44.547541600 +0200
+@@ -253,7 +253,7 @@
+     endif()
+ 
+     # based on the version of protoc it might be necessary to add "/${FIL_PATH_REL}" currently dealt with in #516
+-    set(NANOPB_OUT "${CMAKE_CURRENT_BINARY_DIR}")
++    set(NANOPB_OUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_PATH_REL}")
+ 
+     # We need to pass the path to the option files to the nanopb plugin. There are two ways to do it.
+     # - An older hacky one using ':' as option separator in protoc args preventing the ':' to be used in path.
+Only in nanopb/generator/proto: nanopb_pb2.py
+diff -r -u --no-dereference nanopb-original/pb.h nanopb/pb.h
+--- nanopb-original/pb.h	2021-03-22 15:44:15.000000000 +0100
++++ nanopb/pb.h	2021-06-25 11:26:41.757541600 +0200
+@@ -76,6 +76,7 @@
+ #include <stdbool.h>
+ #include <string.h>
+ #include <limits.h>
++#include "os.h"
+ 
+ #ifdef PB_ENABLE_MALLOC
+ #include <stdlib.h>
+diff -r -u --no-dereference nanopb-original/pb_common.c nanopb/pb_common.c
+--- nanopb-original/pb_common.c	2021-03-22 15:44:15.000000000 +0100
++++ nanopb/pb_common.c	2021-06-25 11:45:18.107541600 +0200
+@@ -14,7 +14,7 @@
+     if (iter->index >= iter->descriptor->field_count)
+         return false;
+ 
+-    word0 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index]);
++    word0 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index]);
+     iter->type = (pb_type_t)((word0 >> 8) & 0xFF);
+ 
+     switch(word0 & 3)
+@@ -31,7 +31,7 @@
+ 
+         case 1: {
+             /* 2-word format */
+-            uint32_t word1 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 1]);
++            uint32_t word1 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 1]);
+ 
+             iter->array_size = (pb_size_t)((word0 >> 16) & 0x0FFF);
+             iter->tag = (pb_size_t)(((word0 >> 2) & 0x3F) | ((word1 >> 28) << 6));
+@@ -43,9 +43,9 @@
+ 
+         case 2: {
+             /* 4-word format */
+-            uint32_t word1 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 1]);
+-            uint32_t word2 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 2]);
+-            uint32_t word3 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 3]);
++            uint32_t word1 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 1]);
++            uint32_t word2 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 2]);
++            uint32_t word3 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 3]);
+ 
+             iter->array_size = (pb_size_t)(word0 >> 16);
+             iter->tag = (pb_size_t)(((word0 >> 2) & 0x3F) | ((word1 >> 8) << 6));
+@@ -57,10 +57,10 @@
+ 
+         default: {
+             /* 8-word format */
+-            uint32_t word1 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 1]);
+-            uint32_t word2 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 2]);
+-            uint32_t word3 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 3]);
+-            uint32_t word4 = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index + 4]);
++            uint32_t word1 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 1]);
++            uint32_t word2 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 2]);
++            uint32_t word3 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 3]);
++            uint32_t word4 = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index + 4]);            
+ 
+             iter->array_size = (pb_size_t)word4;
+             iter->tag = (pb_size_t)(((word0 >> 2) & 0x3F) | ((word1 >> 8) << 6));
+@@ -109,7 +109,7 @@
+ 
+     if (PB_LTYPE_IS_SUBMSG(iter->type))
+     {
+-        iter->submsg_desc = iter->descriptor->submsg_info[iter->submessage_index];
++        iter->submsg_desc = PIC(((const pb_msgdesc_t * const *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->submsg_info))[iter->submessage_index]);
+     }
+     else
+     {
+@@ -139,7 +139,7 @@
+          * - bits 2..7 give the lowest bits of tag number.
+          * - bits 8..15 give the field type.
+          */
+-        uint32_t prev_descriptor = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index]);
++        uint32_t prev_descriptor = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index]);
+         pb_type_t prev_type = (prev_descriptor >> 8) & 0xFF;
+         pb_size_t descriptor_len = (pb_size_t)(1 << (prev_descriptor & 3));
+ 
+@@ -157,7 +157,7 @@
+ {
+     memset(iter, 0, sizeof(*iter));
+ 
+-    iter->descriptor = desc;
++    iter->descriptor = PIC(desc);
+     iter->message = message;
+ 
+     return load_descriptor_values(iter);
+@@ -221,7 +221,7 @@
+             advance_iterator(iter);
+ 
+             /* Do fast check for tag number match */
+-            fieldinfo = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index]);
++            fieldinfo = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index]);
+ 
+             if (((fieldinfo >> 2) & 0x3F) == (tag & 0x3F))
+             {
+@@ -260,7 +260,7 @@
+             advance_iterator(iter);
+ 
+             /* Do fast check for field type */
+-            fieldinfo = PB_PROGMEM_READU32(iter->descriptor->field_info[iter->field_info_index]);
++            fieldinfo = PB_PROGMEM_READU32(((uint32_t *)PIC(((pb_msgdesc_t *)PIC(iter->descriptor))->field_info))[iter->field_info_index]);
+ 
+             if (PB_LTYPE((fieldinfo >> 8) & 0xFF) == PB_LTYPE_EXTENSION)
+             {
+diff -r -u --no-dereference nanopb-original/pb_decode.c nanopb/pb_decode.c
+--- nanopb-original/pb_decode.c	2021-03-22 15:44:15.000000000 +0100
++++ nanopb/pb_decode.c	2021-06-25 11:26:41.757541600 +0200
+@@ -756,7 +756,7 @@
+         do
+         {
+             prev_bytes_left = substream.bytes_left;
+-            if (!field->descriptor->field_callback(&substream, NULL, field))
++            if (!((bool (*)(pb_istream_t *istream, pb_ostream_t *ostream, const pb_field_iter_t *field))(PIC(field->descriptor->field_callback)))(&substream, NULL, field))
+                 PB_RETURN_ERROR(stream, "callback failed");
+         } while (substream.bytes_left > 0 && substream.bytes_left < prev_bytes_left);
+         
+@@ -897,7 +897,7 @@
+             if (PB_LTYPE_IS_SUBMSG(field->type) &&
+                 (field->submsg_desc->default_value != NULL ||
+                  field->submsg_desc->field_callback != NULL ||
+-                 field->submsg_desc->submsg_info[0] != NULL))
++                 ((const pb_msgdesc_t * const *)PIC(field->submsg_desc->submsg_info))[0] != NULL))
+             {
+                 /* Initialize submessage to defaults.
+                  * Only needed if it has default values

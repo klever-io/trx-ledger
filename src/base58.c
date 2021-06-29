@@ -17,6 +17,8 @@
 
 #include "base58.h"
 
+#include <string.h>
+
 /** array of base58 aplhabet letters */
 static const char BASE_58_ALPHABET[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q',
 		'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
@@ -38,7 +40,7 @@ unsigned int encode_base_x(const char * alphabet, const unsigned int alphabet_le
 	if (in_length > sizeof(tmp)) {
 		THROW(0x6D11);
 	}
-	os_memmove(tmp, in, in_length);
+	memcpy(tmp, in, in_length);
 	while ((zeroCount < in_length) && (tmp[zeroCount] == 0)) {
 		++zeroCount;
 	}
@@ -72,6 +74,6 @@ unsigned int encode_base_x(const char * alphabet, const unsigned int alphabet_le
 	if (true_out_length > out_length) {
 		THROW(0x6D14);
 	}
-	os_memmove(out, (buffer + buffer_ix), true_out_length);
+	memcpy(out, (buffer + buffer_ix), true_out_length);
 	return true_out_length;
 }
