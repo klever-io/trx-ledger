@@ -3,7 +3,7 @@ bip32utils==0.3.post4
 mnemonic==0.19
 pycryptodome==3.9.4
 crypto==1.4.1
-cryptography==2.8
+cryptography==39.0.1
 ecdsa==0.14.1
 grpcio==1.25.0
 grpcio-tools==1.25.0
