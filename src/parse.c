@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "pb.h"
-#include "misc/TronApp.pb.h"
+#include "proto/misc/TronApp.pb.h"
 
 #include "parse.h"
 #include "settings.h"

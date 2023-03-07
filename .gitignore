@@ -72,3 +72,5 @@ ledger/
 # Tron Protogen
 examples/proto
 examples/protocol
+proto/*/*.pb.*
+proto/*/*/*.pb.*

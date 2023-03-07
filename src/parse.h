@@ -1,7 +1,7 @@
 #include "os.h"
 #include "cx.h"
 #include <stdbool.h>
-#include "core/Contract.pb.h"
+#include "proto/core/Contract.pb.h"
 
 #ifndef PARSE_H
 #define PARSE_H

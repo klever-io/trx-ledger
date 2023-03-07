@@ -72,12 +72,6 @@ ICONNAME=icons/nanox_app_tron.gif
 endif
 endif
 
-
-################
-# Default rule #
-################
-all: default
-
 ############
 # Platform #
 ############
@@ -151,27 +145,26 @@ DEFINES   += U2F_PROXY_MAGIC=\"TRX\"
 DEFINES   += HAVE_IO_U2F HAVE_U2F
 DEFINES   += U2F_REQUEST_TIMEOUT=28000 # 28 seconds
 
-all: proto
-proto:
-	$(MAKE) -C $@
 
-.PHONY: all proto
+############
+# proto    #
+############
+include proto/Makefile.proto
 
-# nanopb
-include nanopb/extra/nanopb.mk
-
-CFLAGS += "-I$(NANOPB_DIR)" -Iproto
+CFLAGS += "-I$(NANOPB_DIR)" -I.
 DEFINES   += PB_NO_ERRMSG=1
 SOURCE_FILES += $(NANOPB_CORE)
-APP_SOURCE_PATH += proto
+APP_SOURCE_FILES += ${PROTO_SOURCE_FILES}
+
+
+################
+# Default rule #
+################
+all: default
 
 # target to also clean generated proto c files
 .SILENT : cleanall
-cleanall : clean
-	-@rm -rf \
-		proto/core/*.pb.c proto/core/*.pb.h \
-		proto/google/protobuf/*.pb.c proto/google/protobuf/*.pb.h \
-		proto/misc/*.pb.c proto/misc/*.pb.h
+cleanall : clean cleanproto
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
@@ -181,9 +174,6 @@ delete:
 
 # import generic rules from the sdk
 include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile.genericwallet
 
 listvariants:
 	@echo VARIANTS COIN tron

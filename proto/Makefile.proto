@@ -1,0 +1,20 @@
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+
+include ${current_dir}/../nanopb/extra/nanopb.mk
+
+PROTO_SOURCE_FILES += ${current_dir}/core/Tron.pb.c \
+					${current_dir}/core/Contract.pb.c \
+                    ${current_dir}/misc/TronApp.pb.c \
+                    ${current_dir}/google/protobuf/any.pb.c
+
+PROTO_HEADER_FILES += ${current_dir}/core/Tron.pb.h \
+					${current_dir}/core/Contract.pb.h \
+                    ${current_dir}/misc/TronApp.pb.h \
+                    ${current_dir}/google/protobuf/any.pb.h
+
+
+proto: ${PROTO_SOURCE_FILES} ${PROTO_HEADER_FILES}
+
+cleanproto:
+	rm -f ${PROTO_SOURCE_FILES} ${PROTO_HEADER_FILES}

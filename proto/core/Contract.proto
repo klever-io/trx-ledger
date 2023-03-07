@@ -21,7 +21,7 @@ option java_package = "org.tron.protos"; //Specify the name of the package that 
 option java_outer_classname = "Contract"; //Specify the class name of the generated Java file
 option go_package = "github.com/tronprotocol/grpc-gateway/core";
 
-import "core/Tron.proto";
+import "proto/core/Tron.proto";
 
 message AccountCreateContract {
     bytes owner_address = 1;
