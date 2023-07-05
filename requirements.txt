@@ -5,7 +5,7 @@ pycryptodome==3.9.4
 crypto==1.4.1
 cryptography==2.8
 ecdsa==0.14.1
-grpcio==1.25.0
+grpcio==1.53.0
 grpcio-tools==1.25.0
 ledgerblue==0.1.31
 protobuf==3.11.12
